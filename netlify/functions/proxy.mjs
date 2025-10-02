@@ -1,6 +1,7 @@
 /**
- * JOOBIN Renovation Hub Proxy v6.4.0
- * Added: Payment Schedule integration with KPIs, upcoming/overdue/recent, and 4-month forecast
+ * JOOBIN Renovation Hub Proxy v6.6.0
+ * Patched: Centralized required deliverables list in backend to ensure
+ * accurate KPI and gate progress calculations, syncing dashboard with deliverables board.
  */
 
 const {
@@ -17,6 +18,49 @@ const {
 
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
+
+// Central source of truth for all required deliverables
+const REQUIRED_BY_GATE = {
+    "G1 Concept": [
+      "Moodboard — Approved",
+      "Space Analysis and Planning (Draft)",
+      "Concept Design R&D and Moodboard",
+      "Furniture Layout Plan (Draft)"
+    ],
+    "G2 Schematic": [
+      "Schematic Plans (1:100) — Approved",
+      "Area Takeoffs",
+      "Key Dimensions Plan",
+      "Zoning / Room Data Sheets (if applicable)"
+    ],
+    "G3 Design Development": [
+      "DOORS AND WINDOWS — Approved",
+      "Room Finish Schedule — Approved",
+      "Finishes Plan — Floors/Walls/Paint — Approved",
+      "MEP Coordination Plans — Approved",
+      "Electrical/Lighting Layout with Load Schedule — Approved",
+      "Low-Voltage/Controls (Data/AV/Security/Blinds) — Approved",
+      "Cabinetry/Joinery Shop Drawings — Approved",
+      "Kitchen Package (Cabinetry, Countertops, Appliances cut-sheets) — Approved",
+      "Sanitary Ware Schedule and Cut-sheets — Approved",
+      "Flooring System Data and Cut-sheets — Approved",
+      "Motorized Blinds Submittals — Approved",
+      "Coordinated Plans/Elevations/Sections/Details — Approved"
+    ],
+    "G4 Authority Submission": [
+      "Authority Submission Set — Approved",
+      "Approved Permit (Authority)"
+    ],
+    "G5 Construction Documentation": [
+      "Windows Package Shop Drawings — Approved",
+      "Construction Documentation Set (IFC) — Approved",
+      "Schedules and Specs — Approved"
+    ],
+    "G6 Design Close‑out": [
+      "As-built Drawings — Approved",
+      "O&M Manuals — Approved"
+    ]
+  };
 
 const notionHeaders = () => ({
   'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -71,13 +115,13 @@ function extractText(prop) {
   if (prop.type === 'status' && prop.status?.name) return prop.status.name;
   if (prop.type === 'number' && typeof prop.number === 'number') return prop.number;
   if (prop.type === 'date' && prop.date?.start) return prop.date.start;
+  if (prop.type === 'formula' && prop.formula?.type === 'number' && typeof prop.formula.number === 'number') return prop.formula.number;
   return '';
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const { httpMethod, path } = event;
 
-  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -90,9 +134,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    // === GET: Dashboard data ===
     if (httpMethod === 'GET' && path.endsWith('/proxy')) {
-      // Query all databases
       const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData] = await Promise.all([
         queryNotionDB(NOTION_BUDGET_DB_ID, {}),
         queryNotionDB(NOTION_ACTUALS_DB_ID, {}),
@@ -108,56 +150,58 @@ exports.handler = async (event) => {
       const deliverablePages = deliverablesData.results || [];
       const vendorPages = vendorData.results || [];
       const paymentPages = paymentsData.results || [];
+      
+      const now = new Date();
+
+      // === Deliverables & Gates (Calculated from single source of truth) ===
+      const allRequiredDeliverables = Object.values(REQUIRED_BY_GATE).flat();
+      const deliverablesTotal = allRequiredDeliverables.length;
+      
+      const processedDeliverables = deliverablePages.map(p => ({
+          title: extractText(getProp(p, 'Deliverable', 'Name')),
+          gate: extractText(getProp(p, 'Gate', 'Gate')),
+          status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
+          assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
+          url: p.url,
+      }));
+
+      const deliverablesApproved = processedDeliverables.filter(d => d.status === 'Approved').length;
+
+      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
+          const approvedCount = requiredDocs.filter(reqTitle => 
+              processedDeliverables.some(d => d.gate === gateName && d.title === reqTitle && d.status === 'Approved')
+          ).length;
+          
+          return {
+              gate: gateName,
+              total: requiredDocs.length,
+              approved: approvedCount,
+              gateApprovalRate: requiredDocs.length > 0 ? approvedCount / requiredDocs.length : 0,
+          };
+      });
+
 
       // === KPIs ===
-      const budgetMYR = budgetPages.reduce((sum, p) => {
-        const subtotal = extractText(getProp(p, 'Subtotal (Formula)', 'Subtotal'));
-        return sum + (typeof subtotal === 'number' ? subtotal : 0);
-      }, 0);
-
+      const budgetMYR = budgetPages.reduce((sum, p) => sum + (extractText(getProp(p, 'Subtotal (Formula)', 'Subtotal')) || 0), 0);
       const paidMYR = actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
-        .reduce((sum, p) => {
-          const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid'));
-          return sum + (typeof paid === 'number' ? paid : 0);
-        }, 0);
+        .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0), 0);
 
       const remainingMYR = budgetMYR - paidMYR;
-
-      const deliverablesApproved = deliverablePages.filter(p => 
-        extractText(getProp(p, 'Approval_Status', 'Approval Status')) === 'Approved'
-      ).length;
-      const deliverablesTotal = deliverablePages.length;
-
-      // Payment Schedule KPIs
-      const now = new Date();
+      
       const totalOutstandingMYR = paymentPages
         .filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status'))))
-        .reduce((sum, p) => {
-          const amt = extractText(getProp(p, 'Amount (RM)', 'Amount'));
-          return sum + (typeof amt === 'number' ? amt : 0);
-        }, 0);
+        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
 
       const totalOverdueMYR = paymentPages
         .filter(p => {
           const status = extractText(getProp(p, 'Status', 'Status'));
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          const dueDate = dueDateProp?.date?.start;
+          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
           return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
         })
-        .reduce((sum, p) => {
-          const amt = extractText(getProp(p, 'Amount (RM)', 'Amount'));
-          return sum + (typeof amt === 'number' ? amt : 0);
-        }, 0);
+        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
 
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const recentPaymentsCount = paymentPages.filter(p => {
-        const status = extractText(getProp(p, 'Status', 'Status'));
-        const paidDateProp = getProp(p, 'PaidDate', 'Paid Date');
-        const paidDate = paidDateProp?.date?.start;
-        return status === 'Paid' && paidDate && new Date(paidDate) >= thirtyDaysAgo;
-      }).length;
-
+      // ... (rest of the handler remains largely the same)
       // === Payments Schedule ===
       const upcomingPayments = paymentPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
@@ -213,91 +257,59 @@ exports.handler = async (event) => {
 
       // Payment Forecast (4 months)
       const forecastMonths = [];
+      const outstandingPayments = paymentPages.filter(p =>
+        ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status')))
+      );
+      const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const overdueAndUnscheduledAmount = outstandingPayments
+        .filter(p => {
+          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+          if (!dueDate) return true;
+          return new Date(dueDate) < firstMonthDate;
+        })
+        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+
       for (let i = 0; i < 4; i++) {
         const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const monthKey = monthDate.toISOString().slice(0, 7); // YYYY-MM
-        const monthName = monthDate.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+        const monthKey = monthDate.toISOString().slice(0, 7);
+        const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
         
-        const monthPayments = paymentPages.filter(p => {
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          const dueDate = dueDateProp?.date?.start;
-          return dueDate && dueDate.startsWith(monthKey);
-        });
+        const monthScheduledAmount = outstandingPayments
+            .filter(p => (extractText(getProp(p, 'DueDate', 'Due Date')) || '').startsWith(monthKey))
+            .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
 
-        const totalAmount = monthPayments.reduce((sum, p) => {
-          const amt = extractText(getProp(p, 'Amount (RM)', 'Amount'));
-          return sum + (typeof amt === 'number' ? amt : 0);
-        }, 0);
-
-        forecastMonths.push({
-          month: monthName,
-          monthKey,
-          totalAmount,
-          paymentCount: monthPayments.length,
-        });
+        let totalAmount = monthScheduledAmount;
+        if (i === 0) {
+            totalAmount += overdueAndUnscheduledAmount;
+        }
+        
+        forecastMonths.push({ month: monthName, totalAmount });
       }
 
-      // === Gates ===
-      const gateMap = {};
-      deliverablePages.forEach(p => {
-        const gate = extractText(getProp(p, 'Gate', 'Gate')) || 'Unknown';
-        const approvalStatus = extractText(getProp(p, 'Approval_Status', 'Approval Status'));
-        if (!gateMap[gate]) gateMap[gate] = { total: 0, approved: 0 };
-        gateMap[gate].total += 1;
-        if (approvalStatus === 'Approved') gateMap[gate].approved += 1;
-      });
-
-      const gates = Object.keys(gateMap).map(gate => ({
-        gate,
-        total: gateMap[gate].total,
-        approved: gateMap[gate].approved,
-        gateApprovalRate: gateMap[gate].total > 0 ? gateMap[gate].approved / gateMap[gate].total : 0,
-      }));
-
-      // === Top Vendors ===
+      // === Top Vendors, Milestones, etc. ===
       const vendorSpendMap = {};
       actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
         .forEach(p => {
           const vendor = extractText(getProp(p, 'Vendor', 'Vendor')) || 'Unknown';
-          const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid'));
-          const amount = typeof paid === 'number' ? paid : 0;
-          if (!vendorSpendMap[vendor]) vendorSpendMap[vendor] = 0;
-          vendorSpendMap[vendor] += amount;
+          const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0;
+          vendorSpendMap[vendor] = (vendorSpendMap[vendor] || 0) + paid;
         });
 
-      const topVendors = Object.keys(vendorSpendMap)
-        .map(vendor => {
-          const vendorPage = vendorPages.find(v => 
-            extractText(getProp(v, 'Company_Name', 'Company Name')) === vendor
-          );
-          const trade = vendorPage ? extractText(getProp(vendorPage, 'Trade_Specialization', 'Trade Specialization')) : '—';
-          
-          return {
-            name: vendor,
-            trade,
-            paid: vendorSpendMap[vendor],
-          };
-        })
-        .sort((a, b) => b.paid - a.paid)
-        .slice(0, 5);
-
-      // === Milestones ===
+      const topVendors = Object.entries(vendorSpendMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([vendorName, paidAmount]) => {
+            const vendorPage = vendorPages.find(v => extractText(getProp(v, 'Company_Name', 'Company Name')) === vendorName);
+            const trade = vendorPage ? extractText(getProp(vendorPage, 'Trade_Specialization', 'Trade Specialization')) : '—';
+            return { name: vendorName, trade, paid: paidAmount };
+        });
+      
       const milestones = milestonePages.map(p => ({
         title: extractText(getProp(p, 'MilestoneTitle', 'Milestone Title')) || 'Untitled',
         phase: extractText(getProp(p, 'Phase', 'Phase')),
         status: extractText(getProp(p, 'Risk_Status', 'Risk Status')),
-        risk: extractText(getProp(p, 'Risk_Status', 'Risk Status')),
-        url: p.url,
-      }));
-
-      // === Payments (legacy - for overdue list) ===
-      const payments = actualsPages.map(p => ({
-        recipient: extractText(getProp(p, 'Vendor', 'Vendor')),
-        vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-        amount: extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0,
-        status: extractText(getProp(p, 'Status', 'Status')),
-        dueDate: extractText(getProp(p, 'Paid Date', 'PaidDate')),
         url: p.url,
       }));
 
@@ -311,7 +323,6 @@ exports.handler = async (event) => {
           deliverablesTotal,
           totalOutstandingMYR,
           totalOverdueMYR,
-          recentPaymentsCount,
           paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
           deliverablesProgress: deliverablesTotal > 0 ? deliverablesApproved / deliverablesTotal : 0,
           milestonesAtRisk: milestones.filter(m => m.status === 'At Risk').length,
@@ -319,7 +330,7 @@ exports.handler = async (event) => {
         gates,
         topVendors,
         milestones,
-        payments,
+        deliverables: processedDeliverables, // Pass processed deliverables to frontend
         paymentsSchedule: {
           upcoming: upcomingPayments,
           overdue: overduePayments,
@@ -329,41 +340,24 @@ exports.handler = async (event) => {
         timestamp: new Date().toISOString(),
       };
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(responseData),
-      };
+      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     }
 
-    // === POST: AI Summary ===
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-      const body = JSON.parse(event.body || '{}');
-      const { kpis, gates, milestones, payments } = body;
-
-      const prompt = `You are a project assistant. Summarize this renovation project data in 2-3 concise sentences:
+        const body = JSON.parse(event.body || '{}');
+        const { kpis } = body;
+        const prompt = `You are a project assistant. Summarize this renovation project data in 2-3 concise sentences:
 - Budget: ${kpis?.budgetMYR || 0} MYR, Paid: ${kpis?.paidMYR || 0} MYR
 - Deliverables: ${kpis?.deliverablesApproved || 0}/${kpis?.deliverablesTotal || 0} approved
-- Gates: ${gates?.length || 0} total
 - Milestones at risk: ${kpis?.milestonesAtRisk || 0}
-- Overdue payments: ${payments?.filter(p => p.status === 'Overdue').length || 0}
+- Overdue payments: ${kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}
 
-Focus on key risks and progress.`;
-
-      const summary = await callGemini(prompt);
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ summary }),
-      };
+Focus on key risks and overall progress.`;
+        const summary = await callGemini(prompt);
+        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
     }
 
-    return {
-      statusCode: 404,
-      headers,
-      body: JSON.stringify({ error: 'Not found' }),
-    };
+    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
 
   } catch (error) {
     console.error('Handler error:', error);
@@ -374,3 +368,5 @@ Focus on key risks and progress.`;
     };
   }
 };
+
+
