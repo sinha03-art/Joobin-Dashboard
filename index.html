@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="UTF-8">
@@ -7,83 +7,74 @@
   <title>JOOBIN Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide-react@0.378.0/dist/umd/lucide-react.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * {
-      font-family: 'Lato', sans-serif;
+    :root {
+      --background: 222 47% 11%;
+      --foreground: 210 40% 98%;
+      --card: 222 47% 14%;
+      --card-foreground: 210 40% 98%;
+      --popover: 222 47% 11%;
+      --popover-foreground: 210 40% 98%;
+      --primary: 210 40% 98%;
+      --primary-foreground: 222 47% 11%;
+      --secondary: 217 33% 17%;
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217 33% 17%;
+      --muted-foreground: 215 20% 65%;
+      --accent: 217 33% 17%;
+      --accent-foreground: 210 40% 98%;
+      --destructive: 0 63% 31%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 217 33% 17%;
+      --input: 217 33% 17%;
+      --ring: 213 94% 68%;
+      --radius: 0.5rem;
     }
 
     body {
-      background: #0f172a;
-      color: #e2e8f0;
-    }
-
-    @keyframes blink {
-
-      0%,
-      50%,
-      100% {
-        opacity: 1;
-      }
-
-      25%,
-      75% {
-        opacity: 0.3;
-      }
-    }
-
-    .blink {
-      animation: blink 2s infinite;
-    }
-
-    .neon-header {
-      color: #06b6d4;
-      text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
-      font-weight: 900;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .badge-blocked {
-      background: #dc2626;
-      color: white;
-    }
-
-    .badge-submitted {
-      background: #f59e0b;
-      color: white;
-    }
-
-    .badge-pending {
-      background: #6b7280;
-      color: white;
+      font-family: 'Inter', sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
     }
 
     .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 16px;
+      background-color: hsl(var(--card));
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    
+    .tab-button.active {
+        background-color: hsl(var(--muted));
+        color: hsl(var(--foreground));
     }
 
     .progress-bar {
       height: 8px;
-      background: #334155;
+      background: hsl(var(--muted));
       border-radius: 4px;
       overflow: hidden;
     }
 
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #06b6d4, #0891b2);
-      transition: width 0.3s ease;
+      background: #2563eb;
+      transition: width 0.4s ease-in-out;
+    }
+
+    /* Chart.js Dark Mode Tooltips */
+    .chartjs-tooltip {
+      background: hsl(var(--popover)) !important;
+      color: hsl(var(--popover-foreground)) !important;
+      border-radius: 0.5rem !important;
+      border: 1px solid hsl(var(--border)) !important;
+    }
+    .chartjs-tooltip-caret {
+        display: none !important;
     }
   </style>
 </head>
@@ -91,244 +82,442 @@
 <body class="flex h-screen overflow-hidden">
 
   <!-- Sidebar -->
-  <aside class="w-80 border-r border-gray-700 p-6 overflow-y-auto">
-    <h1 class="text-2xl font-black mb-6 neon-header">JOOBIN</h1>
+  <aside class="w-72 border-r border-slate-800 p-6 flex flex-col space-y-6 overflow-y-auto">
+    <div class="flex items-center space-x-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <h1 class="text-2xl font-bold">JOOBIN</h1>
+    </div>
 
     <!-- Video -->
-    <div class="mb-6">
-      <div class="relative" style="padding-top: 56.25%;">
+    <div class="aspect-video">
         <iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479"
           frameborder="0" allow="autoplay; fullscreen; picture-in-picture"
-          class="absolute top-0 left-0 w-full h-full rounded" title="Project Demo">
+          class="w-full h-full rounded-lg" title="Project Demo">
         </iframe>
-      </div>
     </div>
 
     <!-- Property -->
-    <div class="mb-6">
-      <h2 class="text-sm font-bold text-gray-400 mb-3">PROPERTY</h2>
-      <p class="text-sm leading-relaxed">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam<br>Completion: Q2 2026</p>
+    <div>
+      <h2 class="text-sm font-semibold text-slate-400 mb-2">PROPERTY</h2>
+      <p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p>
+      <p class="text-xs text-slate-500 mt-1">Target Completion: Q2 2026</p>
     </div>
 
     <!-- About -->
     <div>
-      <h2 class="text-sm font-bold text-gray-400 mb-3">ABOUT</h2>
-      <p class="text-xs leading-relaxed" style="color: #06b6d4; text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);">This
-        property is being reimagined from the ground up—blending structure, light, landscape, and livability into a
-        fully modernized private residence.</p>
+      <h2 class="text-sm font-semibold text-slate-400 mb-2">ABOUT</h2>
+      <p class="text-xs leading-relaxed text-slate-400">
+        This property is being reimagined from the ground up—blending structure, light, landscape, and livability into a fully modernized private residence.
+      </p>
+    </div>
+
+    <div class="!mt-auto pt-6 text-center text-xs text-slate-600">
+        <p>Last updated: <span id="lastUpdatedSidebar">--</span></p>
     </div>
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 overflow-y-auto p-8">
-
-    <!-- Header -->
-    <header class="mb-6">
-      <h2 class="text-3xl font-black">Command Center 🚀</h2>
-      <p class="text-sm text-gray-400 mt-1">⏱️ 32 days to start • 🚨 MBSA Permit • 📐 3D Render</p>
-    </header>
-
-    <!-- KPI Cards -->
-    <div id="kpis" class="grid grid-cols-3 gap-4 mb-6"></div>
-
-    <!-- Attention Board -->
-    <div class="mb-6">
-      <h3 class="text-lg font-black neon-header mb-3 blink">⚠️ ATTENTION BOARD</h3>
-      <div id="attentionBoard"></div>
-    </div>
-
-    <!-- Next Up (Option 1: Single Narrow Card) -->
-    <div class="mb-6">
-      <h3 class="text-lg font-black neon-header mb-3">📌 NEXT UP</h3>
-      <div id="nextUp"></div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="grid grid-cols-2 gap-6 mb-6">
-      <div class="card">
-        <h3 class="text-sm font-bold text-gray-400 mb-3">CASHFLOW</h3>
-        <canvas id="cashflowChart"></canvas>
-      </div>
-      <div class="card">
-        <h3 class="text-sm font-bold text-gray-400 mb-3">PAYMENT FORECAST</h3>
-        <canvas id="forecastChart"></canvas>
+  <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+    <div id="loader" class="flex items-center justify-center h-full">
+      <div class="text-center">
+        <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <p class="mt-2 text-sm text-slate-400">Loading Command Center...</p>
       </div>
     </div>
 
-    <!-- Gate Progress -->
-    <div class="mb-6">
-      <h3 class="text-lg font-black neon-header mb-3">🎯 GATE PROGRESS</h3>
-      <div id="gates"></div>
-    </div>
+    <div id="dashboardContent" class="hidden">
+      <!-- Header -->
+      <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+        <div>
+          <h2 class="text-3xl font-bold tracking-tight">Command Center</h2>
+          <p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p>
+        </div>
+        <div class="flex items-center space-x-6 mt-4 sm:mt-0">
+            <div class="flex items-center space-x-2">
+                 <div id="aiSummary" class="text-sm text-slate-400 max-w-xs text-right"></div>
+                 <button id="aiSummaryBtn" class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                 </button>
+            </div>
+            <div class="text-right">
+                <div id="clock" class="text-2xl font-bold text-slate-200"></div>
+                <div id="date" class="text-xs text-slate-500"></div>
+            </div>
+        </div>
+      </header>
 
+      <!-- KPI Cards -->
+      <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"></div>
+
+      <!-- Main Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        
+        <!-- Left Column: Action Items & Milestones -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Action Items -->
+            <div class="card p-4 sm:p-6">
+                <h3 class="text-lg font-semibold mb-4">Action Items</h3>
+                <div class="border-b border-slate-700">
+                    <nav class="-mb-px flex space-x-6" id="tabs">
+                         <button data-tab="overdue" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white hover:border-slate-300">Overdue</button>
+                         <button data-tab="upcoming" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white hover:border-slate-300">Upcoming Payments</button>
+                         <button data-tab="recent" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white hover:border-slate-300">Recently Paid</button>
+                    </nav>
+                </div>
+                <div id="tab-content" class="mt-4 min-h-[200px]"></div>
+            </div>
+
+            <!-- Gate Progress -->
+            <div class="card p-4 sm:p-6">
+              <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+              <div id="gates" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- Right Column: Forecast & Vendors -->
+        <div class="lg:col-span-1 space-y-6">
+             <!-- Payment Forecast -->
+            <div class="card p-4 sm:p-6">
+                <h3 class="text-lg font-semibold mb-4">Payment Forecast</h3>
+                <canvas id="forecastChart" class="max-h-64"></canvas>
+            </div>
+             <!-- Top Vendors -->
+            <div class="card p-4 sm:p-6">
+                <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                <div id="topVendors" class="space-y-3"></div>
+            </div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
-    // Configuration - Hardcoded constants
+    // --- CONFIG ---
     const API_URL = '/.netlify/functions/proxy';
-    const DESIGNER_FORM_URL = '';
     let dashboardData = null;
+    let cashflowChart = null;
+    let forecastChart = null;
 
-    // Initialize
+    // --- CLOCK FUNCTION ---
+    function updateClock() {
+        const clockEl = document.getElementById('clock');
+        const dateEl = document.getElementById('date');
+        if (!clockEl || !dateEl) return;
+
+        const now = new Date();
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        
+        // Using Asia/Kuala_Lumpur timezone for Shah Alam
+        const timeString = now.toLocaleTimeString('en-US', {
+            timeZone: 'Asia/Kuala_Lumpur',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        
+        const dateString = now.toLocaleDateString('en-GB', dateOptions);
+
+        clockEl.textContent = timeString;
+        dateEl.textContent = dateString;
+    }
+
+    // --- UTILITY FUNCTIONS ---
+    const formatMYR = (amount) => `RM ${Math.round(amount).toLocaleString()}`;
+    const formatMYRShort = (amount) => {
+        if (amount >= 1000000) return `RM ${(amount / 1000000).toFixed(1)}m`;
+        if (amount >= 1000) return `RM ${(amount / 1000).toFixed(0)}k`;
+        return `RM ${amount}`;
+    }
+    const formatDate = (dateString) => {
+      if (!dateString) return 'N/A';
+      return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+    const timeAgo = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " minutes ago";
+        return Math.floor(seconds) + " seconds ago";
+    };
+
+    // --- RENDER FUNCTIONS ---
+    function renderKPIs(kpis) {
+      const { 
+        budgetMYR = 0, paidMYR = 0, remainingMYR = 0, 
+        paidVsBudget = 0, deliverablesProgress = 0,
+        milestonesAtRisk = 0, totalOverdueMYR = 0, totalOutstandingMYR = 0
+      } = kpis;
+      
+      const kpiData = [
+        { 
+          title: 'Budget Used', 
+          value: `${(paidVsBudget * 100).toFixed(0)}%`, 
+          subValue: `${formatMYRShort(paidMYR)} of ${formatMYRShort(budgetMYR)}`,
+          icon: 'wallet'
+        },
+        { 
+          title: 'Outstanding Payments', 
+          value: formatMYRShort(totalOutstandingMYR), 
+          subValue: `${formatMYRShort(totalOverdueMYR)} Overdue`,
+          icon: 'receipt'
+        },
+        { 
+          title: 'Deliverables', 
+          value: `${(deliverablesProgress * 100).toFixed(0)}%`,
+          subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`,
+          icon: 'check-square'
+        },
+        { 
+          title: 'Milestones at Risk', 
+          value: milestonesAtRisk, 
+          subValue: 'Require attention',
+          icon: 'alert-triangle'
+        }
+      ];
+
+      const kpiContainer = document.getElementById('kpis');
+      kpiContainer.innerHTML = kpiData.map((k, index) => {
+        const isDeliverablesCard = k.title === 'Deliverables';
+        const cardTag = isDeliverablesCard ? 'a' : 'div';
+        const cardProps = isDeliverablesCard ? 'href="deliverables.html" title="View Deliverables Board"' : '';
+
+        return `
+        <${cardTag} ${cardProps} class="card p-4 flex flex-col justify-between ${isDeliverablesCard ? 'hover:bg-slate-800 transition-colors cursor-pointer' : ''}">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <p class="text-sm font-medium">${k.title}</p>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-${k.icon}"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1z"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-3a2 2 0 0 0 0-4h3a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H4a2 2 0 0 0-1 1z"/></svg>
+            </div>
+            <div>
+                <p class="text-3xl font-bold">${k.value}</p>
+                <p class="text-xs text-slate-500 mt-1">${k.subValue}</p>
+            </div>
+        </${cardTag}>
+      `}).join('');
+    }
+
+    function renderTabs(data) {
+        const tabContentContainer = document.getElementById('tab-content');
+        const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
+
+        const renderList = (items, type) => {
+            if (!items || items.length === 0) {
+                return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments.</div>`;
+            }
+            return `<div class="flow-root">
+                <ul role="list" class="-my-4 divide-y divide-slate-800">
+                    ${items.map(item => `
+                    <li class="flex items-center py-4 space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="h-8 w-8 rounded-full flex items-center justify-center ${type === 'overdue' ? 'bg-red-500/20' : 'bg-slate-700'}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${type === 'overdue' ? 'text-red-400' : 'text-slate-400'}"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate">${item.paymentFor}</p>
+                            <p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p>
+                        </div>
+                        <div class="text-right">
+                             <p class="text-sm font-medium">${formatMYR(item.amount)}</p>
+                             <p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p>
+                        </div>
+                    </li>
+                    `).join('')}
+                </ul>
+            </div>`;
+        }
+
+        const tabs = {
+            overdue: renderList(overdue, 'overdue'),
+            upcoming: renderList(upcoming, 'upcoming'),
+            recent: renderList(recentPaid, 'recent')
+        };
+        
+        tabContentContainer.innerHTML = tabs.overdue; // Default view
+
+        document.getElementById('tabs').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const tab = e.target.dataset.tab;
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active', 'text-white', 'border-blue-500'));
+                e.target.classList.add('active', 'text-white', 'border-blue-500');
+                tabContentContainer.innerHTML = tabs[tab];
+            }
+        });
+    }
+
+    function renderGates(gates) {
+        const container = document.getElementById('gates');
+        if (!gates || gates.length === 0) {
+            container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`;
+            return;
+        }
+        container.innerHTML = gates.map(gate => {
+            const progress = Math.round(gate.gateApprovalRate * 100);
+            return `
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <p class="text-sm font-medium">${gate.gate}</p>
+                    <p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%; background-color: ${progress === 100 ? '#10b981' : '#2563eb'};"></div>
+                </div>
+            </div>
+        `}).join('');
+    }
+
+    function renderTopVendors(vendors) {
+        const container = document.getElementById('topVendors');
+        if (!vendors || vendors.length === 0) {
+            container.innerHTML = `<p class="text-sm text-slate-500">No vendor data available.</p>`;
+            return;
+        }
+        container.innerHTML = vendors.map(v => `
+            <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold">${v.name.charAt(0)}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">${v.name}</p>
+                    <p class="text-xs text-slate-400 truncate">${v.trade}</p>
+                </div>
+                <div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div>
+            </div>
+        `).join('');
+    }
+    
+    function renderCharts(data) {
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+        Chart.defaults.font.family = 'Inter';
+        
+        // --- Payment Forecast Chart ---
+        const forecastCtx = document.getElementById('forecastChart');
+        if (forecastChart) forecastChart.destroy();
+        if (forecastCtx && data.paymentsSchedule?.forecast) {
+            const forecastData = data.paymentsSchedule.forecast;
+            forecastChart = new Chart(forecastCtx, {
+              type: 'bar',
+              data: {
+                labels: forecastData.map(f => f.month),
+                datasets: [{
+                  label: 'Forecasted Payment (RM)',
+                  data: forecastData.map(f => f.totalAmount),
+                  backgroundColor: 'rgba(37, 99, 235, 0.5)',
+                  borderColor: 'rgba(37, 99, 235, 1)',
+                  borderWidth: 1,
+                  borderRadius: 4
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: (context) => `Total: ${formatMYR(context.parsed.y)}`
+                        }
+                    }
+                },
+                scales: {
+                  y: { beginAtZero: true, ticks: { callback: value => formatMYRShort(value) } },
+                  x: { grid: { display: false } }
+                }
+              }
+            });
+        }
+    }
+    
+    async function getAISummary() {
+        const summaryEl = document.getElementById('aiSummary');
+        const summaryBtn = document.getElementById('aiSummaryBtn');
+        
+        summaryEl.textContent = 'Generating summary...';
+        summaryBtn.disabled = true;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(dashboardData)
+            });
+            if (!response.ok) throw new Error('Failed to get AI summary');
+            const result = await response.json();
+            summaryEl.textContent = result.summary;
+        } catch (error) {
+            console.error('AI Summary Error:', error);
+            summaryEl.textContent = 'Could not generate summary.';
+        } finally {
+            summaryBtn.disabled = false;
+        }
+    }
+
+    // --- INITIALIZATION ---
     async function init() {
       try {
-        // Fetch data
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
+        if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
         dashboardData = await response.json();
         console.log('✅ Dashboard data loaded:', dashboardData);
 
-        // Render all sections
-        renderKPIs(dashboardData);
-        renderAttentionBoard(dashboardData);
-        renderNextUp(dashboardData);
-        renderGates(dashboardData);
+        // --- Render all sections ---
+        renderKPIs(dashboardData.kpis);
+        renderTabs(dashboardData);
+        renderGates(dashboardData.gates);
+        renderTopVendors(dashboardData.topVendors);
         renderCharts(dashboardData);
+
+        // --- Update Timestamps ---
+        const lastUpdated = timeAgo(dashboardData.timestamp);
+        document.getElementById('lastUpdatedSidebar').textContent = lastUpdated;
+
+        // --- Start Clock ---
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // --- Show content ---
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('dashboardContent').classList.remove('hidden');
+
+        // --- Initial AI Summary ---
+        getAISummary();
+        document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary);
 
       } catch (error) {
         console.error('❌ Error loading dashboard:', error);
-        document.querySelector('main').innerHTML = `
-          <div class="card bg-red-900 text-white">
+        document.getElementById('loader').innerHTML = `
+          <div class="card bg-red-900/50 border-red-700 text-red-200 p-6">
             <h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3>
             <p class="text-sm">${error.message}</p>
-            <p class="text-xs mt-2">Check console for details.</p>
+            <p class="text-xs mt-2 text-red-300">Please check the API connection and refresh the page.</p>
           </div>
         `;
       }
     }
-    function renderKPIs(data) {
-      const budget = data.kpis?.budgetMYR || 0;
-      const paid = data.kpis?.paidMYR || 0;
-      const approved = data.kpis?.deliverablesApproved || 0;
-      const total = data.kpis?.deliverablesTotal || 0;
-      const budgetUsedPct = budget > 0 ? Math.round((paid / budget) * 100) : 0;
-      const contingency = 150000;
-      const contingencyUsed = 0;
-      const html = `<div class="card"><div class="text-xs text-gray-400 mb-1">BUDGET USED</div><div class="text-xl font-black neon-header">${budgetUsedPct}% • ${formatMYR(paid)}</div><div class="text-xs text-gray-400 mt-1">of ${formatMYR(budget)}</div></div><div class="card"><div class="text-xs text-gray-400 mb-1">CONTINGENCY</div><div class="text-2xl font-black text-white">${formatMYR(contingency)}</div><div class="text-xs text-gray-400 mt-1">${formatMYR(contingencyUsed)} used</div></div><div class="card"><div class="text-xs text-gray-400 mb-1">GATES</div><div class="text-2xl font-black text-white">${data.gates?.filter(g => g.gateApprovalRate === 1).length || 0} / ${data.gates?.length || 0}</div><div class="text-xs text-gray-400 mt-1">${approved}/${total} docs</div></div>`;
-      document.getElementById('kpis').innerHTML = html;
-    }
-    function renderAttentionBoard(data) {
-      const payments = data.paymentSchedule || {};
-      const overdue = payments.overdue || [];
-      let html = '<div class="card">';
-      if (overdue.length > 0) {
-        html += '<h4 class="text-sm font-bold text-red-400 mb-2">🚨 OVERDUE PAYMENTS</h4>';
-        overdue.slice(0, 3).forEach(p => {
-          html += `<div class="text-xs mb-1">${p.vendor} • RM ${p.amount.toLocaleString()} • ${p.dueDate}</div>`;
-        });
-        html += '<div class="border-t border-gray-700 my-3"></div>';
-      }
-      html += '<h4 class="text-sm font-bold text-gray-400 mb-3">📊 PAYMENT FORECAST (4 Months)</h4>';
-      const forecast = [{ month: 'Oct', amount: 35000, count: 3, color: '#06b6d4' }, { month: 'Nov', amount: 18000, count: 2, color: '#3b82f6' }, { month: 'Dec', amount: 52000, count: 4, color: '#a855f7' }, { month: 'Jan', amount: 12000, count: 1, color: '#22c55e' }];
-      forecast.forEach(f => {
-        const pct = Math.round((f.amount / 52000) * 100);
-        html += `<div class="text-xs mb-2"><div class="flex justify-between mb-1"><span>${f.month}</span><span>RM ${(f.amount / 1000).toFixed(0)}K • ${f.count}</span></div><div class="progress-bar"><div class="progress-fill" style="width: ${pct}%; background: ${f.color};"></div></div></div>`;
-      });
-      html += '</div>';
-      document.getElementById('attentionBoard').innerHTML = html;
-    }
 
-    function renderNextUp(data) {
-      const html = `<div class="card"><div class="text-sm font-bold mb-2">📅 Sat, Oct 5 • 10:00 AM</div><div class="text-base mb-3 font-bold">3D Presentation Review</div><div class="text-xs text-gray-400 mb-2">👥 HAM, Co-owner, Designer (FER)</div><div class="text-xs text-gray-400 mb-3">📋 Output: Approve ground & first floor renders</div><div class="text-xs" style="color: #f59e0b;">🚨 THEN: Release RM 11,349 payment to unblock architect</div></div>`;
-      document.getElementById('nextUp').innerHTML = html;
-    }
-
-    function renderGates(data) {
-      const gates = data.gates || [];
-      const currentGate = gates.find(g => g.gateApprovalRate > 0 && g.gateApprovalRate < 1);
-      const nextGate = gates.find(g => g.gateApprovalRate === 0);
-      let html = '';
-      if (currentGate) {
-        const progress = Math.round(currentGate.gateApprovalRate * 100);
-        html += `<div class="card mb-3"><div class="text-xs text-gray-400 mb-1">CURRENT</div><div class="font-bold mb-2">${currentGate.id}</div><div class="progress-bar mb-2"><div class="progress-fill" style="width: ${progress}%;"></div></div><div class="text-xs text-gray-400">${currentGate.approved} of ${currentGate.required} deliverables • ${currentGate.required - currentGate.approved} remaining</div></div>`;
-      }
-      if (nextGate) {
-        html += `<div class="card"><div class="text-xs text-gray-400 mb-1">NEXT</div><div class="font-bold mb-2">${nextGate.id}</div><div class="progress-bar mb-2"><div class="progress-fill" style="width: 0%;"></div></div><div class="text-xs text-gray-400">Ready to start when current gate complete</div></div>`;
-      }
-      document.getElementById('gates').innerHTML = html || '<div class="text-sm text-gray-400">All gates complete!</div>';
-    }
-
-    // Render Charts
-    function renderCharts(data) {
-      // Cashflow Chart
-      const cashflowCtx = document.getElementById('cashflowChart');
-      if (cashflowCtx) {
-        new Chart(cashflowCtx, {
-          type: 'line',
-          data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [{
-              label: 'Paid',
-              data: [0, 15, 32, 45, 48, 48],
-              borderColor: '#06b6d4',
-              backgroundColor: 'rgba(6, 182, 212, 0.1)',
-              tension: 0.4
-            }, {
-              label: 'Planned',
-              data: [0, 20, 40, 60, 80, 100],
-              borderColor: '#94a3b8',
-              borderDash: [5, 5],
-              tension: 0.4,
-              fill: false
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { labels: { color: '#e2e8f0' } } },
-            scales: {
-              y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-              x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
-            }
-          }
-        });
-      }
-
-      // Payment Forecast Chart
-      const forecastCtx = document.getElementById('forecastChart');
-      if (forecastCtx) {
-        const payments = data.paymentSchedule || {};
-        const upcoming = payments.upcoming || [];
-
-        new Chart(forecastCtx, {
-          type: 'bar',
-          data: {
-            labels: upcoming.slice(0, 6).map(p => p.dueDate || 'TBD'),
-            datasets: [{
-              label: 'Amount (MYR)',
-              data: upcoming.slice(0, 6).map(p => p.amount || 0),
-              backgroundColor: '#06b6d4'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { labels: { color: '#e2e8f0' } } },
-            scales: {
-              y: {
-                ticks: {
-                  color: '#94a3b8',
-                  callback: value => 'RM ' + (value / 1000).toFixed(0) + 'k'
-                },
-                grid: { color: '#334155' }
-              },
-              x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
-            }
-          }
-        });
-      }
-    }
-
-    // Utility: Format currency
-    function formatMYR(amount) {
-      return 'RM ' + Math.round(amount).toLocaleString();
-    }
-
-    // Start the app
+    // --- Start the app ---
     init();
   </script>
 
 </body>
 
 </html>
+
+

@@ -1,113 +1,136 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gate Deliverables — Board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-  :root{ --bg:#f6f8fa; --panel:#ffffff; --ink:#0f172a; --muted:#64748b; --brand:#e11d48; }
-  html,body{height:100%}
-  body{font-family:"Lato",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink);}
-  .card{ background:var(--panel); border:1px solid #e5e7eb; border-radius:.75rem; }
-  .col{ background:var(--panel); border:1px dashed #e5e7eb; border-radius:.75rem; min-height: 180px; }
-  .badge{ font-size:.7rem; padding:.15rem .45rem; border-radius:999px; font-weight:700 }
-  .badge-Approved{ background:#d1fae5; color:#065f46 }
-  .badge-Submitted{ background:#fef3c7; color:#92400e }
-  .badge-Missing{ background:#e5e7eb; color:#374151 }
-  .badge-Rejected{ background:#fee2e2; color:#991b1b }
-  .card-item{ border:1px solid #e5e7eb; border-radius:.5rem; padding:.6rem .7rem; background:#fff; transition: box-shadow .15s ease }
-  .card-item:hover{ box-shadow: 0 6px 14px rgba(0,0,0,.06) }
-  .header-actions a{ text-decoration: underline; text-underline-offset: 2px; }
-  .sticky-header{ position: sticky; top: 0; background: var(--bg); z-index: 10; padding-top: .5rem; padding-bottom: .5rem; }
-  #ownerChips button.active{ background:#0f1723; color:#fff; border-color:#0f1723 }
+    :root {
+      --background: 222 47% 11%;
+      --foreground: 210 40% 98%;
+      --card: 222 47% 14%;
+      --card-foreground: 210 40% 98%;
+      --muted: 217 33% 17%;
+      --muted-foreground: 215 20% 65%;
+      --border: 217 33% 17%;
+      --input: 217 33% 17%;
+      --radius: 0.5rem;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    .card {
+      background-color: hsl(var(--card));
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+    }
+    .kanban-col {
+      background-color: hsl(var(--card));
+      border-radius: var(--radius);
+    }
+    .badge {
+      font-size: .7rem;
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-Approved { background-color: #10b981; color: #ffffff; }
+    .badge-Submitted { background-color: #f59e0b; color: #ffffff; }
+    .badge-Missing { background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+    .badge-Rejected { background-color: #ef4444; color: #ffffff; }
+    
+    .deliverable-card {
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        padding: 0.75rem 1rem;
+        background-color: hsl(var(--background));
+        transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    .deliverable-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,.1);
+        border-color: #2563eb;
+    }
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      background-color: hsl(var(--background));
+      z-index: 10;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+    #ownerChips button.active {
+      background-color: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
   </style>
 </head>
 <body class="p-4 md:p-6">
   <header class="sticky-header">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <h1 class="text-2xl font-black">Gate Deliverables — Board</h1>
-      <div class="header-actions flex flex-wrap items-center gap-3">
-        <input id="q" class="px-3 py-2 rounded border border-slate-300 text-sm" placeholder="Search title or assignee">
-        <select id="gateFilter" class="px-3 py-2 rounded border border-slate-300 text-sm">
-          <option value="">All gates</option>
-        </select>
-        <div class="flex gap-2" id="ownerChips">
-          <button class="px-3 py-1 text-xs rounded border hover:bg-slate-50" data-owner="solomon">Solomon</button>
-          <button class="px-3 py-1 text-xs rounded border hover:bg-slate-50" data-owner="harminder">Harminder</button>
-          <button class="px-3 py-1 text-xs rounded border hover:bg-slate-50" data-owner="">Both</button>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 max-w-7xl mx-auto">
+      <div class="flex items-center gap-4">
+        <a href="index.html" title="Back to Command Center" class="p-2 rounded-md hover:bg-slate-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight">Gate Deliverables</h1>
+            <p class="text-sm text-slate-400">Track and manage all project deliverables by gate.</p>
         </div>
-        <a href="" target="_blank" rel="noopener noreferrer"
-           class="px-3 py-2 rounded bg-rose-600 text-white text-sm font-bold hover:bg-rose-700">Upload</a>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input id="q" class="px-3 py-2 rounded-md border text-sm w-40 bg-transparent border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search...">
+        <select id="gateFilter" class="px-3 py-2 rounded-md border text-sm bg-transparent border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All Gates</option>
+        </select>
+        <div class="flex gap-2 p-1 bg-slate-800 rounded-md" id="ownerChips">
+          <button class="px-3 py-1 text-xs rounded-md border border-transparent hover:bg-slate-700" data-owner="solomon">Solomon</button>
+          <button class="px-3 py-1 text-xs rounded-md border border-transparent hover:bg-slate-700" data-owner="harminder">Harminder</button>
+          <button class="px-3 py-1 text-xs rounded-md border border-transparent hover:bg-slate-700" data-owner="">Both</button>
+        </div>
       </div>
     </div>
   </header>
-  <main id="root" class="mt-4 space-y-8"></main>
+  
+  <main id="root" class="mt-6 max-w-7xl mx-auto space-y-8">
+      <div id="loader" class="flex items-center justify-center h-64">
+        <div class="text-center">
+            <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="mt-2 text-sm text-slate-400">Loading Deliverables...</p>
+        </div>
+      </div>
+  </main>
+
   <script>
-  const STATUS_ORDER = ['Missing','Submitted','Rejected','Approved'];
-  const STATUS_TITLES = { Missing:'Missing', Submitted:'Submitted', Rejected:'Rejected', Approved:'Approved' };
+  const STATUS_ORDER = ['Missing', 'Submitted', 'Rejected', 'Approved'];
   let dataCache;
   let ownerFilter = '';
 
+  // This hardcoded list defines deliverables that must exist for each gate.
+  // The app will synthesize a "Missing" deliverable if it's not found in the data from the API.
   const REQUIRED_BY_GATE = {
-    "PreconstructionRequired": [
-      "Approved Permit (Authority)",
-      "Approved Structural Drawings",
-      "Single Line Drawing (MEP) — Approved",
-      "Revised Moodboard — Approved",
-      "Revised Furniture Placement Plan — Approved",
-      "Approved Furniture Design Plan",
-      "Approved 3D Visuals"
-    ],
-    "G1 Concept": [
-      "Moodboard — Approved",
-      "Space Analysis and Planning (Draft)",
-      "Concept Design R&D and Moodboard",
-      "Furniture Layout Plan (Draft)"
-    ],
-    "G2 Schematic": [
-      "Schematic Plans (1:100) — Approved",
-      "Area Takeoffs",
-      "Key Dimensions Plan",
-      "Zoning / Room Data Sheets (if applicable)"
-    ],
-    "G3 Design Development": [
-      "DOORS AND WINDOWS — Approved",
-      "Room Finish Schedule — Approved",
-      "Finishes Plan — Floors/Walls/Paint — Approved",
-      "MEP Coordination Plans — Approved",
-      "Electrical/Lighting Layout with Load Schedule — Approved",
-      "Low-Voltage/Controls (Data/AV/Security/Blinds) — Approved",
-      "Cabinetry/Joinery Shop Drawings — Approved",
-      "Kitchen Package (Cabinetry, Countertops, Appliances cut-sheets) — Approved",
-      "Sanitary Ware Schedule and Cut-sheets — Approved",
-      "Flooring System Data and Cut-sheets — Approved",
-      "Motorized Blinds Submittals — Approved",
-      "Coordinated Plans/Elevations/Sections/Details — Approved"
-    ],
-    "G4 Authority Submission": [
-      "Authority Submission Set — Approved",
-      "Approved Permit (Authority)"
-    ],
-    "G5 Construction Documentation": [
-      "Windows Package Shop Drawings — Approved",
-      "Construction Documentation Set (IFC) — Approved",
-      "Schedules and Specs — Approved"
-    ],
-    "G6 Design Close‑out": [
-      "As-built Drawings — Approved",
-      "O&M Manuals — Approved"
-    ]
+    "G1 Concept": ["Moodboard — Approved", "Space Analysis and Planning (Draft)", "Concept Design R&D and Moodboard", "Furniture Layout Plan (Draft)"],
+    "G2 Schematic": ["Schematic Plans (1:100) — Approved", "Area Takeoffs", "Key Dimensions Plan", "Zoning / Room Data Sheets (if applicable)"],
+    "G3 Design Development": ["Room Finish Schedule — Approved", "Finishes Plan — Floors/Walls/Paint — Approved", "MEP Coordination Plans — Approved", "Electrical/Lighting Layout with Load Schedule — Approved", "Cabinetry/Joinery Shop Drawings — Approved"],
+    "G4 Authority Submission": ["Authority Submission Set — Approved", "Approved Permit (Authority)"],
+    "G5 Construction Documentation": ["Windows Package Shop Drawings — Approved", "Construction Documentation Set (IFC) — Approved"],
+    "G6 Design Close‑out": ["As-built Drawings — Approved", "O&M Manuals — Approved"]
   };
 
-  function norm(s){ return String(s||'').trim().toLowerCase(); }
+  function norm(s) { return String(s || '').trim().toLowerCase(); }
 
-  function deliveredIndex(list){
+  // Create an index of items that have been delivered (submitted or approved)
+  function deliveredIndex(list) {
     const have = {};
-    (list||[]).forEach(d=>{
+    (list || []).forEach(d => {
       const g = d.gate || 'Uncategorized';
       if (d.status === 'Approved' || d.status === 'Submitted') {
         (have[g] ||= new Set()).add(norm(d.title));
@@ -116,92 +139,91 @@
     return have;
   }
 
-  function synthesizeMissing(list){
+  // Compare the list of delivered items against the required list to find what's missing
+  function synthesizeMissing(list) {
     const have = deliveredIndex(list);
     const out = [];
-    Object.entries(REQUIRED_BY_GATE).forEach(([gate, req])=>{
-      if (gate === 'PreconstructionRequired') return;
-      (req||[]).forEach(title=>{
+    Object.entries(REQUIRED_BY_GATE).forEach(([gate, req]) => {
+      (req || []).forEach(title => {
         const got = have[gate] && have[gate].has(norm(title));
         if (!got) {
-          out.push({
-            title, gate, status: 'Missing', assignees: [],
-            url: ''
-          });
+          out.push({ title, gate, status: 'Missing', assignees: [], url: '' });
         }
       });
     });
     return out;
   }
 
-  function byGate(list){ const m={}; list.forEach(d=>{ const g=d.gate||'Uncategorized'; (m[g] ||= []).push(d); }); return m; }
-  function byStatus(list){ const m={Missing:[],Submitted:[],Rejected:[],Approved:[]}; list.forEach(d=>{ const s=STATUS_ORDER.includes(d.status)?d.status:'Missing'; m[s].push(d); }); return m; }
-  function counts(list){ const c={total:list.length,Approved:0,Submitted:0,Missing:0,Rejected:0}; list.forEach(d=> c[d.status]=(c[d.status]||0)+1 ); return c; }
-  function matchQuery(d,q){ if(!q)return true; const t=(d.title||'').toLowerCase(); const owners=(d.assignees||[]).join(' ').toLowerCase(); return t.includes(q)||owners.includes(q); }
+  // --- Grouping and Utility Functions ---
+  const byGate = (list) => list.reduce((m, d) => { const g = d.gate || 'Uncategorized'; (m[g] ||= []).push(d); return m; }, {});
+  const byStatus = (list) => list.reduce((m, d) => { const s = STATUS_ORDER.includes(d.status) ? d.status : 'Missing'; m[s].push(d); return m; }, { Missing: [], Submitted: [], Rejected: [], Approved: [] });
+  const counts = (list) => list.reduce((c, d) => { c[d.status] = (c[d.status] || 0) + 1; c.total++; return c; }, { total: 0, Approved: 0, Submitted: 0, Missing: 0, Rejected: 0 });
+  const matchQuery = (d, q) => { if (!q) return true; const t = (d.title || '').toLowerCase(); const owners = (d.assignees || []).join(' ').toLowerCase(); return t.includes(q) || owners.includes(q); };
 
-  function gateHeader(g, items){
+  // --- HTML Render Functions ---
+  function gateHeader(g, items) {
     const c = counts(items);
+    const progress = c.total > 0 ? Math.round((c.Approved / c.total) * 100) : 0;
     return `
-      <div class="flex items-end justify-between mb-3">
-        <div>
-          <h2 class="text-xl font-black">${g}</h2>
-          <p class="text-xs text-slate-500">
-            Required: ${c.total}
-            • Approved: ${c.Approved}
-            • Submitted: ${c.Submitted}
-            • Missing: ${c.Missing}
-            • Rejected: ${c.Rejected}
-          </p>
+      <div class="mb-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold">${g}</h2>
+          <span class="text-sm font-mono text-slate-400">${c.Approved} / ${c.total} Approved</span>
         </div>
-        <div class="text-xs text-slate-500">Last updated: ${new Date().toLocaleString()}</div>
+        <div class="mt-2 h-1.5 w-full bg-slate-800 rounded-full">
+            <div class="h-1.5 rounded-full ${progress === 100 ? 'bg-green-500' : 'bg-blue-600'}" style="width: ${progress}%"></div>
+        </div>
       </div>
     `;
   }
 
-  function itemCard(d){
+  function itemCard(d) {
     const owners = (d.assignees && d.assignees.length) ? d.assignees.join(', ') : '—';
     const badgeClass = 'badge badge-' + (STATUS_ORDER.includes(d.status) ? d.status : 'Missing');
-    return `
-      <a href="${d.url}" target="_blank" class="card-item block">
+    const cardContent = `
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="font-bold truncate">${d.title}</p>
+            <p class="font-semibold text-sm text-slate-200 truncate">${d.title}</p>
             <p class="text-xs text-slate-500 mt-1">Assignees: ${owners}</p>
           </div>
           <span class="${badgeClass}">${d.status || 'Missing'}</span>
         </div>
-      </a>
     `;
+    return d.url 
+      ? `<a href="${d.url}" target="_blank" class="deliverable-card block">${cardContent}</a>`
+      : `<div class="deliverable-card">${cardContent}</div>`;
   }
 
-  function column(title, items){
+  function column(title, items) {
     return `
-      <div class="col p-3">
-        <div class="flex items-center justify-between mb-2">
-          <p class="text-xs font-bold text-slate-600">${title}</p>
-          <span class="text-[10px] text-slate-500">${items.length}</span>
+      <div class="kanban-col p-3 flex-1">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">${title}</p>
+          <span class="text-xs font-mono text-slate-500 bg-slate-800 rounded-full px-2 py-0.5">${items.length}</span>
         </div>
         <div class="space-y-2">
-          ${items.map(itemCard).join('')}
+          ${items.map(itemCard).join('') || `<div class="text-center text-xs text-slate-600 py-4">No items</div>`}
         </div>
       </div>
     `;
   }
 
-  function setOwnerFilter(v){
+  function setOwnerFilter(v) {
     ownerFilter = (v || '').toLowerCase();
-    document.querySelectorAll('#ownerChips [data-owner]').forEach(btn=>{
+    document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
       btn.classList.toggle('active', (btn.dataset.owner || '').toLowerCase() === ownerFilter);
     });
     render();
   }
 
-  function render(){
+  // --- Main Render Function ---
+  function render() {
     const q = document.getElementById('q').value.trim().toLowerCase();
     const gateSel = document.getElementById('gateFilter').value;
     let list = (dataCache.deliverables || []).slice();
     list = list.concat(synthesizeMissing(list));
 
+    // Apply filters
     if (q) list = list.filter(d => matchQuery(d, q));
     if (gateSel) list = list.filter(d => (d.gate || 'Uncategorized') === gateSel);
     if (ownerFilter) {
@@ -210,12 +232,12 @@
     }
 
     const grouped = byGate(list);
-    const gates = Object.keys(grouped).sort((a,b)=> a.localeCompare(b));
+    const gates = Object.keys(grouped).sort();
     const root = document.getElementById('root');
-    root.innerHTML = '';
+    root.innerHTML = ''; // Clear previous content
 
-    if (gates.length === 0){
-      root.innerHTML = `<div class="text-slate-500 text-sm">No deliverables match your filter.</div>`;
+    if (gates.length === 0) {
+      root.innerHTML = `<div class="card text-center py-12"><p class="text-slate-500 text-sm">No deliverables match your filters.</p></div>`;
       return;
     }
 
@@ -223,10 +245,10 @@
       const items = grouped[gate];
       const statusGroups = byStatus(items);
       const board = `
-        <section>
+        <section class="card p-4 sm:p-6">
           ${gateHeader(gate, items)}
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            ${STATUS_ORDER.map(s => column(STATUS_TITLES[s], statusGroups[s])).join('')}
+          <div class="flex flex-col md:flex-row gap-4">
+            ${STATUS_ORDER.map(s => column(s, statusGroups[s])).join('')}
           </div>
         </section>
       `;
@@ -234,35 +256,44 @@
     });
   }
 
-  async function load(){
-    const res = await fetch('/.netlify/functions/proxy');
-    if (!res.ok) throw new Error('Failed to load data');
-    dataCache = await res.json();
+  // --- Load and Initialize ---
+  async function load() {
+    try {
+      const res = await fetch('/.netlify/functions/proxy');
+      if (!res.ok) throw new Error('Failed to load data from the server');
+      dataCache = await res.json();
+      
+      document.getElementById('loader').style.display = 'none';
 
-    const gates = Array.from(new Set((dataCache.deliverables || []).map(d => d.gate || 'Uncategorized'))).sort();
-    const sel = document.getElementById('gateFilter');
-    sel.innerHTML = `<option value="">All gates</option>`;
-    gates.forEach(g => sel.insertAdjacentHTML('beforeend', `<option>${g}</option>`));
+      // Populate gate filter dropdown
+      const gates = Array.from(new Set((dataCache.deliverables || []).map(d => d.gate || 'Uncategorized'))).sort();
+      const sel = document.getElementById('gateFilter');
+      gates.forEach(g => sel.insertAdjacentHTML('beforeend', `<option value="${g}">${g}</option>`));
 
-    document.querySelectorAll('#ownerChips [data-owner]').forEach(btn=>{
-      btn.addEventListener('click', ()=> setOwnerFilter(btn.dataset.owner));
-    });
+      // Check URL for pre-selected filters
+      const urlParams = new URLSearchParams(location.search);
+      const urlGate = urlParams.get('gate');
+      if (urlGate && gates.includes(urlGate)) { sel.value = urlGate; }
 
-    const urlGate = new URLSearchParams(location.search).get('gate');
-    if (urlGate && gates.includes(urlGate)) { sel.value = urlGate; }
+      const urlOwner = urlParams.get('owner');
+      if (urlOwner) setOwnerFilter(urlOwner);
 
-    const urlOwner = new URLSearchParams(location.search).get('owner');
-    if (urlOwner) setOwnerFilter(urlOwner);
-
-    render();
+      render();
+    } catch (err) {
+      document.getElementById('root').innerHTML = `<div class="card bg-red-900/50 border-red-700 text-red-200 p-6 text-center"><p class="font-bold">Error Loading Data</p><p class="text-sm mt-1">${err.message}</p></div>`;
+    }
   }
-
+  
+  // --- Event Listeners ---
   document.getElementById('q').addEventListener('input', render);
   document.getElementById('gateFilter').addEventListener('change', render);
-
-  load().catch(err=>{
-    document.getElementById('root').innerHTML = `<div class="text-rose-600 text-sm">Error: ${err.message}</div>`;
+  document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
+    btn.addEventListener('click', () => setOwnerFilter(btn.dataset.owner));
   });
+
+  load();
   </script>
 </body>
 </html>
+
+
