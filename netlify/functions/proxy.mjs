@@ -1,8 +1,7 @@
 /**
- * JOOBIN Renovation Hub Proxy v6.8.0
- * Patched: Implemented robust matching for budget and deliverables.
- * - Budget calculation now uses a reliable helper function to prevent silent failures.
- * - Deliverable progress matching is now case-insensitive to handle minor data inconsistencies.
+ * JOOBIN Renovation Hub Proxy v7.0.0
+ * Finalized: Corrected file extension to .mjs and confirmed ES Module syntax.
+ * This version is the definitive backend code, ensuring compatibility with modern serverless environments.
  */
 
 const {
@@ -83,7 +82,7 @@ async function queryNotionDB(dbId, filter = {}) {
     if (!res.ok) {
       const errText = await res.text();
       console.error(`Notion API error: ${res.status}`, errText);
-      throw new Error(`Notion API error: ${res.status}`);
+      throw new Error(`Notion API error: ${res.status}: ${errText}`);
     }
     return await res.json();
   } catch (error) {
@@ -102,7 +101,11 @@ async function callGemini(prompt) {
       contents: [{ parts: [{ text: prompt }] }],
     }),
   });
-  if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
+  if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Gemini API error: ${res.status}`, errText);
+      throw new Error(`Gemini API error: ${res.status}: ${errText}`);
+  }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
@@ -119,7 +122,10 @@ function extractText(prop) {
   if (prop.type === 'status' && prop.status?.name) return prop.status.name;
   if (prop.type === 'number' && typeof prop.number === 'number') return prop.number;
   if (prop.type === 'date' && prop.date?.start) return prop.date.start;
-  if (prop.type === 'formula' && prop.formula?.type === 'number') return prop.formula.number;
+  if (prop.type === 'formula') {
+      if (prop.formula?.type === 'number') return prop.formula.number;
+      if (prop.formula?.type === 'string') return prop.formula.string;
+  }
   return '';
 }
 
@@ -156,10 +162,6 @@ export const handler = async (event) => {
       const paymentPages = paymentsData.results || [];
       
       const now = new Date();
-
-      // === Deliverables & Gates (Calculated from single source of truth) ===
-      const allRequiredDeliverables = Object.values(REQUIRED_BY_GATE).flat();
-      const deliverablesTotal = allRequiredDeliverables.length;
       
       const processedDeliverables = deliverablePages.map(p => ({
           title: extractText(getProp(p, 'Name', 'Deliverable')),
@@ -169,21 +171,41 @@ export const handler = async (event) => {
           url: p.url,
       }));
 
-      const deliverablesApproved = processedDeliverables.filter(d => norm(d.status) === 'approved').length;
+      // Augment processedDeliverables with missing items
+      const existingDeliverableTitles = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.title}`)));
+      const allDeliverablesIncludingMissing = [...processedDeliverables];
 
-      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
-          const approvedCount = requiredDocs.filter(reqTitle => 
-              processedDeliverables.some(d => d.gate === gateName && norm(d.title) === norm(reqTitle) && norm(d.status) === 'approved')
-          ).length;
-          
-          return {
-              gate: gateName,
-              total: requiredDocs.length,
-              approved: approvedCount,
-              gateApprovalRate: requiredDocs.length > 0 ? approvedCount / requiredDocs.length : 0,
-          };
+      Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
+          requiredDocs.forEach(requiredTitle => {
+              if (!existingDeliverableTitles.has(norm(`${gateName}|${requiredTitle}`))) {
+                  allDeliverablesIncludingMissing.push({
+                      title: requiredTitle,
+                      gate: gateName,
+                      status: 'Missing',
+                      assignees: [],
+                      url: '#'
+                  });
+              }
+          });
       });
 
+      const deliverablesTotal = allDeliverablesIncludingMissing.length;
+      const deliverablesApproved = allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length;
+
+      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
+          const approvedCount = allDeliverablesIncludingMissing.filter(d => 
+              d.gate === gateName && requiredDocs.some(reqTitle => norm(d.title) === norm(reqTitle)) && norm(d.status) === 'approved'
+          ).length;
+          
+          const gateDeliverablesCount = requiredDocs.length;
+
+          return {
+              gate: gateName,
+              total: gateDeliverablesCount,
+              approved: approvedCount,
+              gateApprovalRate: gateDeliverablesCount > 0 ? approvedCount / gateDeliverablesCount : 0,
+          };
+      }).sort((a, b) => a.gate.localeCompare(b.gate));
 
       // === KPIs ===
       const budgetMYR = budgetPages.reduce((sum, p) => {
@@ -210,7 +232,6 @@ export const handler = async (event) => {
         })
         .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
 
-      // ... (rest of the handler remains the same)
       // === Payments Schedule ===
       const upcomingPayments = paymentPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
@@ -266,34 +287,38 @@ export const handler = async (event) => {
 
       // Payment Forecast (4 months)
       const forecastMonths = [];
-      const outstandingPayments = paymentPages.filter(p =>
+      const outstandingAndOverduePayments = paymentPages.filter(p =>
         ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status')))
       );
+      
       const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const overdueAndUnscheduledAmount = outstandingPayments
+      const cumulativeUnscheduledOverdue = outstandingAndOverduePayments
         .filter(p => {
           const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
-          if (!dueDate) return true;
-          return new Date(dueDate) < firstMonthDate;
+          return !dueDate || new Date(dueDate) < firstMonthDate;
         })
         .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
 
       for (let i = 0; i < 4; i++) {
         const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const monthKey = monthDate.toISOString().slice(0, 7);
+        const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
         const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
         
-        const monthScheduledAmount = outstandingPayments
-            .filter(p => (extractText(getProp(p, 'DueDate', 'Due Date')) || '').startsWith(monthKey))
-            .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
-
-        let totalAmount = monthScheduledAmount;
+        let totalAmountForMonth = outstandingAndOverduePayments
+          .filter(p => {
+            const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+            if (!dueDate) return false;
+            const paymentDate = new Date(dueDate);
+            return paymentDate >= monthDate && paymentDate < nextMonthDate;
+          })
+          .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+        
         if (i === 0) {
-            totalAmount += overdueAndUnscheduledAmount;
+            totalAmountForMonth += cumulativeUnscheduledOverdue;
         }
         
-        forecastMonths.push({ month: monthName, totalAmount });
+        forecastMonths.push({ month: monthName, totalAmount: totalAmountForMonth });
       }
 
       // === Top Vendors, Milestones, etc. ===
@@ -339,7 +364,7 @@ export const handler = async (event) => {
         gates,
         topVendors,
         milestones,
-        deliverables: processedDeliverables,
+        deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: {
           upcoming: upcomingPayments,
           overdue: overduePayments,

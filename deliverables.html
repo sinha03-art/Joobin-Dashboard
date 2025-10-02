@@ -20,7 +20,7 @@
   html,body { height:100% }
   body { font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--ink); }
   .card { background:var(--panel); border:1px solid var(--border); border-radius:.75rem; }
-  .col { background:var(--panel); border:1px dashed var(--border); border-radius:.75rem; min-height: 180px; }
+  .col { background:var(--panel); border:1px solid var(--border); border-radius:.75rem; min-height: 180px; }
   .badge { font-size:.7rem; padding:.15rem .45rem; border-radius:999px; font-weight:600 }
   .badge-Approved { background:#059669; color:#d1fae5 }
   .badge-Submitted { background:#d97706; color:#fef3c7 }
@@ -52,8 +52,9 @@
         <div class="flex gap-2" id="ownerChips">
           <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800" data-owner="solomon">Solomon</button>
           <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800" data-owner="harminder">Harminder</button>
+          <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800 active" data-owner="">All</button>
         </div>
-        <a href="https://www.notion.so/..." target="_blank" rel="noopener noreferrer"
+        <a href="https://www.notion.so/26d5a80cd0678017bf64dd3c6a3d9946" target="_blank" rel="noopener noreferrer"
            class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">Upload</a>
       </div>
     </div>
@@ -69,7 +70,7 @@
 
   function norm(s){ return String(s||'').trim().toLowerCase(); }
 
-  // Logic to synthesize missing deliverables now happens on backend
+  // Logic to synthesize missing deliverables now happens on backend (proxy.mjs)
   function byGate(list){ const m={}; list.forEach(d=>{ const g=d.gate||'Uncategorized'; (m[g] ||= []).push(d); }); return m; }
   function byStatus(list){ const m={Missing:[],Submitted:[],Rejected:[],Approved:[]}; list.forEach(d=>{ const s=STATUS_ORDER.includes(d.status)?d.status:'Missing'; m[s].push(d); }); return m; }
   function counts(list){ const c={total:list.length,Approved:0,Submitted:0,Missing:0,Rejected:0}; list.forEach(d=> c[d.status]=(c[d.status]||0)+1 ); return c; }
@@ -137,17 +138,9 @@
     if (!dataCache) return;
     const q = document.getElementById('q').value.trim().toLowerCase();
     const gateSel = document.getElementById('gateFilter').value;
-    let list = (dataCache.deliverables || []).slice();
+    let list = (dataCache.deliverables || []).slice(); // This now includes 'Missing' items from backend
     
-    // Synthesize missing items on the client side for rendering purposes only
-    const presentDeliverables = new Set(list.map(d => `${d.gate}|${d.title}`));
-    (dataCache.gates || []).forEach(gateInfo => {
-        const gateName = gateInfo.gate;
-        // This requires REQUIRED_BY_GATE to be passed from backend if we want to show missing items
-        // For now, we only show what's present.
-    });
-
-
+    // Filtering logic
     if (q) list = list.filter(d => matchQuery(d, q));
     if (gateSel) list = list.filter(d => (d.gate || 'Uncategorized') === gateSel);
     if (ownerFilter) {
@@ -167,8 +160,8 @@
     }
 
     gatesToRender.forEach(gateInfo => {
-      const items = grouped[gateInfo.gate] || [];
-      const statusGroups = byStatus(items);
+      const itemsForThisGate = grouped[gateInfo.gate] || [];
+      const statusGroups = byStatus(itemsForThisGate);
       const board = `
         <section>
           ${gateHeader(gateInfo.gate, gateInfo)}
@@ -186,29 +179,31 @@
       const res = await fetch('/.netlify/functions/proxy');
       if (!res.ok) throw new Error(`Failed to load data: ${res.statusText}`);
       dataCache = await res.json();
-      console.log("Loaded data:", dataCache);
 
       document.getElementById('loader').style.display = 'none';
 
-      const gates = (dataCache.gates || []).map(g => g.gate).sort();
+      const gatesFromData = (dataCache.gates || []).map(g => g.gate).sort();
       const sel = document.getElementById('gateFilter');
       sel.innerHTML = `<option value="">All gates</option>`;
-      gates.forEach(g => sel.insertAdjacentHTML('beforeend', `<option>${g}</option>`));
-
-      document.querySelectorAll('#ownerChips [data-owner]').forEach(btn=>{
-        btn.addEventListener('click', ()=> setOwnerFileter(btn.dataset.owner));
+      gatesFromData.forEach(g => sel.insertAdjacentHTML('beforeend', `<option>${g}</option>`));
+      
+      // *** FIX: Correctly add event listeners ***
+      document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
+        btn.addEventListener('click', () => setOwnerFilter(btn.dataset.owner));
       });
 
-      const urlParams = new URLSearchParams(location.search);
-      const urlGate = urlParams.get('gate');
-      if (urlGate && gates.includes(urlGate)) { sel.value = urlGate; }
-      
-      const urlOwner = urlParams.get('owner');
+      const urlGate = new URLSearchParams(location.search).get('gate');
+      if (urlGate && gatesFromData.includes(urlGate)) { sel.value = urlGate; }
+
+      const urlOwner = new URLSearchParams(location.search).get('owner');
       if (urlOwner) setOwnerFilter(urlOwner);
 
       render();
     } catch(err) {
-      document.getElementById('loader').innerHTML = `<div class="text-red-500 text-sm">Error: ${err.message}</div>`;
+        console.error("Load error:", err);
+        const root = document.getElementById('root');
+        root.innerHTML = `<div class="text-rose-400 text-sm text-center py-8">Error: ${err.message}. Check console for details.</div>`;
+        document.getElementById('loader').style.display = 'none';
     }
   }
 
