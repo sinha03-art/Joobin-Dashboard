@@ -1,7 +1,8 @@
 /**
- * JOOBIN Renovation Hub Proxy v6.7.1
- * Patched: Corrected deliverable title mapping. The backend now prioritizes the 'Name' 
- * property from Notion to prevent incorrect data (like assignees) from appearing as the title.
+ * JOOBIN Renovation Hub Proxy v6.8.0
+ * Patched: Implemented robust matching for budget and deliverables.
+ * - Budget calculation now uses a reliable helper function to prevent silent failures.
+ * - Deliverable progress matching is now case-insensitive to handle minor data inconsistencies.
  */
 
 const {
@@ -68,6 +69,9 @@ const notionHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
+// Helper to normalize strings for reliable comparison
+const norm = (s) => String(s || '').trim().toLowerCase();
+
 async function queryNotionDB(dbId, filter = {}) {
   const url = `https://api.notion.com/v1/databases/${dbId}/query`;
   try {
@@ -115,7 +119,6 @@ function extractText(prop) {
   if (prop.type === 'status' && prop.status?.name) return prop.status.name;
   if (prop.type === 'number' && typeof prop.number === 'number') return prop.number;
   if (prop.type === 'date' && prop.date?.start) return prop.date.start;
-  // This is the specific fix for reading formula results
   if (prop.type === 'formula' && prop.formula?.type === 'number') return prop.formula.number;
   return '';
 }
@@ -159,18 +162,18 @@ export const handler = async (event) => {
       const deliverablesTotal = allRequiredDeliverables.length;
       
       const processedDeliverables = deliverablePages.map(p => ({
-          title: extractText(getProp(p, 'Name', 'Deliverable')), // FIX: Prioritize 'Name' property for the title
+          title: extractText(getProp(p, 'Name', 'Deliverable')),
           gate: extractText(getProp(p, 'Gate', 'Gate')),
           status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
           assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
           url: p.url,
       }));
 
-      const deliverablesApproved = processedDeliverables.filter(d => d.status === 'Approved').length;
+      const deliverablesApproved = processedDeliverables.filter(d => norm(d.status) === 'approved').length;
 
       const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
           const approvedCount = requiredDocs.filter(reqTitle => 
-              processedDeliverables.some(d => d.gate === gateName && d.title === reqTitle && d.status === 'Approved')
+              processedDeliverables.some(d => d.gate === gateName && norm(d.title) === norm(reqTitle) && norm(d.status) === 'approved')
           ).length;
           
           return {
@@ -183,9 +186,8 @@ export const handler = async (event) => {
 
 
       // === KPIs ===
-      // Specific fix for budget calculation
       const budgetMYR = budgetPages.reduce((sum, p) => {
-          const prop = p.properties?.['Subtotal (Formula)'];
+          const prop = getProp(p, 'Subtotal (Formula)', 'Subtotal');
           const subtotal = extractText(prop);
           return sum + (typeof subtotal === 'number' ? subtotal : 0);
       }, 0);
