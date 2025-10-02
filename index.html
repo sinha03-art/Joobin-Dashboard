@@ -1,9 +1,11 @@
+<!-- JOOBIN Dashboard v6.6.0 - 2025-10-02 -->
 <!DOCTYPE html>
+<html lang="en"><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Project Dashboard</title>
+  <title>JOOBIN Command Center</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏗️%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,100 +13,191 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --bg: #0f1723; --panel: #1a2332; --border: #2a3544; --text: #e5e7eb; --muted: #9ca3af; --brand: #e11d48; }
+    :root {
+      --bg: #0f1723;
+      --panel: #1a2332;
+      --border: #2a3544;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --brand: #e11d48;
+      --neon: #06b6d4;
+    }
+    
     html, body { height: 100%; margin: 0; padding: 0; }
-    body { font-family: "Lato", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
-    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; }
-    .metric-value { font-size: 2rem; font-weight: 900; line-height: 1; }
-    .metric-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.5rem; }
-    .alert-item { border-left: 3px solid var(--brand); padding-left: 0.75rem; margin-bottom: 0.75rem; }
-    .vendor-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
-    .vendor-row:last-child { border-bottom: none; }
-    .badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 999px; font-weight: 700; }
+    body {
+      font-family: "Lato", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+    
+    .neon-header {
+      color: var(--neon);
+      text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+      font-weight: 900;
+    }
+    
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0.5; }
+    }
+    
+    .blink { animation: blink 2s infinite; }
+    
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.5rem;
+    }
+    
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    
     .badge-red { background: #fee2e2; color: #991b1b; }
     .badge-yellow { background: #fef3c7; color: #92400e; }
     .badge-green { background: #d1fae5; color: #065f46; }
-    #summary { line-height: 1.6; }
-    #summary h3 { font-size: 1rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
-    #summary ul { margin: 0.5rem 0; padding-left: 1.5rem; }
-    #summary li { margin: 0.25rem 0; }
-    #loading { text-align: center; padding: 2rem; color: var(--muted); }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    
+    .payment-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    
+    .payment-row:last-child { border-bottom: none; }
+    
+    .separator {
+      height: 1px;
+      background: var(--border);
+      margin: 1rem 0;
+    }
   </style>
 </head>
 <body class="flex">
-  <aside class="w-80 border-r border-gray-700 p-6 overflow-y-auto">
-    <h1 class="text-2xl font-black mb-6">JOOBIN</h1>
-    <nav class="space-y-1 mb-8">
-      <a href="/" class="block px-3 py-2 rounded bg-gray-800 font-bold">Dashboard</a>
-      <a href="/deliverables.html" class="block px-3 py-2 rounded hover:bg-gray-800">Deliverables</a>
-    </nav>
-    <div class="space-y-6">
-      <div>
-        <h2 class="text-sm font-bold text-gray-400 mb-3">PROPERTY</h2>
-        <p class="text-sm leading-relaxed">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam<br>20250602</p>
-      </div>
-      <div>
-        <h2 class="text-sm font-bold text-gray-400 mb-3">ABOUT</h2>
-        <p class="text-xs leading-relaxed text-gray-400">JOOBIN Renovation Command Center is a full‑stack project control system for residential renovation. Powered by Notion databases, Netlify functions, and Gemini AI.</p>
-      </div>
-      <div>
-        <h2 class="text-sm font-bold text-gray-400 mb-3">DEMO</h2>
-        <div class="relative" style="padding-top: 56.25%;">
-          <iframe src="https://player.vimeo.com/video/1040002906?badge=0&autopause=0&player_id=0&app_id=58479" 
-                  frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write" 
-                  class="absolute top-0 left-0 w-full h-full rounded"
-                  title="JOOBIN Command Center Demo"></iframe>
-        </div>
-      </div>
+
+<!-- SIDEBAR -->
+<aside class="w-80 border-r border-gray-700 p-6 overflow-y-auto">
+  <h1 class="text-2xl font-black mb-6" style="color: #06b6d4;">JOOBIN</h1>
+  
+  <!-- Video -->
+  <div class="mb-6">
+    <div class="relative" style="padding-top: 56.25%;">
+      <iframe id="vimeoEmbed"
+        frameborder="0"
+        allow="autoplay; fullscreen; picture-in-picture"
+        class="absolute top-0 left-0 w-full h-full rounded"
+        title="Project Demo">
+      </iframe>
     </div>
-  </aside>
-  <main class="flex-1 overflow-y-auto p-6">
-    <div id="loading">Loading dashboard...</div>
-    <div id="app" style="display:none;">
-      <header class="mb-6">
-        <h2 class="text-3xl font-black">Project Dashboard</h2>
-        <p class="text-sm text-gray-400 mt-1">Live KPIs, alerts, cashflow, and gate progress</p>
-      </header>
-      <div id="goNoGoBanner" style="display:none;" class="card mb-6 flex items-center justify-between">
-        <div>
-          <div class="text-sm font-bold text-gray-400">PROJECT GO/NO-GO</div>
-          <div id="goNoGoMessage" class="text-lg font-bold mt-1"></div>
-        </div>
-        <div id="goNoGoChip"></div>
-      </div>
-      <section id="kpis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></section>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div class="card">
-          <h3 class="text-lg font-bold mb-4">🚨 Attention Board</h3>
-          <div id="alerts"></div>
-        </div>
-        <div class="card">
-          <h3 class="text-lg font-bold mb-4">🏆 Top 5 Vendors (by spend)</h3>
-          <div id="vendors"></div>
-        </div>
-      </div>
-      <div class="card mb-6">
-        <h3 class="text-lg font-bold mb-4">🎯 Gate Progress (Deliverables)</h3>
-        <div id="gates"></div>
-      </div>
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold">🤖 AI Summary</h3>
-          <button id="summarizeBtn" class="px-4 py-2 rounded bg-rose-600 text-white text-sm font-bold hover:bg-rose-700">Generate Summary</button>
-        </div>
-        <div id="summary" class="text-sm"></div>
-      </div>
+  </div>
+  
+  <!-- Property -->
+  <div class="mb-6">
+    <h2 class="text-sm font-bold text-gray-400 mb-3">PROPERTY</h2>
+    <p class="text-sm leading-relaxed">
+      House-4 @ Sri Suria<br>
+      Bukit Rimau, Shah Alam<br>
+      Completion: Q2 2026
+    </p>
+  </div>
+  
+  <!-- About -->
+  <div>
+    <h2 class="text-sm font-bold text-gray-400 mb-3">ABOUT</h2>
+    <p class="text-xs leading-relaxed text-gray-400">
+      Full-stack renovation control system powered by Notion databases, 
+      Netlify functions, and AI. Real-time tracking, gate-based delivery, 
+      and intelligent alerts.
+    </p>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="flex-1 overflow-y-auto p-6">
+  <div id="loading">Loading dashboard...</div>
+  
+  <div id="app" style="display:none;">
+    <!-- Header -->
+    <header class="mb-6">
+      <h2 class="text-3xl font-black">Command Center 🚀</h2>
+      <p class="text-sm text-gray-400 mt-1">Real-time project pulse</p>
+    </header>
+    
+    <!-- KPIs -->
+    <section id="kpis" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></section>
+    
+    <!-- Attention Board -->
+    <div class="card mb-6">
+      <h3 class="text-lg font-bold neon-header blink mb-4">⚠️ ATTENTION BOARD</h3>
+      <div id="attentionBoard"></div>
     </div>
-  </main>
-  <script>
+    
+    <!-- Gate Progress -->
+    <div class="card mb-6">
+      <h3 class="text-lg font-bold neon-header mb-4">🎯 Current Gate Progress</h3>
+      <div id="gateProgress"></div>
+    </div>
+    
+    <!-- Top Vendors -->
+    <div class="card mb-6">
+      <h3 class="text-lg font-bold neon-header mb-4">🏆 Top Vendors</h3>
+      <div id="topVendors"></div>
+    </div>
+    
+    <!-- Submit Documents Button -->
+    <div class="flex justify-center mb-6">
+      <a id="submitDocsBtn" 
+         href="#" 
+         target="_blank"
+         class="px-8 py-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-lg">
+        📤 Submit Documents
+      </a>
+    </div>
+  </div>
+</main>
+
+<script>
+// Configuration from environment (hardcoded for now, will read from backend)
+const VIMEO_VIDEO_ID = '1121406919';
+const DESIGNER_FORM_URL = '';
+
 let dataCache;
 
 async function load() {
   try {
+    // Set Vimeo video
+    document.getElementById('vimeoEmbed').src = `https://player.vimeo.com/video/${VIMEO_VIDEO_ID}?autoplay=1&loop=1&muted=1`;
+    
+    // Set form URL
+    document.getElementById('submitDocsBtn').href = DESIGNER_FORM_URL;
+    
+    // Load data
     const res = await fetch('/.netlify/functions/proxy');
     if (!res.ok) throw new Error('Failed to load data');
     dataCache = await res.json();
     console.log('✅ Data loaded:', dataCache);
+    
     render();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -115,129 +208,170 @@ async function load() {
 
 function render() {
   renderKPIs();
-  renderAlerts();
-  renderVendors();
-  renderGates();
+  renderAttentionBoard();
+  renderGateProgress();
+  renderTopVendors();
 }
 
 function renderKPIs() {
   const kpis = dataCache.kpis || {};
   const budget = kpis.budgetMYR || 1418996.10;
   const paid = kpis.paidMYR || 0;
-  const remaining = kpis.remainingMYR || (budget - paid);
-  const approved = kpis.deliverablesApproved || 0;
-  const total = kpis.deliverablesTotal || 0;
+  const pctUsed = budget > 0 ? ((paid / budget) * 100).toFixed(1) : 0;
   
   const container = document.getElementById('kpis');
   container.innerHTML = `
     <div class="card">
-      <div class="metric-value">RM ${budget.toLocaleString()}</div>
-      <div class="metric-label">Budget (MYR)</div>
+      <div class="metric-value">${pctUsed}%</div>
+      <div class="metric-label">Budget Used</div>
     </div>
     <div class="card">
       <div class="metric-value">RM ${Math.round(paid).toLocaleString()}</div>
-      <div class="metric-label">Paid to Date (MYR)</div>
+      <div class="metric-label">Paid to Date</div>
     </div>
     <div class="card">
-      <div class="metric-value">RM ${Math.round(remaining).toLocaleString()}</div>
-      <div class="metric-label">Remaining (MYR)</div>
-    </div>
-    <div class="card">
-      <div class="metric-value">${approved} / ${total}</div>
-      <div class="metric-label">Deliverables Complete</div>
+      <div class="metric-value">${kpis.deliverablesApproved || 0}/${kpis.deliverablesTotal || 0}</div>
+      <div class="metric-label">Docs Approved</div>
     </div>
   `;
 }
 
-function renderAlerts() {
+function renderAttentionBoard() {
   const paymentsSchedule = dataCache.paymentsSchedule || {};
   const overdue = paymentsSchedule.overdue || [];
+  const upcoming = paymentsSchedule.upcoming || [];
+  const forecast = paymentsSchedule.forecast || [];
   
-  const container = document.getElementById('alerts');
-  if (overdue.length === 0) {
-    container.innerHTML = '<p class="text-sm text-gray-400">No alerts</p>';
-    return;
+  const container = document.getElementById('attentionBoard');
+  let html = '';
+  
+  // OVERDUE Section
+  if (overdue.length > 0) {
+    html += '<div class="mb-4"><h4 class="text-sm font-bold text-red-400 mb-2">🚨 OVERDUE</h4>';
+    html += '<div class="payment-row" style="font-weight: 700; color: var(--muted); font-size: 0.75rem;">';
+    html += '<div>RECIPIENT</div><div>AMOUNT</div><div>DUE BY</div></div>';
+    
+    overdue.slice(0, 3).forEach(p => {
+      html += `
+        <div class="payment-row">
+          <div class="font-semibold">${p.vendor || 'Unknown'}</div>
+          <div class="text-red-400 font-bold">RM ${(p.amount || 0).toLocaleString()}</div>
+          <div class="text-gray-400">${p.dueDate || 'N/A'}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
   }
   
-  container.innerHTML = overdue.slice(0, 5).map(p => `
-    <div class="alert-item">
-      <div class="text-sm font-bold">${p.paymentFor || 'Payment'} - RM ${(p.amount || 0).toLocaleString()}</div>
-      <div class="text-xs text-gray-400 mt-1">${p.vendor || 'Unknown'} • Due: ${p.dueDate || 'N/A'}</div>
-    </div>
-  `).join('');
-}
-
-function renderVendors() {
-  const vendors = dataCache.topVendors || [];
-  const container = document.getElementById('vendors');
-  
-  if (vendors.length === 0) {
-    container.innerHTML = '<p class="text-sm text-gray-400">No vendor data</p>';
-    return;
+  // Separator
+  if (overdue.length > 0 && upcoming.length > 0) {
+    html += '<div class="separator"></div>';
   }
   
-  container.innerHTML = vendors.slice(0, 5).map((v, i) => `
-    <div class="vendor-row">
-      <div>
-        <div class="text-sm font-bold">${i + 1}. ${v.name || 'Unknown'}</div>
-        <div class="text-xs text-gray-400">${v.trade || '—'}</div>
-      </div>
-      <div class="text-sm font-bold">MYR ${(v.paid || 0).toLocaleString()}</div>
-    </div>
-  `).join('');
+  // UPCOMING Section
+  if (upcoming.length > 0) {
+    html += '<div class="mb-4"><h4 class="text-sm font-bold text-yellow-400 mb-2">📅 UPCOMING</h4>';
+    html += '<div class="payment-row" style="font-weight: 700; color: var(--muted); font-size: 0.75rem;">';
+    html += '<div>RECIPIENT</div><div>AMOUNT</div><div>DUE BY</div></div>';
+    
+    upcoming.slice(0, 3).forEach(p => {
+      html += `
+        <div class="payment-row">
+          <div class="font-semibold">${p.vendor || 'Unknown'}</div>
+          <div class="font-bold">RM ${(p.amount || 0).toLocaleString()}</div>
+          <div class="text-gray-400">${p.dueDate || 'N/A'}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  
+  // Separator
+  if ((overdue.length > 0 || upcoming.length > 0) && forecast.length > 0) {
+    html += '<div class="separator"></div>';
+  }
+  
+  // PAYMENT FORECAST Section
+  if (forecast.length > 0) {
+    html += '<div><h4 class="text-sm font-bold text-blue-400 mb-2">📊 PAYMENT FORECAST (Next 4 Months)</h4>';
+    
+    forecast.forEach(month => {
+      html += `
+        <div class="mb-3">
+          <div class="text-sm font-bold text-cyan-400 mb-1">${month.month}</div>
+          <div class="text-gray-400">RM ${(month.totalAmount || 0).toLocaleString()} • ${month.paymentCount} payment(s)</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  
+  if (html === '') {
+    html = '<p class="text-gray-400">✅ All clear!</p>';
+  }
+  
+  container.innerHTML = html;
 }
 
-function renderGates() {
+function renderGateProgress() {
   const gates = dataCache.gates || [];
-  const container = document.getElementById('gates');
+  const container = document.getElementById('gateProgress');
   
   if (gates.length === 0) {
-    container.innerHTML = '<p class="text-sm text-gray-400">No gate data</p>';
+    container.innerHTML = '<p class="text-gray-400">No gate data</p>';
     return;
   }
   
-  container.innerHTML = gates.map(g => {
-    const pct = g.total > 0 ? Math.round((g.approved / g.total) * 100) : 0;
-    return `
-      <div class="flex items-center justify-between py-2 border-b border-gray-700">
-        <div class="text-sm font-bold">${g.gate || g.id || 'Unknown'}</div>
-        <div class="flex items-center gap-3">
-          <div class="text-xs text-gray-400">${g.approved} / ${g.total}</div>
-          <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-            <div class="h-full bg-green-500" style="width: ${pct}%"></div>
-          </div>
-          <div class="text-xs font-bold w-10 text-right">${pct}%</div>
+  // Find current gate (first one that's not 100%)
+  const currentGate = gates.find(g => {
+    const pct = g.total > 0 ? (g.approved / g.total) * 100 : 0;
+    return pct < 100;
+  }) || gates[0];
+  
+  const pct = currentGate.total > 0 ? Math.round((currentGate.approved / currentGate.total) * 100) : 0;
+  
+  container.innerHTML = `
+    <div class="flex items-center gap-4">
+      <div class="flex-1">
+        <div class="text-lg font-bold mb-2">${currentGate.gate || currentGate.id || 'Unknown Gate'}</div>
+        <div class="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-500" style="width: ${pct}%"></div>
         </div>
+      </div>
+      <div class="text-3xl font-black" style="color: #06b6d4;">${pct}%</div>
+    </div>
+    <div class="text-xs text-gray-400 mt-2">${currentGate.approved} of ${currentGate.total} deliverables approved</div>
+  `;
+}
+
+function renderTopVendors() {
+  const vendors = dataCache.topVendors || [];
+  const container = document.getElementById('topVendors');
+  
+  if (vendors.length === 0) {
+    container.innerHTML = '<p class="text-gray-400">No vendor data</p>';
+    return;
+  }
+  
+  container.innerHTML = vendors.slice(0, 5).map((v, i) => {
+    const badges = [
+      '<span class="badge badge-blue">Rank #' + (i + 1) + '</span>'
+    ];
+    
+    return `
+      <div class="flex items-center justify-between py-3 border-b border-gray-700">
+        <div>
+          <div class="text-sm font-bold">${v.name || 'Unknown'}</div>
+          <div class="text-xs text-gray-400 mt-1">${badges.join(' ')}</div>
+        </div>
+        <div class="text-sm font-bold">RM ${(v.paid || 0).toLocaleString()}</div>
       </div>
     `;
   }).join('');
 }
 
-document.getElementById('summarizeBtn')?.addEventListener('click', async () => {
-  const btn = document.getElementById('summarizeBtn');
-  const summary = document.getElementById('summary');
-  btn.disabled = true;
-  btn.textContent = 'Generating...';
-  summary.innerHTML = '<p class="text-gray-400">Generating AI summary...</p>';
-  
-  try {
-    const res = await fetch('/.netlify/functions/proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dataCache)
-    });
-    if (!res.ok) throw new Error('Failed to generate summary');
-    const data = await res.json();
-    summary.innerHTML = data.summary || '<p class="text-gray-400">No summary available</p>';
-  } catch (err) {
-    summary.innerHTML = `<p class="text-rose-600">Error: ${err.message}</p>`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Generate Summary';
-  }
-});
-
 load();
 </script>
+
 </body>
-</html>v6.5.0
+</html>
