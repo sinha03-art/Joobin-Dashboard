@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,21 +9,39 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <style>
-    * { font-family: 'Lato', sans-serif; }
-    body { background: #0f172a; color: #e2e8f0; }
-    
-    @keyframes blink {
-      0%, 50%, 100% { opacity: 1; }
-      25%, 75% { opacity: 0.3; }
+    * {
+      font-family: 'Lato', sans-serif;
     }
-    .blink { animation: blink 2s infinite; }
-    
+
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    @keyframes blink {
+
+      0%,
+      50%,
+      100% {
+        opacity: 1;
+      }
+
+      25%,
+      75% {
+        opacity: 0.3;
+      }
+    }
+
+    .blink {
+      animation: blink 2s infinite;
+    }
+
     .neon-header {
       color: #06b6d4;
       text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
       font-weight: 900;
     }
-    
+
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -31,25 +50,36 @@
       font-weight: 700;
       text-transform: uppercase;
     }
-    
-    .badge-blocked { background: #dc2626; color: white; }
-    .badge-submitted { background: #f59e0b; color: white; }
-    .badge-pending { background: #6b7280; color: white; }
-    
+
+    .badge-blocked {
+      background: #dc2626;
+      color: white;
+    }
+
+    .badge-submitted {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .badge-pending {
+      background: #6b7280;
+      color: white;
+    }
+
     .card {
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 8px;
       padding: 16px;
     }
-    
+
     .progress-bar {
       height: 8px;
       background: #334155;
       border-radius: 4px;
       overflow: hidden;
     }
-    
+
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #06b6d4, #0891b2);
@@ -57,49 +87,49 @@
     }
   </style>
 </head>
+
 <body class="flex h-screen overflow-hidden">
 
   <!-- Sidebar -->
   <aside class="w-80 border-r border-gray-700 p-6 overflow-y-auto">
     <h1 class="text-2xl font-black mb-6 neon-header">JOOBIN</h1>
-    
+
     <!-- Video -->
     <div class="mb-6">
       <div class="relative" style="padding-top: 56.25%;">
-        <iframe 
-          src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479"
-          frameborder="0" 
-          allow="autoplay; fullscreen; picture-in-picture" 
-          class="absolute top-0 left-0 w-full h-full rounded"
-          title="Project Demo">
+        <iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479"
+          frameborder="0" allow="autoplay; fullscreen; picture-in-picture"
+          class="absolute top-0 left-0 w-full h-full rounded" title="Project Demo">
         </iframe>
       </div>
     </div>
-    
+
     <!-- Property -->
     <div class="mb-6">
       <h2 class="text-sm font-bold text-gray-400 mb-3">PROPERTY</h2>
       <p class="text-sm leading-relaxed">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam<br>Completion: Q2 2026</p>
     </div>
-    
+
     <!-- About -->
     <div>
       <h2 class="text-sm font-bold text-gray-400 mb-3">ABOUT</h2>
-      <p class="text-xs leading-relaxed text-gray-400">Full-stack renovation control system powered by Notion databases, Netlify functions, and AI. Real-time tracking, gate-based delivery, and intelligent alerts.</p>
+      <p class="text-xs leading-relaxed" style="color: #06b6d4; text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);">This
+        property is being reimagined from the ground up—blending structure, light, landscape, and livability into a
+        fully modernized private residence.</p>
     </div>
   </aside>
 
   <!-- Main Content -->
   <main class="flex-1 overflow-y-auto p-8">
-    
+
     <!-- Header -->
     <header class="mb-6">
       <h2 class="text-3xl font-black">Command Center 🚀</h2>
-      <p class="text-sm text-gray-400 mt-1">Real-time project pulse</p>
+      <p class="text-sm text-gray-400 mt-1">⏱️ 32 days to start • 🚨 MBSA Permit • 📐 3D Render</p>
     </header>
 
     <!-- KPI Cards -->
-    <div id="kpis" class="grid grid-cols-4 gap-4 mb-6"></div>
+    <div id="kpis" class="grid grid-cols-3 gap-4 mb-6"></div>
 
     <!-- Attention Board -->
     <div class="mb-6">
@@ -145,17 +175,17 @@
         // Fetch data
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
+
         dashboardData = await response.json();
         console.log('✅ Dashboard data loaded:', dashboardData);
-        
+
         // Render all sections
         renderKPIs(dashboardData);
         renderAttentionBoard(dashboardData);
         renderNextUp(dashboardData);
         renderGates(dashboardData);
         renderCharts(dashboardData);
-        
+
       } catch (error) {
         console.error('❌ Error loading dashboard:', error);
         document.querySelector('main').innerHTML = `
@@ -167,136 +197,56 @@
         `;
       }
     }
-
-    // Render KPIs (% Budget Used, no amounts)
     function renderKPIs(data) {
       const budget = data.kpis?.budgetMYR || 0;
       const paid = data.kpis?.paidMYR || 0;
-      const remaining = data.kpis?.remainingMYR || 0;
       const approved = data.kpis?.deliverablesApproved || 0;
       const total = data.kpis?.deliverablesTotal || 0;
-      
       const budgetUsedPct = budget > 0 ? Math.round((paid / budget) * 100) : 0;
-      const approvalPct = total > 0 ? Math.round((approved / total) * 100) : 0;
-      
-      const html = `
-        <div class="card">
-          <div class="text-xs text-gray-400 mb-1">BUDGET USED</div>
-          <div class="text-2xl font-black neon-header">${budgetUsedPct}%</div>
-          <div class="text-xs text-gray-400 mt-1">${formatMYR(paid)} / ${formatMYR(budget)}</div>
-        </div>
-        <div class="card">
-          <div class="text-xs text-gray-400 mb-1">REMAINING</div>
-          <div class="text-2xl font-black text-white">${formatMYR(remaining)}</div>
-        </div>
-        <div class="card">
-          <div class="text-xs text-gray-400 mb-1">APPROVALS</div>
-          <div class="text-2xl font-black text-white">${approvalPct}%</div>
-          <div class="text-xs text-gray-400 mt-1">${approved} / ${total}</div>
-        </div>
-        <div class="card">
-          <div class="text-xs text-gray-400 mb-1">GATES</div>
-          <div class="text-2xl font-black text-white">${data.gates?.filter(g => g.gateApprovalRate === 1).length || 0} / ${data.gates?.length || 0}</div>
-        </div>
-      `;
-      
+      const contingency = 150000;
+      const contingencyUsed = 0;
+      const html = `<div class="card"><div class="text-xs text-gray-400 mb-1">BUDGET USED</div><div class="text-xl font-black neon-header">${budgetUsedPct}% • ${formatMYR(paid)}</div><div class="text-xs text-gray-400 mt-1">of ${formatMYR(budget)}</div></div><div class="card"><div class="text-xs text-gray-400 mb-1">CONTINGENCY</div><div class="text-2xl font-black text-white">${formatMYR(contingency)}</div><div class="text-xs text-gray-400 mt-1">${formatMYR(contingencyUsed)} used</div></div><div class="card"><div class="text-xs text-gray-400 mb-1">GATES</div><div class="text-2xl font-black text-white">${data.gates?.filter(g => g.gateApprovalRate === 1).length || 0} / ${data.gates?.length || 0}</div><div class="text-xs text-gray-400 mt-1">${approved}/${total} docs</div></div>`;
       document.getElementById('kpis').innerHTML = html;
     }
-
-    // Render Attention Board (3 sections: Blocked, Submitted, Pending Action)
     function renderAttentionBoard(data) {
-      const deliverables = data.deliverables || [];
-      
-      const blocked = deliverables.filter(d => d.status === 'Blocked' || d.status === 'Changes Required');
-      const submitted = deliverables.filter(d => d.status === 'Submitted');
-      const pending = deliverables.filter(d => d.status === 'Pending' || d.status === 'In Progress');
-      
-      const sections = [
-        { title: 'BLOCKED', items: blocked, badge: 'badge-blocked', icon: '🚨' },
-        { title: 'SUBMITTED', items: submitted, badge: 'badge-submitted', icon: '📥' },
-        { title: 'PENDING ACTION', items: pending, badge: 'badge-pending', icon: '⏳' }
-      ];
-      
-      const html = sections.map(section => {
-        if (section.items.length === 0) return '';
-        
-        const items = section.items.slice(0, 3).map(item => 
-          `<div class="text-sm mb-1">${section.icon} ${item.title || item.id || 'Untitled'}</div>`
-        ).join('');
-        
-        const more = section.items.length > 3 ? 
-          `<div class="text-xs text-gray-400 mt-2">+${section.items.length - 3} more</div>` : '';
-        
-        return `
-          <div class="card mb-3">
-            <span class="badge ${section.badge}">${section.title}</span>
-            <div class="mt-3">${items}${more}</div>
-          </div>
-        `;
-      }).join('');
-      
-      document.getElementById('attentionBoard').innerHTML = html || 
-        '<div class="text-sm text-gray-400">✅ All clear!</div>';
+      const payments = data.paymentSchedule || {};
+      const overdue = payments.overdue || [];
+      let html = '<div class="card">';
+      if (overdue.length > 0) {
+        html += '<h4 class="text-sm font-bold text-red-400 mb-2">🚨 OVERDUE PAYMENTS</h4>';
+        overdue.slice(0, 3).forEach(p => {
+          html += `<div class="text-xs mb-1">${p.vendor} • RM ${p.amount.toLocaleString()} • ${p.dueDate}</div>`;
+        });
+        html += '<div class="border-t border-gray-700 my-3"></div>';
+      }
+      html += '<h4 class="text-sm font-bold text-gray-400 mb-3">📊 PAYMENT FORECAST (4 Months)</h4>';
+      const forecast = [{ month: 'Oct', amount: 35000, count: 3, color: '#06b6d4' }, { month: 'Nov', amount: 18000, count: 2, color: '#3b82f6' }, { month: 'Dec', amount: 52000, count: 4, color: '#a855f7' }, { month: 'Jan', amount: 12000, count: 1, color: '#22c55e' }];
+      forecast.forEach(f => {
+        const pct = Math.round((f.amount / 52000) * 100);
+        html += `<div class="text-xs mb-2"><div class="flex justify-between mb-1"><span>${f.month}</span><span>RM ${(f.amount / 1000).toFixed(0)}K • ${f.count}</span></div><div class="progress-bar"><div class="progress-fill" style="width: ${pct}%; background: ${f.color};"></div></div></div>`;
+      });
+      html += '</div>';
+      document.getElementById('attentionBoard').innerHTML = html;
     }
 
-    // Render Next Up (Option 1: Single narrow card with next incomplete gate)
     function renderNextUp(data) {
-      const gates = data.gates || [];
-      const nextGate = gates.find(g => g.gateApprovalRate < 1);
-      
-      if (!nextGate) {
-        document.getElementById('nextUp').innerHTML = 
-          '<div class="card text-center text-gray-400">🎉 All gates complete!</div>';
-        return;
-      }
-      
-      const progress = Math.round(nextGate.gateApprovalRate * 100);
-      const needed = nextGate.required - nextGate.approved;
-      
-      const html = `
-        <div class="card flex items-center justify-between">
-          <div class="flex-1">
-            <div class="text-sm font-bold mb-1">${nextGate.id}</div>
-            <div class="text-xs text-gray-400 mb-2">${needed} deliverable${needed !== 1 ? 's' : ''} needed</div>
-            <div class="progress-bar" style="width: 200px;">
-              <div class="progress-fill" style="width: ${progress}%;"></div>
-            </div>
-          </div>
-          <a href="${DESIGNER_FORM_URL}" target="_blank" 
-             class="px-4 py-2 rounded font-bold text-sm neon-header border border-cyan-500 hover:bg-cyan-900 transition">
-            📄 SUBMIT DOCUMENTS
-          </a>
-        </div>
-      `;
-      
+      const html = `<div class="card"><div class="text-sm font-bold mb-2">📅 Sat, Oct 5 • 10:00 AM</div><div class="text-base mb-3 font-bold">3D Presentation Review</div><div class="text-xs text-gray-400 mb-2">👥 HAM, Co-owner, Designer (FER)</div><div class="text-xs text-gray-400 mb-3">📋 Output: Approve ground & first floor renders</div><div class="text-xs" style="color: #f59e0b;">🚨 THEN: Release RM 11,349 payment to unblock architect</div></div>`;
       document.getElementById('nextUp').innerHTML = html;
     }
 
-    // Render Gate Progress
     function renderGates(data) {
       const gates = data.gates || [];
-      
-      const html = gates.map(gate => {
-        const progress = Math.round(gate.gateApprovalRate * 100);
-        const statusColor = progress === 100 ? 'text-green-400' : 
-                           progress >= 50 ? 'text-yellow-400' : 'text-red-400';
-        
-        return `
-          <div class="card mb-3">
-            <div class="flex justify-between items-center mb-2">
-              <span class="font-bold">${gate.id}</span>
-              <span class="${statusColor} text-sm">${progress}%</span>
-            </div>
-            <div class="text-xs text-gray-400 mb-2">${gate.approved} / ${gate.required} approved</div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: ${progress}%;"></div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      
-      document.getElementById('gates').innerHTML = html || 
-        '<div class="text-sm text-gray-400">No gates configured</div>';
+      const currentGate = gates.find(g => g.gateApprovalRate > 0 && g.gateApprovalRate < 1);
+      const nextGate = gates.find(g => g.gateApprovalRate === 0);
+      let html = '';
+      if (currentGate) {
+        const progress = Math.round(currentGate.gateApprovalRate * 100);
+        html += `<div class="card mb-3"><div class="text-xs text-gray-400 mb-1">CURRENT</div><div class="font-bold mb-2">${currentGate.id}</div><div class="progress-bar mb-2"><div class="progress-fill" style="width: ${progress}%;"></div></div><div class="text-xs text-gray-400">${currentGate.approved} of ${currentGate.required} deliverables • ${currentGate.required - currentGate.approved} remaining</div></div>`;
+      }
+      if (nextGate) {
+        html += `<div class="card"><div class="text-xs text-gray-400 mb-1">NEXT</div><div class="font-bold mb-2">${nextGate.id}</div><div class="progress-bar mb-2"><div class="progress-fill" style="width: 0%;"></div></div><div class="text-xs text-gray-400">Ready to start when current gate complete</div></div>`;
+      }
+      document.getElementById('gates').innerHTML = html || '<div class="text-sm text-gray-400">All gates complete!</div>';
     }
 
     // Render Charts
@@ -334,13 +284,13 @@
           }
         });
       }
-      
+
       // Payment Forecast Chart
       const forecastCtx = document.getElementById('forecastChart');
       if (forecastCtx) {
         const payments = data.paymentSchedule || {};
         const upcoming = payments.upcoming || [];
-        
+
         new Chart(forecastCtx, {
           type: 'bar',
           data: {
@@ -356,12 +306,12 @@
             maintainAspectRatio: true,
             plugins: { legend: { labels: { color: '#e2e8f0' } } },
             scales: {
-              y: { 
-                ticks: { 
+              y: {
+                ticks: {
                   color: '#94a3b8',
-                  callback: value => 'RM ' + (value/1000).toFixed(0) + 'k'
-                }, 
-                grid: { color: '#334155' } 
+                  callback: value => 'RM ' + (value / 1000).toFixed(0) + 'k'
+                },
+                grid: { color: '#334155' }
               },
               x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
             }
@@ -380,4 +330,5 @@
   </script>
 
 </body>
+
 </html>
