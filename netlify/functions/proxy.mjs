@@ -1,7 +1,7 @@
 /**
- * JOOBIN Renovation Hub Proxy v6.6.0
- * Patched: Centralized required deliverables list in backend to ensure
- * accurate KPI and gate progress calculations, syncing dashboard with deliverables board.
+ * JOOBIN Renovation Hub Proxy v6.7.1
+ * Patched: Corrected deliverable title mapping. The backend now prioritizes the 'Name' 
+ * property from Notion to prevent incorrect data (like assignees) from appearing as the title.
  */
 
 const {
@@ -115,7 +115,8 @@ function extractText(prop) {
   if (prop.type === 'status' && prop.status?.name) return prop.status.name;
   if (prop.type === 'number' && typeof prop.number === 'number') return prop.number;
   if (prop.type === 'date' && prop.date?.start) return prop.date.start;
-  if (prop.type === 'formula' && prop.formula?.type === 'number' && typeof prop.formula.number === 'number') return prop.formula.number;
+  // This is the specific fix for reading formula results
+  if (prop.type === 'formula' && prop.formula?.type === 'number') return prop.formula.number;
   return '';
 }
 
@@ -158,7 +159,7 @@ export const handler = async (event) => {
       const deliverablesTotal = allRequiredDeliverables.length;
       
       const processedDeliverables = deliverablePages.map(p => ({
-          title: extractText(getProp(p, 'Deliverable', 'Name')),
+          title: extractText(getProp(p, 'Name', 'Deliverable')), // FIX: Prioritize 'Name' property for the title
           gate: extractText(getProp(p, 'Gate', 'Gate')),
           status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
           assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
@@ -182,7 +183,13 @@ export const handler = async (event) => {
 
 
       // === KPIs ===
-      const budgetMYR = budgetPages.reduce((sum, p) => sum + (extractText(getProp(p, 'Subtotal (Formula)', 'Subtotal')) || 0), 0);
+      // Specific fix for budget calculation
+      const budgetMYR = budgetPages.reduce((sum, p) => {
+          const prop = p.properties?.['Subtotal (Formula)'];
+          const subtotal = extractText(prop);
+          return sum + (typeof subtotal === 'number' ? subtotal : 0);
+      }, 0);
+
       const paidMYR = actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
         .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0), 0);
@@ -201,7 +208,7 @@ export const handler = async (event) => {
         })
         .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
 
-      // ... (rest of the handler remains largely the same)
+      // ... (rest of the handler remains the same)
       // === Payments Schedule ===
       const upcomingPayments = paymentPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
@@ -330,7 +337,7 @@ export const handler = async (event) => {
         gates,
         topVendors,
         milestones,
-        deliverables: processedDeliverables, // Pass processed deliverables to frontend
+        deliverables: processedDeliverables,
         paymentsSchedule: {
           upcoming: upcomingPayments,
           overdue: overduePayments,
