@@ -21,46 +21,46 @@ const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
 
 // Central source of truth for all required deliverables
 const REQUIRED_BY_GATE = {
-    "G1 Concept": [
-      "Moodboard — Approved",
-      "Space Analysis and Planning (Draft)",
-      "Concept Design R&D and Moodboard",
-      "Furniture Layout Plan (Draft)"
-    ],
-    "G2 Schematic": [
-      "Schematic Plans (1:100) — Approved",
-      "Area Takeoffs",
-      "Key Dimensions Plan",
-      "Zoning / Room Data Sheets (if applicable)"
-    ],
-    "G3 Design Development": [
-      "DOORS AND WINDOWS — Approved",
-      "Room Finish Schedule — Approved",
-      "Finishes Plan — Floors/Walls/Paint — Approved",
-      "MEP Coordination Plans — Approved",
-      "Electrical/Lighting Layout with Load Schedule — Approved",
-      "Low-Voltage/Controls (Data/AV/Security/Blinds) — Approved",
-      "Cabinetry/Joinery Shop Drawings — Approved",
-      "Kitchen Package (Cabinetry, Countertops, Appliances cut-sheets) — Approved",
-      "Sanitary Ware Schedule and Cut-sheets — Approved",
-      "Flooring System Data and Cut-sheets — Approved",
-      "Motorized Blinds Submittals — Approved",
-      "Coordinated Plans/Elevations/Sections/Details — Approved"
-    ],
-    "G4 Authority Submission": [
-      "Authority Submission Set — Approved",
-      "Approved Permit (Authority)"
-    ],
-    "G5 Construction Documentation": [
-      "Windows Package Shop Drawings — Approved",
-      "Construction Documentation Set (IFC) — Approved",
-      "Schedules and Specs — Approved"
-    ],
-    "G6 Design Close‑out": [
-      "As-built Drawings — Approved",
-      "O&M Manuals — Approved"
-    ]
-  };
+  "G1 Concept": [
+    "Moodboard — Approved",
+    "Space Analysis and Planning (Draft)",
+    "Concept Design R&D and Moodboard",
+    "Furniture Layout Plan (Draft)"
+  ],
+  "G2 Schematic": [
+    "Schematic Plans (1:100) — Approved",
+    "Area Takeoffs",
+    "Key Dimensions Plan",
+    "Zoning / Room Data Sheets (if applicable)"
+  ],
+  "G3 Design Development": [
+    "DOORS AND WINDOWS — Approved",
+    "Room Finish Schedule — Approved",
+    "Finishes Plan — Floors/Walls/Paint — Approved",
+    "MEP Coordination Plans — Approved",
+    "Electrical/Lighting Layout with Load Schedule — Approved",
+    "Low-Voltage/Controls (Data/AV/Security/Blinds) — Approved",
+    "Cabinetry/Joinery Shop Drawings — Approved",
+    "Kitchen Package (Cabinetry, Countertops, Appliances cut-sheets) — Approved",
+    "Sanitary Ware Schedule and Cut-sheets — Approved",
+    "Flooring System Data and Cut-sheets — Approved",
+    "Motorized Blinds Submittals — Approved",
+    "Coordinated Plans/Elevations/Sections/Details — Approved"
+  ],
+  "G4 Authority Submission": [
+    "Authority Submission Set — Approved",
+    "Approved Permit (Authority)"
+  ],
+  "G5 Construction Documentation": [
+    "Windows Package Shop Drawings — Approved",
+    "Construction Documentation Set (IFC) — Approved",
+    "Schedules and Specs — Approved"
+  ],
+  "G6 Design Close‑out": [
+    "As-built Drawings — Approved",
+    "O&M Manuals — Approved"
+  ]
+};
 
 const notionHeaders = () => ({
   'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -102,9 +102,9 @@ async function callGemini(prompt) {
     }),
   });
   if (!res.ok) {
-      const errText = await res.text();
-      console.error(`Gemini API error: ${res.status}`, errText);
-      throw new Error(`Gemini API error: ${res.status}: ${errText}`);
+    const errText = await res.text();
+    console.error(`Gemini API error: ${res.status}`, errText);
+    throw new Error(`Gemini API error: ${res.status}: ${errText}`);
   }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -123,8 +123,8 @@ function extractText(prop) {
   if (prop.type === 'number' && typeof prop.number === 'number') return prop.number;
   if (prop.type === 'date' && prop.date?.start) return prop.date.start;
   if (prop.type === 'formula') {
-      if (prop.formula?.type === 'number') return prop.formula.number;
-      if (prop.formula?.type === 'string') return prop.formula.string;
+    if (prop.formula?.type === 'number') return prop.formula.number;
+    if (prop.formula?.type === 'string') return prop.formula.string;
   }
   return '';
 }
@@ -182,11 +182,11 @@ export const handler = async (event) => {
 
       // Process deliverables
       const processedDeliverables = deliverablePages.map(p => ({
-          title: extractText(getProp(p, 'Name', 'Deliverable')),
-          gate: extractText(getProp(p, 'Gate', 'Gate')),
-          status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
-          assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
-          url: p.url,
+        title: extractText(getProp(p, 'Name', 'Deliverable')),
+        gate: extractText(getProp(p, 'Gate', 'Gate')),
+        status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
+        assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
+        url: p.url,
       }));
 
       // Augment processedDeliverables with missing items
@@ -194,35 +194,35 @@ export const handler = async (event) => {
       const allDeliverablesIncludingMissing = [...processedDeliverables];
 
       Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
-          requiredDocs.forEach(requiredTitle => {
-              if (!existingDeliverableTitles.has(norm(`${gateName}|${requiredTitle}`))) {
-                  allDeliverablesIncludingMissing.push({
-                      title: requiredTitle,
-                      gate: gateName,
-                      status: 'Missing',
-                      assignees: [],
-                      url: '#'
-                  });
-              }
-          });
+        requiredDocs.forEach(requiredTitle => {
+          if (!existingDeliverableTitles.has(norm(`${gateName}|${requiredTitle}`))) {
+            allDeliverablesIncludingMissing.push({
+              title: requiredTitle,
+              gate: gateName,
+              status: 'Missing',
+              assignees: [],
+              url: '#'
+            });
+          }
+        });
       });
 
       const deliverablesTotal = allDeliverablesIncludingMissing.length;
       const deliverablesApproved = allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length;
 
       const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
-          const approvedCount = allDeliverablesIncludingMissing.filter(d => 
-              d.gate === gateName && requiredDocs.some(reqTitle => norm(d.title) === norm(reqTitle)) && norm(d.status) === 'approved'
-          ).length;
-          
-          const gateDeliverablesCount = requiredDocs.length;
+        const approvedCount = allDeliverablesIncludingMissing.filter(d =>
+          d.gate === gateName && requiredDocs.some(reqTitle => norm(d.title) === norm(reqTitle)) && norm(d.status) === 'approved'
+        ).length;
 
-          return {
-              gate: gateName,
-              total: gateDeliverablesCount,
-              approved: approvedCount,
-              gateApprovalRate: gateDeliverablesCount > 0 ? approvedCount / gateDeliverablesCount : 0,
-          };
+        const gateDeliverablesCount = requiredDocs.length;
+
+        return {
+          gate: gateName,
+          total: gateDeliverablesCount,
+          approved: approvedCount,
+          gateApprovalRate: gateDeliverablesCount > 0 ? approvedCount / gateDeliverablesCount : 0,
+        };
       }).sort((a, b) => a.gate.localeCompare(b.gate));
 
       // ===== Helpers =====
@@ -260,238 +260,251 @@ export const handler = async (event) => {
 
       // ===== KPIs =====
       // Calculate budget from In Scope items only (null-safe)
-      const budgetSubtotal = budgetPages.reduce((sum, p) => {
-        const inScopeRaw = getProp(p, 'In Scope', 'In Scope');
-        const inScope = typeof extractText === 'function' ? extractText(inScopeRaw) : inScopeRaw;
-        if (!isYes(inScope)) return sum;
+      const inScopeItems = budgetPages.filter(p => getProp(p, 'inScope') === true);
 
-        // Prefer Subtotal (Formula). If you don’t query it, fall back to Supply + Install.
-        let subVal = 0;
-        const subRaw = getProp(p, 'Subtotal (Formula)', 'Subtotal (Formula)');
-        if (typeof subRaw === 'number') {
-          subVal = subRaw;
-        } else {
-          const subExtracted = typeof extractText === 'function' ? extractText(subRaw) : subRaw;
-          if (Number.isFinite(Number(subExtracted))) {
-            subVal = Number(subExtracted);
-          } else {
-            // Last resort: compute from Supply + Install directly
-            const sup = getProp(p, 'Supply (MYR)', 'Supply');
-            const ins = getProp(p, 'Install (MYR)', 'Install');
-            subVal = nz(typeof extractText === 'function' ? extractText(sup) : sup)
-              + nz(typeof extractText === 'function' ? extractText(ins) : ins);
-          }
-        }
-        return sum + nz(subVal);
+      const subtotal = inScopeItems.reduce((sum, p) => {
+        const supply = getProp(p, 'supply_myr') || 0;
+        const install = getProp(p, 'install_myr') || 0;
+        return sum + supply + install;
       }, 0);
 
-      // Shipping + Discount + Contingency (read from config if available)
-      const discountPct = cfgPct('Project Discount', 5);        // [%]
-      const contingencyPct = cfgPct('Contingency Buffer', 10);  // [%]
-      const shippingMYR = cfgMYR('Shipping MYR', 27900);
+      const shippingMYR = 27900;
+      const discountPct = 5;
+      const contingencyPct = 10;
 
-      const subtotalWithShipping = budgetSubtotal + shippingMYR;
-      const afterDiscount = subtotalWithShipping * (1 - discountPct / 100);
-      const budgetMYR = afterDiscount * (1 + contingencyPct / 100);
+      const subtotalWithShipping = subtotal + shippingMYR;
+      const afterDiscount = subtotalWithShipping * 0.95; // 5% off
+      const budgetMYR = afterDiscount * 1.10; // 10% extra
 
-      // Sanity guard
-      if (budgetMYR > 0 && budgetMYR < 50000) {
-        console.warn('[KPI] budgetMYR unexpectedly low', { budgetSubtotal, shippingMYR, discountPct, contingencyPct, budgetMYR });
-      }
 
-      // Paid from Actuals (Status = Paid, sum Paid (MYR))
-      const paidMYR = actualsPages
-        .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0), 0);
-
-      const remainingMYR = budgetMYR - paidMYR;
-
-      // Outstanding and Overdue from Payment Schedule pages (if you have a separate payments DS)
-      const totalOutstandingMYR = paymentPages
-        .filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status'))))
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
-
-      const totalOverdueMYR = paymentPages
-        .filter(p => {
-          const status = extractText(getProp(p, 'Status', 'Status'));
-          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
-          return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
-        })
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
-
-      // === Payments Schedule ===
-      const upcomingPayments = paymentPages
-        .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
-        .map(p => {
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          return {
-            paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
-            vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-            amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
-            status: extractText(getProp(p, 'Status', 'Status')),
-            dueDate: dueDateProp?.date?.start || null,
-            url: p.url,
-          };
-        })
-        .sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1)
-        .slice(0, 10);
-
-      const overduePayments = paymentPages
-        .filter(p => {
-          const status = extractText(getProp(p, 'Status', 'Status'));
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          const dueDate = dueDateProp?.date?.start;
-          return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
-        })
-        .map(p => {
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          return {
-            paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
-            vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-            amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
-            status: extractText(getProp(p, 'Status', 'Status')),
-            dueDate: dueDateProp?.date?.start || null,
-            url: p.url,
-          };
-        })
-        .sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
-
-      const recentPaidPayments = paymentPages
-        .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
-        .map(p => {
-          const paidDateProp = getProp(p, 'PaidDate', 'Paid Date');
-          return {
-            paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
-            vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-            amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
-            status: extractText(getProp(p, 'Status', 'Status')),
-            paidDate: paidDateProp?.date?.start || null,
-            url: p.url,
-          };
-        })
-        .sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1)
-        .slice(0, 10);
-
-      // Payment Forecast (4 months)
-      const forecastMonths = [];
-      const outstandingAndOverduePayments = paymentPages.filter(p =>
-        ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status')))
-      );
-      const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const cumulativeUnscheduledOverdue = outstandingAndOverduePayments
-        .filter(p => {
-          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
-          return !dueDate || new Date(dueDate) < firstMonthDate;
-        })
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
-
-      for (let i = 0; i < 4; i++) {
-        const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
-        const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
-        
-        let totalAmountForMonth = outstandingAndOverduePayments
-          .filter(p => {
-            const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
-            if (!dueDate) return false;
-            const paymentDate = new Date(dueDate);
-            return paymentDate >= monthDate && paymentDate < nextMonthDate;
-          })
-          .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))), 0);
-
-        if (i === 0) {
-            totalAmountForMonth += cumulativeUnscheduledOverdue;
+      // Prefer Subtotal (Formula). If you don’t query it, fall back to Supply + Install.
+      let subVal = 0;
+      const subRaw = getProp(p, 'Subtotal (Formula)', 'Subtotal (Formula)');
+      if (typeof subRaw === 'number') {
+        subVal = subRaw;
+      } else {
+        const subExtracted = typeof extractText === 'function' ? extractText(subRaw) : subRaw;
+        if (Number.isFinite(Number(subExtracted))) {
+          subVal = Number(subExtracted);
+        } else {
+          // Last resort: compute from Supply + Install directly
+          const sup = getProp(p, 'Supply (MYR)', 'Supply');
+          const ins = getProp(p, 'Install (MYR)', 'Install');
+          subVal = nz(typeof extractText === 'function' ? extractText(sup) : sup)
+            + nz(typeof extractText === 'function' ? extractText(ins) : ins);
         }
-        
-        forecastMonths.push({ month: monthName, totalAmount: totalAmountForMonth });
+      }
+      return sum + nz(subVal);
+    }, 0);
+
+    // Shipping + Discount + Contingency (read from config if available)
+    const discountPct = cfgPct('Project Discount', 5);        // [%]
+    const contingencyPct = cfgPct('Contingency Buffer', 10);  // [%]
+    const shippingMYR = cfgMYR('Shipping MYR', 27900);
+
+    const subtotalWithShipping = budgetSubtotal + shippingMYR;
+    const afterDiscount = subtotalWithShipping * (1 - discountPct / 100);
+    const budgetMYR = afterDiscount * (1 + contingencyPct / 100);
+
+    // Sanity guard
+    if (budgetMYR > 0 && budgetMYR < 50000) {
+      console.warn('[KPI] budgetMYR unexpectedly low', { budgetSubtotal, shippingMYR, discountPct, contingencyPct, budgetMYR });
+    }
+
+    // Paid from Actuals (Status = Paid, sum Paid (MYR))
+    const paidMYR = actualsPages
+      .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
+      .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0), 0);
+
+    const remainingMYR = budgetMYR - paidMYR;
+
+    // Outstanding and Overdue from Payment Schedule pages (if you have a separate payments DS)
+    const totalOutstandingMYR = paymentPages
+      .filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status'))))
+      .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+
+    const totalOverdueMYR = paymentPages
+      .filter(p => {
+        const status = extractText(getProp(p, 'Status', 'Status'));
+        const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+        return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
+      })
+      .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+
+    // === Payments Schedule ===
+    const upcomingPayments = paymentPages
+      .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
+      .map(p => {
+        const dueDateProp = getProp(p, 'DueDate', 'Due Date');
+        return {
+          paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
+          vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
+          amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
+          status: extractText(getProp(p, 'Status', 'Status')),
+          dueDate: dueDateProp?.date?.start || null,
+          url: p.url,
+        };
+      })
+      .sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1)
+      .slice(0, 10);
+
+    const overduePayments = paymentPages
+      .filter(p => {
+        const status = extractText(getProp(p, 'Status', 'Status'));
+        const dueDateProp = getProp(p, 'DueDate', 'Due Date');
+        const dueDate = dueDateProp?.date?.start;
+        return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
+      })
+      .map(p => {
+        const dueDateProp = getProp(p, 'DueDate', 'Due Date');
+        return {
+          paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
+          vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
+          amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
+          status: extractText(getProp(p, 'Status', 'Status')),
+          dueDate: dueDateProp?.date?.start || null,
+          url: p.url,
+        };
+      })
+      .sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
+
+    const recentPaidPayments = paymentPages
+      .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
+      .map(p => {
+        const paidDateProp = getProp(p, 'PaidDate', 'Paid Date');
+        return {
+          paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
+          vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
+          amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
+          status: extractText(getProp(p, 'Status', 'Status')),
+          paidDate: paidDateProp?.date?.start || null,
+          url: p.url,
+        };
+      })
+      .sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1)
+      .slice(0, 10);
+
+    // Payment Forecast (4 months)
+    const forecastMonths = [];
+    const outstandingAndOverduePayments = paymentPages.filter(p =>
+      ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status')))
+    );
+    const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const cumulativeUnscheduledOverdue = outstandingAndOverduePayments
+      .filter(p => {
+        const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+        return !dueDate || new Date(dueDate) < firstMonthDate;
+      })
+      .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+
+    for (let i = 0; i < 4; i++) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+      const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
+
+      let totalAmountForMonth = outstandingAndOverduePayments
+        .filter(p => {
+          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+          if (!dueDate) return false;
+          const paymentDate = new Date(dueDate);
+          return paymentDate >= monthDate && paymentDate < nextMonthDate;
+        })
+        .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))), 0);
+
+      if (i === 0) {
+        totalAmountForMonth += cumulativeUnscheduledOverdue;
       }
 
-      // === Top Vendors, Milestones, etc. ===
-      const vendorSpendMap = {};
-      actualsPages
-        .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
-        .forEach(p => {
-          const vendor = extractText(getProp(p, 'Vendor', 'Vendor')) || 'Unknown';
-          const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0;
-          vendorSpendMap[vendor] = (vendorSpendMap[vendor] || 0) + paid;
-        });
-
-      const topVendors = Object.entries(vendorSpendMap)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([vendorName, paidAmount]) => {
-          const vendorPage = vendorPages.find(v =>
-            extractText(getProp(v, 'Company_Name', 'Company Name')) === vendorName
-          );
-          const trade = vendorPage
-            ? extractText(getProp(vendorPage, 'Trade_Specialization', 'Trade Specialization'))
-            : '—';
-          return { name: vendorName, trade, paid: paidAmount };
-        });
-      
-      const milestones = milestonePages.map(p => ({
-        title: extractText(getProp(p, 'MilestoneTitle', 'Milestone Title')) || 'Untitled',
-        phase: extractText(getProp(p, 'Phase', 'Phase')),
-        status: extractText(getProp(p, 'Risk_Status', 'Risk Status')),
-        url: p.url,
-      }));
-
-      // === Response ===
-      const responseData = {
-        kpis: {
-          budgetMYR,
-          paidMYR,
-          remainingMYR,
-          deliverablesApproved,
-          deliverablesTotal,
-          totalOutstandingMYR,
-          totalOverdueMYR,
-          paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-          deliverablesProgress: deliverablesTotal > 0 ? deliverablesApproved / deliverablesTotal : 0,
-          milestonesAtRisk: milestones.filter(m => m.status === 'At Risk').length,
-        },
-        gates,
-        topVendors,
-        milestones,
-        deliverables: allDeliverablesIncludingMissing,
-        paymentsSchedule: {
-          upcoming: upcomingPayments,
-          overdue: overduePayments,
-          recentPaid: recentPaidPayments,
-          forecast: forecastMonths,
-        },
-        timestamp: new Date().toISOString(),
-      };
-
-      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+      forecastMonths.push({ month: monthName, totalAmount: totalAmountForMonth });
     }
+
+    // === Top Vendors, Milestones, etc. ===
+    const vendorSpendMap = {};
+    actualsPages
+      .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
+      .forEach(p => {
+        const vendor = extractText(getProp(p, 'Vendor', 'Vendor')) || 'Unknown';
+        const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0;
+        vendorSpendMap[vendor] = (vendorSpendMap[vendor] || 0) + paid;
+      });
+
+    const topVendors = Object.entries(vendorSpendMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([vendorName, paidAmount]) => {
+        const vendorPage = vendorPages.find(v =>
+          extractText(getProp(v, 'Company_Name', 'Company Name')) === vendorName
+        );
+        const trade = vendorPage
+          ? extractText(getProp(vendorPage, 'Trade_Specialization', 'Trade Specialization'))
+          : '—';
+        return { name: vendorName, trade, paid: paidAmount };
+      });
+
+    const milestones = milestonePages.map(p => ({
+      title: extractText(getProp(p, 'MilestoneTitle', 'Milestone Title')) || 'Untitled',
+      phase: extractText(getProp(p, 'Phase', 'Phase')),
+      status: extractText(getProp(p, 'Risk_Status', 'Risk Status')),
+      url: p.url,
+    }));
+
+    // === Response ===
+    const responseData = {
+      kpis: {
+        budgetMYR,
+        paidMYR,
+        remainingMYR,
+        deliverablesApproved,
+        deliverablesTotal,
+        totalOutstandingMYR,
+        totalOverdueMYR,
+        paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
+        deliverablesProgress: deliverablesTotal > 0 ? deliverablesApproved / deliverablesTotal : 0,
+        milestonesAtRisk: milestones.filter(m => m.status === 'At Risk').length,
+      },
+      gates,
+      topVendors,
+      milestones,
+      deliverables: allDeliverablesIncludingMissing,
+      paymentsSchedule: {
+        upcoming: upcomingPayments,
+        overdue: overduePayments,
+        recentPaid: recentPaidPayments,
+        forecast: forecastMonths,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+  }
 
       // POST /proxy summary with Gemini
       if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-        const body = JSON.parse(event.body || '{}');
-        const { kpis } = body;
-        const prompt = `You are a project assistant. Summarize this renovation project data in 2-3 concise sentences:
+    const body = JSON.parse(event.body || '{}');
+    const { kpis } = body;
+    const prompt = `You are a project assistant. Summarize this renovation project data in 2-3 concise sentences:
 - Budget: ${kpis?.budgetMYR || 0} MYR, Paid: ${kpis?.paidMYR || 0} MYR
 - Deliverables: ${kpis?.deliverablesApproved || 0}/${kpis?.deliverablesTotal || 0} approved
 - Milestones at risk: ${kpis?.milestonesAtRisk || 0}
 - Overdue payments: ${kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}
 
 Focus on key risks and overall progress.`;
-        const summary = await callGemini(prompt);
-        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
-      }
-
-    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-  } catch (error) {
-    console.error('Handler error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }),
-    };
+    const summary = await callGemini(prompt);
+    return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
   }
+
+  return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
+} catch (error) {
+  console.error('Handler error:', error);
+  return {
+    statusCode: 500,
+    headers,
+    body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }),
+  };
+}
 };
+
 
 
