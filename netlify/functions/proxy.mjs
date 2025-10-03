@@ -24,45 +24,40 @@ const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
 // Central source of truth for all required deliverables
 const REQUIRED_BY_GATE = {
     "G1 Concept": [
-      "Moodboard — Approved",
-      "Space Analysis and Planning (Draft)",
-      "Concept Design R&D and Moodboard",
-      "Furniture Layout Plan (Draft)"
+      "MOODBOARD",
+      "PROPOSED RENOVATION FLOOR PLAN"
     ],
     "G2 Schematic": [
-      "Schematic Plans (1:100) — Approved",
-      "Area Takeoffs",
-      "Key Dimensions Plan",
-      "Zoning / Room Data Sheets (if applicable)"
+      // Currently no specific deliverables defined
     ],
     "G3 Design Development": [
-      "DOORS AND WINDOWS — Approved",
-      "Room Finish Schedule — Approved",
-      "Finishes Plan — Floors/Walls/Paint — Approved",
-      "MEP Coordination Plans — Approved",
-      "Electrical/Lighting Layout with Load Schedule — Approved",
-      "Low-Voltage/Controls (Data/AV/Security/Blinds) — Approved",
-      "Cabinetry/Joinery Shop Drawings — Approved",
-      "Kitchen Package (Cabinetry, Countertops, Appliances cut-sheets) — Approved",
-      "Sanitary Ware Schedule and Cut-sheets — Approved",
-      "Flooring System Data and Cut-sheets — Approved",
-      "Motorized Blinds Submittals — Approved",
-      "Coordinated Plans/Elevations/Sections/Details — Approved"
+      "DOORS AND WINDOWS",
+      "Construction Drawings",
+      "MEP Drawings",
+      "Interior Design Plans",
+      "Schedules",
+      "Finishes"
     ],
     "G4 Authority Submission": [
-      "Authority Submission Set — Approved",
-      "Approved Permit (Authority)"
+      "RENOVATION PERMIT",
+      "Structural Drawings",
+      "BQ Complete",
+      "Quotation Package Ready"
     ],
     "G5 Construction Documentation": [
-      "Windows Package Shop Drawings — Approved",
-      "Construction Documentation Set (IFC) — Approved",
-      "Schedules and Specs — Approved"
+      "Contractor Awarded",
+      "Tender Package Issued",
+      "Site Mobilization Complete",
+      "Demolition Complete Certificate",
+      "Structural Works Complete",
+      "Carpentry Complete",
+      "Finishes Complete"
     ],
-    "G6 Design Close‑out": [
-      "As-built Drawings — Approved",
-      "O&M Manuals — Approved"
+    "G6 Design Close-out": [
+      "Final Inspection Complete",
+      "Handover Certificate"
     ]
-  };
+};
 
 const notionHeaders = () => ({
   'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -183,14 +178,14 @@ export const handler = async (event) => {
       
       // === DELIVERABLES FIX AS PER BUG REPORT ===
       const processedDeliverables = deliverablePages.map(p => ({
-          title: extractText(getProp(p, 'Name', 'Deliverable')),
-          deliverableType: extractText(getProp(p, 'Deliverable Type', 'Type')), // <<< FIX 1
-          gate: extractText(getProp(p, 'Gate', 'Gate')),
-          status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
-          assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
-          url: p.url,
+        title: extractText(getProp(p, 'Deliverable Name')),
+        deliverableType: extractText(getProp(p, 'Deliverable Name')), // Same as title for this database
+        gate: extractText(getProp(p, 'Gate')),
+        status: extractText(getProp(p, 'Status')), // Correct property name
+        assignees: ...,
+        url: p.url
       }));
-
+      
       const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
 
@@ -406,3 +401,4 @@ Focus on key risks and overall progress.`;
 };
 
 
+LS
