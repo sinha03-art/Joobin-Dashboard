@@ -145,24 +145,53 @@ export const handler = async (event) => {
 
   try {
     if (httpMethod === 'GET' && path.endsWith('/proxy')) {
-      const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData] = await Promise.all([
+      // Fetch all sources (including config)
+      const [
+        budgetData,
+        actualsData,
+        milestonesData,
+        deliverablesData,
+        vendorData,
+        paymentsData,
+        configData,
+      ] = await Promise.all([
         queryNotionDB(NOTION_BUDGET_DB_ID, {}),
         queryNotionDB(NOTION_ACTUALS_DB_ID, {}),
         queryNotionDB(MILESTONES_DB_ID, {}),
         queryNotionDB(DELIVERABLES_DB_ID, {}),
         queryNotionDB(VENDOR_REGISTRY_DB_ID, {}),
         PAYMENTS_DB_ID ? queryNotionDB(PAYMENTS_DB_ID, {}) : Promise.resolve({ results: [] }),
+        CONFIG_DB_ID ? queryNotionDB(CONFIG_DB_ID, {}) : Promise.resolve({ results: [] }),
       ]);
 
+      // Unpack results
       const budgetPages = budgetData.results || [];
       const actualsPages = actualsData.results || [];
       const milestonePages = milestonesData.results || [];
       const deliverablePages = deliverablesData.results || [];
       const vendorPages = vendorData.results || [];
       const paymentPages = paymentsData.results || [];
-
       const now = new Date();
 
+      // Build config rows -> configMap (safe if empty)
+      const notionConfigRows = (configData.results || []).map(r => ({
+        Setting: extractText(getProp(r, 'Setting', 'Setting')),
+        Value: extractText(getProp(r, 'Value', 'Value')),
+      }));
+
+      // Helpers for config
+      const buildConfigMap = (configRows = []) => {
+        const map = Object.create(null);
+        for (const r of configRows) {
+          const key = (r?.Setting ?? '').toString().trim();
+          const val = Number(r?.Value ?? NaN);
+          if (key) map[key] = Number.isFinite(val) ? val : map[key] ?? undefined;
+        }
+        return map;
+      };
+      const configMap = buildConfigMap(notionConfigRows);
+
+      // Process deliverables
       const processedDeliverables = deliverablePages.map(p => ({
         title: extractText(getProp(p, 'Name', 'Deliverable')),
         gate: extractText(getProp(p, 'Gate', 'Gate')),
@@ -170,6 +199,8 @@ export const handler = async (event) => {
         assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
         url: p.url,
       }));
+
+      // ...continue with your gates construction, KPI math, and response using budgetPages, actualsPages, paymentPages, configMap, now, and processedDeliverables
 
       // Augment processedDeliverables with missing items
       const existingDeliverableTitles = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.title}`)));
@@ -468,6 +499,6 @@ Focus on key risks and overall progress.`;
         const summary = await callGemini(prompt);
         return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
       }
-      
+
       // Fallback
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
