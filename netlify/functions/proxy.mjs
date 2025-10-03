@@ -1,9 +1,8 @@
 /**
- * JOOBIN Renovation Hub Proxy v7.4.0
- * Patched:
- * - Added new fields to deliverables for the "To Complete" tab.
- * - Updated upcoming payments logic to exclude overdue items.
- * - Implemented exponential backoff for the Gemini API call.
+ * JOOBIN Renovation Hub Proxy v7.5.0
+ * CRITICAL FIX: Restored correct budget calculation logic.
+ * - Re-instated robust property name lookups for 'In Scope', 'Supply (MYR)', and 'Install (MYR)'.
+ * - This corrects the major budget calculation error that was causing the budget to show ~29k instead of ~1.4M.
  */
 
 const {
@@ -116,11 +115,18 @@ export const handler = async (event) => {
       const paymentPages = paymentsData.results || [];
       const now = new Date();
       
+      // === BUDGET CALCULATION FIX ===
       const budgetSubtotal = budgetPages
-        .filter(p => getProp(p, 'inScope', 'In Scope')?.checkbox === true)
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'supply_myr')) || 0) + (extractText(getProp(p, 'install_myr')) || 0), 0);
+        .filter(p => getProp(p, 'inScope', 'In Scope')?.checkbox === true) // Restored fallback
+        .reduce((sum, p) => {
+          const supply = extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0; // Restored fallback
+          const install = extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0; // Restored fallback
+          return sum + supply + install;
+        }, 0);
+
       const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
-      
+      // === END BUDGET FIX ===
+
       const processedDeliverables = deliverablePages.map(p => ({
           title: extractText(getProp(p, 'Deliverable Name')),
           deliverableType: extractText(getProp(p, 'Deliverable Name')),
@@ -186,10 +192,37 @@ export const handler = async (event) => {
       })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
       
       const forecastMonths = [];
-      // ... (forecast logic remains the same)
+      // (forecast logic is correct and remains unchanged)
+      const outstandingAndOverduePayments = paymentPages.filter(p =>
+        ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status')))
+      );
+      const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const cumulativeUnscheduledOverdue = outstandingAndOverduePayments
+        .filter(p => {
+          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+          return !dueDate || new Date(dueDate) < firstMonthDate;
+        })
+        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+      for (let i = 0; i < 4; i++) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+        const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
+        let totalAmountForMonth = outstandingAndOverduePayments
+          .filter(p => {
+            const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
+            if (!dueDate) return false;
+            const paymentDate = new Date(dueDate);
+            return paymentDate >= monthDate && paymentDate < nextMonthDate;
+          })
+          .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+        if (i === 0) {
+            totalAmountForMonth += cumulativeUnscheduledOverdue;
+        }
+        forecastMonths.push({ month: monthName, totalAmount: totalAmountForMonth });
+      }
 
-      const responseData = {
-        kpis: {
+
+      const kpis = {
           budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
           deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
           deliverablesTotal: allDeliverablesIncludingMissing.length,
@@ -198,11 +231,30 @@ export const handler = async (event) => {
           paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
           deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
           milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
-        },
+      };
+
+      const topVendors = Object.entries(actualsPages.filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid').reduce((acc, p) => {
+        const vendor = extractText(getProp(p, 'Vendor', 'Vendor')) || 'Unknown';
+        const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0;
+        acc[vendor] = (acc[vendor] || 0) + paid;
+        return acc;
+      }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([vendorName, paidAmount]) => ({ name: vendorName, trade: '—', paid: paidAmount }));
+
+      const milestones = (milestonesData.results || []).map(p => ({
+        title: extractText(getProp(p, 'MilestoneTitle', 'Milestone Title')) || 'Untitled',
+        phase: extractText(getProp(p, 'Phase', 'Phase')),
+        status: extractText(getProp(p, 'Risk_Status', 'Risk Status')),
+        url: p.url,
+      }));
+
+      const responseData = {
+        kpis,
         gates,
-        // ... (rest of the response data remains the same)
+        topVendors,
+        milestones,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
+        timestamp: new Date().toISOString()
       };
       return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     }
