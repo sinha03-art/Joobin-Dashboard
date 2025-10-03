@@ -207,55 +207,91 @@ export const handler = async (event) => {
         };
       }).sort((a, b) => a.gate.localeCompare(b.gate));
 
-      // Helpers
+      // ===== Helpers =====
       const nz = v => {
         const n = Number(v);
         return Number.isFinite(n) ? n : 0;
       };
-
       const isYes = v => v === true || v === '__YES__' || v === 'Yes' || v === 'yes';
 
-      // === KPIs ===
+      // Optional: build configMap from Notion_Config rows if you have them.
+      // If you don't have config rows, configMap remains {} and we use fallbacks.
+      const buildConfigMap = (configRows = []) => {
+        const map = Object.create(null);
+        for (const r of configRows) {
+          const key = (r?.Setting ?? r?.setting ?? '').toString().trim();
+          const val = Number(r?.Value ?? r?.value ?? NaN);
+          if (key) map[key] = Number.isFinite(val) ? val : map[key] ?? undefined;
+        }
+        return map;
+      };
+
+      // If you have these rows somewhere, pass them in here. Otherwise, empty.
+      const configMap = typeof notionConfigRows !== 'undefined'
+        ? buildConfigMap(notionConfigRows)
+        : {};
+
+      const cfgPct = (key, fallback) => {
+        const v = nz(configMap?.[key]);
+        return v > 0 ? v : fallback;
+      };
+      const cfgMYR = (key, fallback) => {
+        const v = nz(configMap?.[key]);
+        return v || fallback;
+      };
+
+      // ===== KPIs =====
       // Calculate budget from In Scope items only (null-safe)
       const budgetSubtotal = budgetPages.reduce((sum, p) => {
         const inScopeRaw = getProp(p, 'In Scope', 'In Scope');
-        // extractText may return strings; fall back to raw
         const inScope = typeof extractText === 'function' ? extractText(inScopeRaw) : inScopeRaw;
         if (!isYes(inScope)) return sum;
 
+        // Prefer Subtotal (Formula). If you don’t query it, fall back to Supply + Install.
+        let subVal = 0;
         const subRaw = getProp(p, 'Subtotal (Formula)', 'Subtotal (Formula)');
-        const subVal = typeof subRaw === 'number'
-          ? subRaw
-          : (typeof extractText === 'function' ? nz(extractText(subRaw)) : nz(subRaw));
-
+        if (typeof subRaw === 'number') {
+          subVal = subRaw;
+        } else {
+          const subExtracted = typeof extractText === 'function' ? extractText(subRaw) : subRaw;
+          if (Number.isFinite(Number(subExtracted))) {
+            subVal = Number(subExtracted);
+          } else {
+            // Last resort: compute from Supply + Install directly
+            const sup = getProp(p, 'Supply (MYR)', 'Supply');
+            const ins = getProp(p, 'Install (MYR)', 'Install');
+            subVal = nz(typeof extractText === 'function' ? extractText(sup) : sup)
+              + nz(typeof extractText === 'function' ? extractText(ins) : ins);
+          }
+        }
         return sum + nz(subVal);
       }, 0);
 
-      // Shipping + Discount + Contingency
-      // Prefer reading from Notion_Config; fall back to constants if not present
-      // Example: configMap['Project Discount'] = 5 (percent), configMap['Contingency Buffer'] = 10 (percent)
-      const discountPct = nz(configMap?.['Project Discount']) || 5;      // [%] from 🎗️ Notion_Config
-      const contingencyPct = nz(configMap?.['Contingency Buffer']) || 10; // [%] from 🎗️ Notion_Config
-      const shippingMYR = nz(configMap?.['Shipping MYR']) || 27900;
+      // Shipping + Discount + Contingency (read from config if available)
+      const discountPct = cfgPct('Project Discount', 5);        // [%]
+      const contingencyPct = cfgPct('Contingency Buffer', 10);  // [%]
+      const shippingMYR = cfgMYR('Shipping MYR', 27900);
 
       const subtotalWithShipping = budgetSubtotal + shippingMYR;
       const afterDiscount = subtotalWithShipping * (1 - discountPct / 100);
       const budgetMYR = afterDiscount * (1 + contingencyPct / 100);
 
-      // Optional sanity guard
+      // Sanity guard
       if (budgetMYR > 0 && budgetMYR < 50000) {
         console.warn('[KPI] budgetMYR unexpectedly low', { budgetSubtotal, shippingMYR, discountPct, contingencyPct, budgetMYR });
       }
 
+      // Paid from Actuals (Status = Paid, sum Paid (MYR))
       const paidMYR = actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0), 0);
+        .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Paid (MYR)', 'Paid'))), 0);
 
       const remainingMYR = budgetMYR - paidMYR;
 
+      // Outstanding and Overdue from Payment Schedule pages (if you have a separate payments DS)
       const totalOutstandingMYR = paymentPages
         .filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status'))))
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+        .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))), 0);
 
       const totalOverdueMYR = paymentPages
         .filter(p => {
@@ -263,9 +299,9 @@ export const handler = async (event) => {
           const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
           return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
         })
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+        .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))), 0);
 
-      // === Payments Schedule ===
+      // ===== Payments Schedule =====
       const upcomingPayments = paymentPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
         .map(p => {
@@ -273,7 +309,7 @@ export const handler = async (event) => {
           return {
             paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
             vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-            amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
+            amount: nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))),
             status: extractText(getProp(p, 'Status', 'Status')),
             dueDate: dueDateProp?.date?.start || null,
             url: p.url,
@@ -294,7 +330,7 @@ export const handler = async (event) => {
           return {
             paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
             vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-            amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
+            amount: nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))),
             status: extractText(getProp(p, 'Status', 'Status')),
             dueDate: dueDateProp?.date?.start || null,
             url: p.url,
@@ -309,7 +345,7 @@ export const handler = async (event) => {
           return {
             paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
             vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
-            amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
+            amount: nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))),
             status: extractText(getProp(p, 'Status', 'Status')),
             paidDate: paidDateProp?.date?.start || null,
             url: p.url,
@@ -323,7 +359,6 @@ export const handler = async (event) => {
       const outstandingAndOverduePayments = paymentPages.filter(p =>
         ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status', 'Status')))
       );
-
       const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const cumulativeUnscheduledOverdue = outstandingAndOverduePayments
@@ -331,7 +366,7 @@ export const handler = async (event) => {
           const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
           return !dueDate || new Date(dueDate) < firstMonthDate;
         })
-        .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+        .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))), 0);
 
       for (let i = 0; i < 4; i++) {
         const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
@@ -345,7 +380,7 @@ export const handler = async (event) => {
             const paymentDate = new Date(dueDate);
             return paymentDate >= monthDate && paymentDate < nextMonthDate;
           })
-          .reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0), 0);
+          .reduce((sum, p) => sum + nz(extractText(getProp(p, 'Amount (RM)', 'Amount'))), 0);
 
         if (i === 0) {
           totalAmountForMonth += cumulativeUnscheduledOverdue;
@@ -354,13 +389,13 @@ export const handler = async (event) => {
         forecastMonths.push({ month: monthName, totalAmount: totalAmountForMonth });
       }
 
-      // === Top Vendors, Milestones, etc. ===
+      // ===== Top Vendors, Milestones =====
       const vendorSpendMap = {};
       actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
         .forEach(p => {
           const vendor = extractText(getProp(p, 'Vendor', 'Vendor')) || 'Unknown';
-          const paid = extractText(getProp(p, 'Paid (MYR)', 'Paid')) || 0;
+          const paid = nz(extractText(getProp(p, 'Paid (MYR)', 'Paid')));
           vendorSpendMap[vendor] = (vendorSpendMap[vendor] || 0) + paid;
         });
 
@@ -368,8 +403,12 @@ export const handler = async (event) => {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([vendorName, paidAmount]) => {
-          const vendorPage = vendorPages.find(v => extractText(getProp(v, 'Company_Name', 'Company Name')) === vendorName);
-          const trade = vendorPage ? extractText(getProp(vendorPage, 'Trade_Specialization', 'Trade Specialization')) : '—';
+          const vendorPage = vendorPages.find(v =>
+            extractText(getProp(v, 'Company_Name', 'Company Name')) === vendorName
+          );
+          const trade = vendorPage
+            ? extractText(getProp(vendorPage, 'Trade_Specialization', 'Trade Specialization'))
+            : '—';
           return { name: vendorName, trade, paid: paidAmount };
         });
 
@@ -380,7 +419,11 @@ export const handler = async (event) => {
         url: p.url,
       }));
 
-      // === Response ===
+      // Assuming these are already computed elsewhere:
+      const deliverablesApproved = typeof deliverablesApproved === 'number' ? deliverablesApproved : 0;
+      const deliverablesTotal = typeof deliverablesTotal === 'number' ? deliverablesTotal : 0;
+
+      // ===== Response =====
       const responseData = {
         kpis: {
           budgetMYR,
@@ -407,33 +450,24 @@ export const handler = async (event) => {
         timestamp: new Date().toISOString(),
       };
 
-      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-    }
+      // GET /proxy response
+      if (httpMethod === 'GET' && path.endsWith('/proxy')) {
+        return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+      }
 
-    if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-      const body = JSON.parse(event.body || '{}');
-      const { kpis } = body;
-      const prompt = `You are a project assistant. Summarize this renovation project data in 2-3 concise sentences:
+      // POST /proxy summary with Gemini
+      if (httpMethod === 'POST' && path.endsWith('/proxy')) {
+        const body = JSON.parse(event.body || '{}');
+        const { kpis } = body;
+        const prompt = `You are a project assistant. Summarize this renovation project data in 2-3 concise sentences:
 - Budget: ${kpis?.budgetMYR || 0} MYR, Paid: ${kpis?.paidMYR || 0} MYR
 - Deliverables: ${kpis?.deliverablesApproved || 0}/${kpis?.deliverablesTotal || 0} approved
 - Milestones at risk: ${kpis?.milestonesAtRisk || 0}
 - Overdue payments: ${kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}
-
 Focus on key risks and overall progress.`;
-      const summary = await callGemini(prompt);
-      return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
-    }
-
-    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-  } catch (error) {
-    console.error('Handler error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }),
-    };
-  }
-};
-
-
+        const summary = await callGemini(prompt);
+        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+      }
+      
+      // Fallback
+      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
