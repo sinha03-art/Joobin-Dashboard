@@ -165,16 +165,12 @@ export const handler = async (event) => {
       
       const now = new Date();
       
-      // === BUDGET CALCULATION (NEW LOGIC) ===
       const shippingMYR = 27900;
-      const discountPct = 0.05; // 5%
-      const contingencyPct = 0.10; // 10%
+      const discountPct = 0.05;
+      const contingencyPct = 0.10;
 
       const budgetSubtotal = budgetPages
-        .filter(p => {
-          const inScopeProp = getProp(p, 'inScope', 'In Scope');
-          return inScopeProp?.type === 'checkbox' && inScopeProp.checkbox === true;
-        })
+        .filter(p => getProp(p, 'inScope', 'In Scope')?.checkbox === true)
         .reduce((sum, p) => {
           const supply = extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0;
           const install = extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0;
@@ -184,8 +180,8 @@ export const handler = async (event) => {
       const subtotalWithShipping = budgetSubtotal + shippingMYR;
       const afterDiscount = subtotalWithShipping * (1 - discountPct);
       const budgetMYR = afterDiscount * (1 + contingencyPct);
-      // === END BUDGET CALCULATION ===
-
+      
+      // === DELIVERABLES FIX AS PER BUG REPORT ===
       const processedDeliverables = deliverablePages.map(p => ({
           title: extractText(getProp(p, 'Name', 'Deliverable')),
           deliverableType: extractText(getProp(p, 'Deliverable Type', 'Type')), // <<< FIX 1
@@ -195,12 +191,12 @@ export const handler = async (event) => {
           url: p.url,
       }));
 
-      const existingDeliverableTitles = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
+      const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
 
       Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
           requiredDocs.forEach(requiredTitle => {
-              if (!existingDeliverableTitles.has(norm(`${gateName}|${requiredTitle}`))) {
+              if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
                   allDeliverablesIncludingMissing.push({
                       title: requiredTitle,
                       deliverableType: requiredTitle, // <<< FIX 2
@@ -232,6 +228,7 @@ export const handler = async (event) => {
               gateApprovalRate: gateDeliverablesCount > 0 ? approvedCount / gateDeliverablesCount : 0,
           };
       }).sort((a, b) => a.gate.localeCompare(b.gate));
+      // === END DELIVERABLES FIX ===
 
       const paidMYR = actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
@@ -253,53 +250,43 @@ export const handler = async (event) => {
 
       const upcomingPayments = paymentPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Outstanding')
-        .map(p => {
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          return {
+        .map(p => ({
             paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
             vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
             amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
             status: extractText(getProp(p, 'Status', 'Status')),
-            dueDate: dueDateProp?.date?.start || null,
+            dueDate: extractText(getProp(p, 'DueDate', 'Due Date')) || null,
             url: p.url,
-          };
-        })
+          }))
         .sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1)
         .slice(0, 10);
 
       const overduePayments = paymentPages
         .filter(p => {
           const status = extractText(getProp(p, 'Status', 'Status'));
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          const dueDate = dueDateProp?.date?.start;
+          const dueDate = extractText(getProp(p, 'DueDate', 'Due Date'));
           return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
         })
-        .map(p => {
-          const dueDateProp = getProp(p, 'DueDate', 'Due Date');
-          return {
+        .map(p => ({
             paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
             vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
             amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
             status: extractText(getProp(p, 'Status', 'Status')),
-            dueDate: dueDateProp?.date?.start || null,
+            dueDate: extractText(getProp(p, 'DueDate', 'Due Date')) || null,
             url: p.url,
-          };
-        })
+          }))
         .sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
 
       const recentPaidPayments = paymentPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
-        .map(p => {
-          const paidDateProp = getProp(p, 'PaidDate', 'Paid Date');
-          return {
+        .map(p => ({
             paymentFor: extractText(getProp(p, 'Payment For', 'PaymentFor')) || 'Untitled',
             vendor: extractText(getProp(p, 'Vendor', 'Vendor')),
             amount: extractText(getProp(p, 'Amount (RM)', 'Amount')) || 0,
             status: extractText(getProp(p, 'Status', 'Status')),
-            paidDate: paidDateProp?.date?.start || null,
+            paidDate: extractText(getProp(p, 'PaidDate', 'Paid Date')) || null,
             url: p.url,
-          };
-        })
+          }))
         .sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1)
         .slice(0, 10);
 
