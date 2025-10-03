@@ -177,15 +177,15 @@ export const handler = async (event) => {
       const budgetMYR = afterDiscount * (1 + contingencyPct);
       
       // === DELIVERABLES FIX AS PER BUG REPORT ===
-      const processedDeliverables = deliverablePages.map(p => ({
-        title: extractText(getProp(p, 'Deliverable Name')),
-        deliverableType: extractText(getProp(p, 'Deliverable Name')), // Same as title for this database
-        gate: extractText(getProp(p, 'Gate')),
-        status: extractText(getProp(p, 'Status')), // Correct property name
-        assignees: ...,
-        url: p.url
-      }));
-      
+     const processedDeliverables = deliverablePages.map(p => ({
+      title: extractText(getProp(p, 'Deliverable Name')),
+      deliverableType: extractText(getProp(p, 'Deliverable Name')), // Same as title in this database
+      gate: extractText(getProp(p, 'Gate')),
+      status: extractText(getProp(p, 'Status')), // Correct property name (not Approval_Status)
+      assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
+      url: p.url,
+    }));
+
       const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
 
@@ -401,4 +401,3 @@ Focus on key risks and overall progress.`;
 };
 
 
-LS
