@@ -207,23 +207,45 @@ export const handler = async (event) => {
         };
       }).sort((a, b) => a.gate.localeCompare(b.gate));
 
+      // Helpers
+      const nz = v => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+
+      const isYes = v => v === true || v === '__YES__' || v === 'Yes' || v === 'yes';
+
       // === KPIs ===
-      // Calculate budget from In Scope items only
+      // Calculate budget from In Scope items only (null-safe)
       const budgetSubtotal = budgetPages.reduce((sum, p) => {
-        const inScope = extractText(getProp(p, 'In Scope', 'In Scope'));
-        if (inScope === true || inScope === 'Yes' || inScope === '__YES__') {
-          const prop = getProp(p, 'Subtotal (Formula)', 'Subtotal');
-          const subtotal = extractText(prop);
-          return sum + (typeof subtotal === 'number' ? subtotal : 0);
-        }
-        return sum;
+        const inScopeRaw = getProp(p, 'In Scope', 'In Scope');
+        // extractText may return strings; fall back to raw
+        const inScope = typeof extractText === 'function' ? extractText(inScopeRaw) : inScopeRaw;
+        if (!isYes(inScope)) return sum;
+
+        const subRaw = getProp(p, 'Subtotal (Formula)', 'Subtotal (Formula)');
+        const subVal = typeof subRaw === 'number'
+          ? subRaw
+          : (typeof extractText === 'function' ? nz(extractText(subRaw)) : nz(subRaw));
+
+        return sum + nz(subVal);
       }, 0);
 
-      // Add shipping and apply discount/contingency
-      const shippingMYR = 27900;
+      // Shipping + Discount + Contingency
+      // Prefer reading from Notion_Config; fall back to constants if not present
+      // Example: configMap['Project Discount'] = 5 (percent), configMap['Contingency Buffer'] = 10 (percent)
+      const discountPct = nz(configMap?.['Project Discount']) || 5;      // [%] from 🎗️ Notion_Config
+      const contingencyPct = nz(configMap?.['Contingency Buffer']) || 10; // [%] from 🎗️ Notion_Config
+      const shippingMYR = nz(configMap?.['Shipping MYR']) || 27900;
+
       const subtotalWithShipping = budgetSubtotal + shippingMYR;
-      const afterDiscount = subtotalWithShipping * 0.95; // 5% discount
-      const budgetMYR = afterDiscount * 1.10; // 10% contingency
+      const afterDiscount = subtotalWithShipping * (1 - discountPct / 100);
+      const budgetMYR = afterDiscount * (1 + contingencyPct / 100);
+
+      // Optional sanity guard
+      if (budgetMYR > 0 && budgetMYR < 50000) {
+        console.warn('[KPI] budgetMYR unexpectedly low', { budgetSubtotal, shippingMYR, discountPct, contingencyPct, budgetMYR });
+      }
 
       const paidMYR = actualsPages
         .filter(p => extractText(getProp(p, 'Status', 'Status')) === 'Paid')
