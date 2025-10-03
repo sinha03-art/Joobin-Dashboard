@@ -1,9 +1,9 @@
 /**
- * JOOBIN Renovation Hub Proxy v7.1.0
- * Finalized: Implemented the correct, detailed budget calculation logic as per user specification.
- * - Filters for 'inScope' items.
- * - Calculates subtotal from raw supply/install costs.
- * - Applies global shipping, discount, and contingency adjustments.
+ * JOOBIN Renovation Hub Proxy v7.2.0
+ * Patched: Implemented the deliverableType fix as per user specification.
+ * - Real deliverables now have a 'deliverableType' property extracted from Notion.
+ * - Missing placeholder deliverables are also assigned a 'deliverableType'.
+ * - Gate progress calculation now correctly compares 'deliverableType' for accurate matching.
  */
 
 const {
@@ -188,13 +188,14 @@ export const handler = async (event) => {
 
       const processedDeliverables = deliverablePages.map(p => ({
           title: extractText(getProp(p, 'Name', 'Deliverable')),
+          deliverableType: extractText(getProp(p, 'Deliverable Type', 'Type')), // <<< FIX 1
           gate: extractText(getProp(p, 'Gate', 'Gate')),
           status: extractText(getProp(p, 'Approval_Status', 'Approval Status')),
           assignees: (getProp(p, 'Assignees(text)', 'Assignees')?.rich_text || []).map(rt => rt.plain_text),
           url: p.url,
       }));
 
-      const existingDeliverableTitles = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.title}`)));
+      const existingDeliverableTitles = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
 
       Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
@@ -202,6 +203,7 @@ export const handler = async (event) => {
               if (!existingDeliverableTitles.has(norm(`${gateName}|${requiredTitle}`))) {
                   allDeliverablesIncludingMissing.push({
                       title: requiredTitle,
+                      deliverableType: requiredTitle, // <<< FIX 2
                       gate: gateName,
                       status: 'Missing',
                       assignees: [],
@@ -216,7 +218,9 @@ export const handler = async (event) => {
 
       const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
           const approvedCount = allDeliverablesIncludingMissing.filter(d => 
-              d.gate === gateName && requiredDocs.some(reqTitle => norm(d.title) === norm(reqTitle)) && norm(d.status) === 'approved'
+              d.gate === gateName && 
+              requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && // <<< FIX 3
+              norm(d.status) === 'approved'
           ).length;
           
           const gateDeliverablesCount = requiredDocs.length;
