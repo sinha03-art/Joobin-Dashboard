@@ -149,25 +149,33 @@ export const handler = async (event) => {
         requiredDocs.forEach(requiredTitle => {
           if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
             allDeliverablesIncludingMissing.push({
-              title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
-              status: 'Missing', assignees: [], url: '#'
+              title: requiredTitle,
+              deliverableType: requiredTitle,
+              gate: gateName,
+              status: 'Missing',
+              assignees: [],
+              url: '#'
             });
           }
         });
       });
-      // After querying Design Gates, add this filter
-      const gatesWithContent = gatePages.filter(page => {
-        const gateName = page.properties['Gate Name']?.title?.[0]?.plain_text;
-        return gateName && gateName.trim() !== '';
-      });
-      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
-        const approvedCount = allDeliverablesIncludingMissing.filter(d =>
-          d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved'
-        ).length;
-        const totalInGate = requiredDocs.length;
-        return { gate: gateName, total: totalInGate, approved: approvedCount, gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0 };
-      }).sort((a, b) => a.gate.localeCompare(b.gate));
-
+      const gates = Object.entries(REQUIRED_BY_GATE)
+        .map(([gateName, requiredDocs]) => {
+          const approvedCount = allDeliverablesIncludingMissing.filter(d =>
+            d.gate === gateName &&
+            requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) &&
+            norm(d.status) === 'approved'
+          ).length;
+          const totalInGate = requiredDocs.length;
+          return {
+            gate: gateName,
+            total: totalInGate,
+            approved: approvedCount,
+            gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0
+          };
+        })
+        .filter(g => g.total > 0)  // ← NEW: Hide gates with no deliverables
+        .sort((a, b) => a.gate.localeCompare(b.gate));
       const paidMYR = actualsPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
 
       const overduePayments = paymentPages.filter(p => {
