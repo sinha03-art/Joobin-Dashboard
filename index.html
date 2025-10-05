@@ -683,66 +683,48 @@
 
             // === CRITICAL PATH FUNCTIONS ===
             const TARGET_START_DATE = new Date('2025-11-22');  // ← ADD THIS LINE ABOVE init()
-            function countBlockers(data) {
-                let count = 0;
-                // Check overdue payments from alerts array
-                if (data.alerts?.paymentsOverdue && data.alerts.paymentsOverdue.length > 0) count++;
-                // Check pending deliverables (not Approved status)
-                const deliverables = data.deliverables || [];
-                const pending = deliverables.filter(d => d.status !== 'Approved').length;
-                if (pending > 20) count++;
-                return count;
-            }
-
             function updateBlockersList(data) {
                 const blockerList = document.getElementById('blocker-list');
                 const blockerCount = document.getElementById('blocker-count');
                 if (!blockerList || !blockerCount) return;
+
                 const blockers = [];
 
-                // Calculate total overdue from alerts
                 const overduePayments = data.alerts?.paymentsOverdue || [];
                 if (overduePayments.length > 0) {
                     const overdueMYR = overduePayments.reduce((sum, p) => sum + p.amount, 0);
                     blockers.push({
                         icon: '💰',
-                        text: `RM ${overdueMYR.toLocaleString()} overdue payments`,
+                        text: 'RM ' + overdueMYR.toLocaleString() + ' overdue payments',
                         impact: 'Architect stopped - MBSA permit blocked'
                     });
                 }
 
-                // Count deliverables not approved
                 const deliverables = data.deliverables || [];
                 const pending = deliverables.filter(d => d.status !== 'Approved').length;
                 if (pending > 3) {
                     blockers.push({
                         icon: '📋',
-                        text: `${pending} deliverables pending approval`,
+                        text: pending + ' deliverables pending approval',
                         impact: 'Design incomplete - cannot finalize BQ and tender'
                     });
                 }
 
-                // Hardcoded blockers
                 if (!data.contractorAwarded) {
-                    blockers.push({
-                        icon: '👷',
-                        text: 'Zero contractors awarded',
-                        impact: 'Cannot begin mobilization without contractor'
-                    });
+                    blockers.push({ icon: '👷', text: 'Zero contractors awarded', impact: 'Cannot begin mobilization without contractor' });
                 }
                 if (!data.mbsaPermitApproved) {
-                    blockers.push({
-                        icon: '📜',
-                        text: 'MBSA permit not submitted',
-                        impact: 'Construction cannot start without permit'
-                    });
+                    blockers.push({ icon: '📜', text: 'MBSA permit not submitted', impact: 'Construction cannot start without permit' });
                 }
 
                 blockerCount.textContent = blockers.length;
+
                 if (blockers.length === 0) {
-                    blockerList.innerHTML = `<div class="blocker-item resolved"><div class="blocker-icon">✅</div><div class="blocker-content"><p class="blocker-text" style="color: #86efac;">No critical blockers - timeline on track</p></div></div>`;
+                    blockerList.innerHTML = '<div class="blocker-item resolved"><div class="blocker-icon">✅</div><div class="blocker-content"><p class="blocker-text" style="color: #86efac;">No critical blockers - timeline on track</p></div></div>';
                 } else {
-                    blockerList.innerHTML = blockers.map(b => `<div class="blocker-item"><div class="blocker-icon">${b.icon}</div><div class="blocker-content"><p class="blocker-text">${b.text}</p><p class="blocker-impact">${b.impact}</p></div></div>`).join('');
+                    blockerList.innerHTML = blockers.map(function (b) {
+                        return '<div class="blocker-item"><div class="blocker-icon">' + b.icon + '</div><div class="blocker-content"><p class="blocker-text">' + b.text + '</p><p class="blocker-impact">' + b.impact + '</p></div></div>';
+                    }).join('');
                 }
             }
 
