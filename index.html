@@ -650,6 +650,67 @@
                 });
             }
         }
+        // === CRITICAL PATH FUNCTIONS ===
+        const TARGET_START_DATE = new Date('2025-11-22');
+
+        function countBlockers(data) {
+            let count = 0;
+            if (data.alerts?.paymentsOverdue && data.alerts.paymentsOverdue.length > 0) count++;
+            const deliverables = data.deliverables || [];
+            const pending = deliverables.filter(d => d.status !== 'Approved').length;
+            if (pending > 3) count++;
+            return count;
+        }
+
+        function updateCountdownBanner(data) {
+            const now = new Date();
+            const daysRemaining = Math.ceil((TARGET_START_DATE - now) / (1000 * 60 * 60 * 24));
+            const daysEl = document.getElementById('countdown-days');
+            const statusEl = document.getElementById('countdown-status');
+            const bannerEl = document.getElementById('countdown-banner');
+            if (!daysEl || !statusEl || !bannerEl) return;
+            daysEl.textContent = daysRemaining + ' DAYS';
+            const blockerCount = countBlockers(data);
+            let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
+            if (blockerCount === 0 && daysRemaining > 30) {
+                riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢';
+            } else if (blockerCount <= 1 && daysRemaining > 20) {
+                riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡';
+            }
+            bannerEl.className = 'countdown-banner ' + riskLevel;
+            statusEl.innerHTML = '<span class="status-indicator">' + riskIcon + '</span><span class="status-text">' + riskText + '</span>';
+        }
+
+        function updateBlockersList(data) {
+            const blockerList = document.getElementById('blocker-list');
+            const blockerCount = document.getElementById('blocker-count');
+            if (!blockerList || !blockerCount) return;
+            const blockers = [];
+            const overduePayments = data.alerts?.paymentsOverdue || [];
+            if (overduePayments.length > 0) {
+                const overdueMYR = overduePayments.reduce((sum, p) => sum + p.amount, 0);
+                blockers.push({ icon: '💰', text: 'RM ' + overdueMYR.toLocaleString() + ' overdue payments', impact: 'Architect stopped - MBSA permit blocked' });
+            }
+            const deliverables = data.deliverables || [];
+            const pending = deliverables.filter(d => d.status !== 'Approved').length;
+            if (pending > 3) {
+                blockers.push({ icon: '📋', text: pending + ' deliverables pending approval', impact: 'Design incomplete - cannot finalize BQ and tender' });
+            }
+            if (!data.contractorAwarded) {
+                blockers.push({ icon: '👷', text: 'Zero contractors awarded', impact: 'Cannot begin mobilization without contractor' });
+            }
+            if (!data.mbsaPermitApproved) {
+                blockers.push({ icon: '📜', text: 'MBSA permit not submitted', impact: 'Construction cannot start without permit' });
+            }
+            blockerCount.textContent = blockers.length;
+            if (blockers.length === 0) {
+                blockerList.innerHTML = '<div class="blocker-item resolved"><div class="blocker-icon">✅</div><div class="blocker-content"><p class="blocker-text" style="color: #86efac;">No critical blockers - timeline on track</p></div></div>';
+            } else {
+                blockerList.innerHTML = blockers.map(function (b) {
+                    return '<div class="blocker-item"><div class="blocker-icon">' + b.icon + '</div><div class="blocker-content"><p class="blocker-text">' + b.text + '</p><p class="blocker-impact">' + b.impact + '</p></div></div>';
+                }).join('');
+            }
+        }
 
         async function getAISummary() {
             const summaryEl = document.getElementById('aiSummary');
@@ -664,102 +725,39 @@
             } catch (error) {
                 console.error('AI Summary Error:', error);
                 summaryEl.textContent = 'Could not generate summary.';
-
-
-                // Check overdue payments
-                if (data.kpis?.totalOverdueMYR && data.kpis.totalOverdueMYR > 0) count++;
-
-                // Check pending deliverables
-                const delApproved = data.kpis?.deliverablesApproved || 0;
-                const delTotal = data.kpis?.deliverablesTotal || 0;
-                if ((delTotal - delApproved) > 20) count++;
-
-                // Add more blockers as needed
-
-                return count;
+            } finally {
+                summaryBtn.disabled = false;
             }
+        }
 
-            // === CRITICAL PATH FUNCTIONS ===
-            const TARGET_START_DATE = new Date('2025-11-22');  // ← ADD THIS LINE ABOVE init()
-            function updateBlockersList(data) {
-                const blockerList = document.getElementById('blocker-list');
-                const blockerCount = document.getElementById('blocker-count');
-                if (!blockerList || !blockerCount) return;
-
-                const blockers = [];
-
-                const overduePayments = data.alerts?.paymentsOverdue || [];
-                if (overduePayments.length > 0) {
-                    const overdueMYR = overduePayments.reduce((sum, p) => sum + p.amount, 0);
-                    blockers.push({
-                        icon: '💰',
-                        text: 'RM ' + overdueMYR.toLocaleString() + ' overdue payments',
-                        impact: 'Architect stopped - MBSA permit blocked'
-                    });
-                }
-
-                const deliverables = data.deliverables || [];
-                const pending = deliverables.filter(d => d.status !== 'Approved').length;
-                if (pending > 3) {
-                    blockers.push({
-                        icon: '📋',
-                        text: pending + ' deliverables pending approval',
-                        impact: 'Design incomplete - cannot finalize BQ and tender'
-                    });
-                }
-
-                if (!data.contractorAwarded) {
-                    blockers.push({ icon: '👷', text: 'Zero contractors awarded', impact: 'Cannot begin mobilization without contractor' });
-                }
-                if (!data.mbsaPermitApproved) {
-                    blockers.push({ icon: '📜', text: 'MBSA permit not submitted', impact: 'Construction cannot start without permit' });
-                }
-
-                blockerCount.textContent = blockers.length;
-
-                if (blockers.length === 0) {
-                    blockerList.innerHTML = '<div class="blocker-item resolved"><div class="blocker-icon">✅</div><div class="blocker-content"><p class="blocker-text" style="color: #86efac;">No critical blockers - timeline on track</p></div></div>';
-                } else {
-                    blockerList.innerHTML = blockers.map(function (b) {
-                        return '<div class="blocker-item"><div class="blocker-icon">' + b.icon + '</div><div class="blocker-content"><p class="blocker-text">' + b.text + '</p><p class="blocker-impact">' + b.impact + '</p></div></div>';
-                    }).join('');
-                }
+        async function init() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Network error: ' + response.statusText);
+                dashboardData = await response.json();
+                dashboardData.contractorAwarded = false;
+                dashboardData.mbsaPermitApproved = false;
+                renderKPIs(dashboardData.kpis);
+                renderTabs(dashboardData);
+                renderUpcomingTasks(dashboardData.deliverables);
+                renderGates(dashboardData.gates);
+                renderTopVendors(dashboardData.topVendors);
+                renderCharts(dashboardData);
+                updateCountdownBanner(dashboardData);
+                updateBlockersList(dashboardData);
+                document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
+                updateClock();
+                setInterval(updateClock, 1000);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('dashboardContent').classList.remove('hidden');
+                getAISummary();
+                document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary);
+            } catch (error) {
+                console.error('❌ Error loading dashboard:', error);
+                document.getElementById('loader').innerHTML = '<div class="card bg-red-900/50 border-red-700 text-red-200 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">' + error.message + '</p><p class="text-xs mt-2 text-red-300">Please check the API and refresh.</p></div>';
             }
-
-            async function init() {
-                try {
-                    const response = await fetch(API_URL);
-                    if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
-                    dashboardData = await response.json();
-
-                    // ADD THESE TWO LINES ↓
-                    dashboardData.contractorAwarded = false;
-                    dashboardData.mbsaPermitApproved = false;
-
-                    renderKPIs(dashboardData.kpis);
-                    renderTabs(dashboardData);
-                    renderUpcomingTasks(dashboardData.deliverables);
-                    renderGates(dashboardData.gates);
-                    renderTopVendors(dashboardData.topVendors);
-                    renderCharts(dashboardData);
-
-                    // ADD THESE TWO LINES ↓
-                    updateCountdownBanner(dashboardData);
-                    updateBlockersList(dashboardData);
-
-                    document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
-                    updateClock();
-                    setInterval(updateClock, 1000);
-                    document.getElementById('loader').style.display = 'none';
-                    document.getElementById('dashboardContent').classList.remove('hidden');
-                    getAISummary();
-                    document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary);
-                } catch (error) {
-                    console.error('❌ Error loading dashboard:', error);
-                    document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 border-red-700 text-red-200 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p><p class="text-xs mt-2 text-red-300">Please check the API and refresh.</p></div>`;
-                }
-            }
-            init();
+        }
+        init();
         }
     </script>
 </body>
