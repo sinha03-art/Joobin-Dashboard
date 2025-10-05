@@ -758,30 +758,13 @@
             const TARGET_START_DATE = new Date('2025-11-22');  // ← ADD THIS LINE ABOVE init()
             function countBlockers(data) {
                 let count = 0;
-                if (data.kpis?.totalOverdueMYR && data.kpis.totalOverdueMYR > 0) count++;
-                const delApproved = data.kpis?.deliverablesApproved || 0;
-                const delTotal = data.kpis?.deliverablesTotal || 0;
-                if ((delTotal - delApproved) > 20) count++;
+                // Check overdue payments from alerts array
+                if (data.alerts?.paymentsOverdue && data.alerts.paymentsOverdue.length > 0) count++;
+                // Check pending deliverables (not Approved status)
+                const deliverables = data.deliverables || [];
+                const pending = deliverables.filter(d => d.status !== 'Approved').length;
+                if (pending > 20) count++;
                 return count;
-            }
-
-            function updateCountdownBanner(data) {
-                const now = new Date();
-                const daysRemaining = Math.ceil((TARGET_START_DATE - now) / (1000 * 60 * 60 * 24));
-                const daysEl = document.getElementById('countdown-days');
-                const statusEl = document.getElementById('countdown-status');
-                const bannerEl = document.getElementById('countdown-banner');
-                if (!daysEl || !statusEl || !bannerEl) return;
-                daysEl.textContent = `${daysRemaining} DAYS`;
-                const blockerCount = countBlockers(data);
-                let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
-                if (blockerCount === 0 && daysRemaining > 30) {
-                    riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢';
-                } else if (blockerCount <= 1 && daysRemaining > 20) {
-                    riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡';
-                }
-                bannerEl.className = `countdown-banner ${riskLevel}`;
-                statusEl.innerHTML = `<span class="status-indicator">${riskIcon}</span><span class="status-text">${riskText}</span>`;
             }
 
             function updateBlockersList(data) {
@@ -789,22 +772,45 @@
                 const blockerCount = document.getElementById('blocker-count');
                 if (!blockerList || !blockerCount) return;
                 const blockers = [];
-                const overdueMYR = data.kpis?.totalOverdueMYR || 0;
-                if (overdueMYR > 0) {
-                    blockers.push({ icon: '💰', text: `RM ${overdueMYR.toLocaleString()} overdue payments`, impact: 'Architect stopped - MBSA permit blocked' });
+
+                // Calculate total overdue from alerts
+                const overduePayments = data.alerts?.paymentsOverdue || [];
+                if (overduePayments.length > 0) {
+                    const overdueMYR = overduePayments.reduce((sum, p) => sum + p.amount, 0);
+                    blockers.push({
+                        icon: '💰',
+                        text: `RM ${overdueMYR.toLocaleString()} overdue payments`,
+                        impact: 'Architect stopped - MBSA permit blocked'
+                    });
                 }
-                const delApproved = data.kpis?.deliverablesApproved || 0;
-                const delTotal = data.kpis?.deliverablesTotal || 0;
-                const delPending = delTotal - delApproved;
-                if (delPending > 20) {
-                    blockers.push({ icon: '📋', text: `${delPending} deliverables pending approval`, impact: 'Design incomplete - cannot finalize BQ and tender' });
+
+                // Count deliverables not approved
+                const deliverables = data.deliverables || [];
+                const pending = deliverables.filter(d => d.status !== 'Approved').length;
+                if (pending > 3) {
+                    blockers.push({
+                        icon: '📋',
+                        text: `${pending} deliverables pending approval`,
+                        impact: 'Design incomplete - cannot finalize BQ and tender'
+                    });
                 }
+
+                // Hardcoded blockers
                 if (!data.contractorAwarded) {
-                    blockers.push({ icon: '👷', text: 'Zero contractors awarded', impact: 'Cannot begin mobilization without contractor' });
+                    blockers.push({
+                        icon: '👷',
+                        text: 'Zero contractors awarded',
+                        impact: 'Cannot begin mobilization without contractor'
+                    });
                 }
                 if (!data.mbsaPermitApproved) {
-                    blockers.push({ icon: '📜', text: 'MBSA permit not submitted', impact: 'Construction cannot start without permit' });
+                    blockers.push({
+                        icon: '📜',
+                        text: 'MBSA permit not submitted',
+                        impact: 'Construction cannot start without permit'
+                    });
                 }
+
                 blockerCount.textContent = blockers.length;
                 if (blockers.length === 0) {
                     blockerList.innerHTML = `<div class="blocker-item resolved"><div class="blocker-icon">✅</div><div class="blocker-content"><p class="blocker-text" style="color: #86efac;">No critical blockers - timeline on track</p></div></div>`;
@@ -849,5 +855,5 @@
             init();
         }
     </script>
-</body
+</body>
 </html>
