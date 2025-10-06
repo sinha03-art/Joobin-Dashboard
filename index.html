@@ -70,14 +70,6 @@
             }
         }
 
-        .kpi-icon {
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover .kpi-icon {
-            transform: scale(1.1);
-        }
-
         /* === Modern Visuals: Critical Path Alerts === */
         .countdown-banner {
             background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%);
@@ -173,6 +165,124 @@
         .card:hover .kpi-icon {
             transform: scale(1.1);
         }
+
+        /* === Critical Path Alerts === */
+        .countdown-banner {
+            background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%);
+            padding: 24px;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            border: 1px solid #dc2626;
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .countdown-banner.low-risk {
+            background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%);
+            border-color: #16a34a;
+            box-shadow: 0 8px 25px rgba(22, 163, 74, 0.15);
+        }
+
+        .countdown-banner.medium-risk {
+            background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%);
+            border-color: #ea580c;
+            box-shadow: 0 8px 25px rgba(234, 88, 12, 0.15);
+        }
+
+        .countdown-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .countdown-icon {
+            font-size: 40px;
+            animation: pulse 2.5s ease-out infinite;
+        }
+
+        .countdown-text {
+            flex: 1;
+        }
+
+        .countdown-days {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .countdown-label {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .countdown-status {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            font-size: 32px;
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .blocker-card {
+            background: hsl(var(--card));
+            border-radius: 0.75rem;
+            padding: 20px;
+            border: 1px solid #b91c1c;
+            margin-bottom: 24px;
+        }
+
+        .blocker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .blocker-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f87171;
+        }
+
+        .blocker-count {
+            background: #dc2626;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 99px;
+        }
+
+        .blocker-item {
+            background: rgba(153, 27, 27, 0.1);
+            border-left: 3px solid #dc2626;
+            padding: 12px;
+            border-radius: 4px;
+        }
+
+        .blocker-item.resolved {
+            background: rgba(22, 163, 74, 0.1);
+            border-left-color: #16a34a;
+            color: #86efac;
+        }
     </style>
 </head>
 
@@ -256,50 +366,51 @@
 
             <div id="critical-path-section">
                 <!-- Critical Path Alert Banner & Blockers will be injected here by JS -->
-                <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                </div>
+            </div>
+            <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="card p-4 sm:p-6">
-                            <h3 class="text-lg font-semibold mb-4">Action Items</h3>
-                            <div class="border-b border-slate-700">
-                                <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue"
-                                        class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button
-                                        data-tab="upcoming"
-                                        class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming
-                                        Payments</button><button data-tab="recent"
-                                        class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
-                                        Paid</button><button data-tab="toComplete"
-                                        class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
-                                        Complete</button></nav>
-                            </div>
-                            <div class="mt-4 min-h-[250px] relative">
-                                <div id="overdueContent" class="tab-content active"></div>
-                                <div id="upcomingContent" class="tab-content"></div>
-                                <div id="recentContent" class="tab-content"></div>
-                                <div id="toCompleteContent" class="tab-content">
-                                    <div id="upcomingTasksList" class="space-y-3"></div>
-                                </div>
-                            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Action Items</h3>
+                        <div class="border-b border-slate-700">
+                            <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue"
+                                    class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button
+                                    data-tab="upcoming"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming
+                                    Payments</button><button data-tab="recent"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
+                                    Paid</button><button data-tab="toComplete"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
+                                    Complete</button></nav>
                         </div>
-                        <div class="card p-4 sm:p-6">
-                            <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
-                            <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                        <div class="mt-4 min-h-[250px] relative">
+                            <div id="overdueContent" class="tab-content active"></div>
+                            <div id="upcomingContent" class="tab-content"></div>
+                            <div id="recentContent" class="tab-content"></div>
+                            <div id="toCompleteContent" class="tab-content">
+                                <div id="upcomingTasksList" class="space-y-3"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="card p-4 sm:p-6">
-                            <h3 class="text-lg font-semibold mb-4">Payment Forecast</h3><canvas id="forecastChart"
-                                class="max-h-64"></canvas>
-                        </div>
-                        <div class="card p-4 sm:p-6">
-                            <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
-                            <div id="topVendors" class="space-y-4"></div>
-                        </div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+                        <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Payment Forecast</h3><canvas id="forecastChart"
+                            class="max-h-64"></canvas>
+                    </div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                        <div id="topVendors" class="space-y-4"></div>
                     </div>
                 </div>
             </div>
+        </div>
     </main>
 
     <script>
@@ -390,28 +501,6 @@
                 return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div class="flex justify-between items-start"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)} ${task.dueTime || ''}</p></div></div><div class="grid grid-cols-3 gap-2 text-xs mt-3 pt-2 border-t border-slate-700/50"><div><span class="text-slate-500 block">Vendor:</span> <span class="text-slate-300">${task.vendor || 'N/A'}</span></div><div><span class="text-slate-500 block">Gate:</span> <span class="text-slate-300">${task.gate}</span></div><div><span class="text-slate-500 block">Assigned:</span> <span class="text-slate-300">${task.assignees.join(', ') || 'HAM'}</span></div></div></div>`;
             }).join('');
         }
-
-        function renderTopVendors(vendors) {
-            const container = document.getElementById('topVendors');
-            if (!vendors || vendors.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">No vendor spend data.</p>`; return; }
-            const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
-            container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join('');
-        }
-
-        function renderCharts(data) {
-            Chart.defaults.color = '#94a3b8';
-            Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
-            const forecastCtx = document.getElementById('forecastChart');
-            if (forecastChart) forecastChart.destroy();
-            if (forecastCtx && data.paymentsSchedule?.forecast) {
-                const chartData = data.paymentsSchedule.forecast;
-                const gradient = forecastCtx.getContext('2d').createLinearGradient(0, 0, 0, forecastCtx.height);
-                gradient.addColorStop(0, 'rgba(37, 99, 235, 0.6)');
-                gradient.addColorStop(1, 'rgba(37, 99, 235, 0.1)');
-                forecastChart = new Chart(forecastCtx, { type: 'bar', data: { labels: chartData.map(f => f.month), datasets: [{ data: chartData.map(f => f.totalAmount), backgroundColor: gradient, borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false, backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1, padding: 10, callbacks: { label: (c) => `Total: ${formatMYR(c.parsed.y)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => formatMYRShort(v) } }, x: { grid: { display: false } } } } });
-            }
-        }
-
         function renderCriticalPath(alerts) {
             const container = document.getElementById('critical-path-section');
             if (!alerts) {
@@ -501,6 +590,26 @@
   `;
 
             container.innerHTML = bannerHTML + blockersHTML;
+        }
+        function renderTopVendors(vendors) {
+            const container = document.getElementById('topVendors');
+            if (!vendors || vendors.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">No vendor spend data.</p>`; return; }
+            const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
+            container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join('');
+        }
+
+        function renderCharts(data) {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+            const forecastCtx = document.getElementById('forecastChart');
+            if (forecastChart) forecastChart.destroy();
+            if (forecastCtx && data.paymentsSchedule?.forecast) {
+                const chartData = data.paymentsSchedule.forecast;
+                const gradient = forecastCtx.getContext('2d').createLinearGradient(0, 0, 0, forecastCtx.height);
+                gradient.addColorStop(0, 'rgba(37, 99, 235, 0.6)');
+                gradient.addColorStop(1, 'rgba(37, 99, 235, 0.1)');
+                forecastChart = new Chart(forecastCtx, { type: 'bar', data: { labels: chartData.map(f => f.month), datasets: [{ data: chartData.map(f => f.totalAmount), backgroundColor: gradient, borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false, backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1, padding: 10, callbacks: { label: (c) => `Total: ${formatMYR(c.parsed.y)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => formatMYRShort(v) } }, x: { grid: { display: false } } } } });
+            }
         }
 
         async function getAISummary() {
