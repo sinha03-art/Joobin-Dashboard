@@ -31,6 +31,7 @@
             border: 1px solid hsl(var(--border));
             transition: all 0.2s ease-in-out;
         }
+
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
@@ -41,11 +42,41 @@
             border-bottom-color: hsl(var(--ring));
         }
 
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
-        @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0); } }
-        @keyframes draw-circle { to { stroke-dashoffset: 0; } }
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0);
+            }
+        }
+
+        @keyframes draw-circle {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .kpi-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .kpi-icon {
+            transform: scale(1.1);
+        }
 
         /* === Modern Visuals: Critical Path Alerts === */
         .countdown-banner {
@@ -56,23 +87,92 @@
             border: 1px solid #dc2626;
             box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
         }
-        .countdown-banner.low-risk { background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%); border-color: #16a34a; box-shadow: 0 8px 25px rgba(22, 163, 74, 0.15); }
-        .countdown-banner.medium-risk { background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%); border-color: #ea580c; box-shadow: 0 8px 25px rgba(234, 88, 12, 0.15); }
 
-        .countdown-icon { font-size: 40px; animation: pulse 2.5s ease-out infinite; }
-        .countdown-days { font-size: 36px; font-weight: 800; line-height: 1; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        .countdown-label { font-size: 13px; opacity: 0.8; margin-top: 4px; letter-spacing: 0.5px; }
+        .countdown-banner.low-risk {
+            background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%);
+            border-color: #16a34a;
+            box-shadow: 0 8px 25px rgba(22, 163, 74, 0.15);
+        }
 
-        .blocker-card { background: hsl(var(--card)); border-radius: 0.75rem; padding: 20px; border: 1px solid #b91c1c; margin-bottom: 24px; }
-        .blocker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid hsl(var(--border)); }
-        .blocker-title { font-size: 16px; font-weight: 700; color: #f87171; }
-        .blocker-count { background: #dc2626; color: white; font-weight: 700; font-size: 14px; padding: 4px 10px; border-radius: 99px; }
-        .blocker-item { background: rgba(153, 27, 27, 0.1); border-left: 3px solid #dc2626; }
-        .blocker-item.resolved { background: rgba(22, 163, 74, 0.1); border-left-color: #16a34a; color: #86efac;}
-        
-        .gate-circle { animation: draw-circle 1.5s ease-out forwards; }
-        .kpi-icon { transition: transform 0.3s ease; }
-        .card:hover .kpi-icon { transform: scale(1.1); }
+        .countdown-banner.medium-risk {
+            background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%);
+            border-color: #ea580c;
+            box-shadow: 0 8px 25px rgba(234, 88, 12, 0.15);
+        }
+
+        .countdown-icon {
+            font-size: 40px;
+            animation: pulse 2.5s ease-out infinite;
+        }
+
+        .countdown-days {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .countdown-label {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .blocker-card {
+            background: hsl(var(--card));
+            border-radius: 0.75rem;
+            padding: 20px;
+            border: 1px solid #b91c1c;
+            margin-bottom: 24px;
+        }
+
+        .blocker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .blocker-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f87171;
+        }
+
+        .blocker-count {
+            background: #dc2626;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 99px;
+        }
+
+        .blocker-item {
+            background: rgba(153, 27, 27, 0.1);
+            border-left: 3px solid #dc2626;
+        }
+
+        .blocker-item.resolved {
+            background: rgba(22, 163, 74, 0.1);
+            border-left-color: #16a34a;
+            color: #86efac;
+        }
+
+        .gate-circle {
+            animation: draw-circle 1.5s ease-out forwards;
+        }
+
+        .kpi-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .kpi-icon {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 
@@ -117,39 +217,89 @@
     <main class="flex-1 overflow-y-auto p-6 lg:p-8">
         <div id="loader" class="flex items-center justify-center h-full">
             <div class="text-center">
-                <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
                 <p class="mt-2 text-sm text-slate-400">Loading Command Center...</p>
             </div>
         </div>
 
         <div id="dashboardContent" class="hidden">
             <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
-                <div class="flex-shrink-0"><h2 class="text-3xl font-bold tracking-tight">Command Center</h2><p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p></div>
-                <div class="flex items-center justify-center text-center sm:text-left flex-grow"><div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn" class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" /></svg></button></div>
-                <div class="text-right flex-shrink-0"><div id="clock" class="text-2xl font-bold text-slate-200"></div><div id="date" class="text-xs text-slate-500"></div></div>
+                <div class="flex-shrink-0">
+                    <h2 class="text-3xl font-bold tracking-tight">Command Center</h2>
+                    <p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p>
+                </div>
+                <div class="flex items-center justify-center text-center sm:text-left flex-grow">
+                    <div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn"
+                        class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-sparkles">
+                            <path
+                                d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                            <path d="M5 3v4" />
+                            <path d="M19 17v4" />
+                            <path d="M3 5h4" />
+                            <path d="M17 19h4" />
+                        </svg></button>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div id="clock" class="text-2xl font-bold text-slate-200"></div>
+                    <div id="date" class="text-xs text-slate-500"></div>
+                </div>
             </header>
 
             <div id="critical-path-section">
                 <!-- Critical Path Alert Banner & Blockers will be injected here by JS -->
-            </div>
+                <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                </div>
 
-            <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="card p-4 sm:p-6">
-                        <h3 class="text-lg font-semibold mb-4">Action Items</h3>
-                        <div class="border-b border-slate-700"><nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button data-tab="upcoming" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming Payments</button><button data-tab="recent" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently Paid</button><button data-tab="toComplete" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To Complete</button></nav></div>
-                        <div class="mt-4 min-h-[250px] relative"><div id="overdueContent" class="tab-content active"></div><div id="upcomingContent" class="tab-content"></div><div id="recentContent" class="tab-content"></div><div id="toCompleteContent" class="tab-content"><div id="upcomingTasksList" class="space-y-3"></div></div></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="card p-4 sm:p-6">
+                            <h3 class="text-lg font-semibold mb-4">Action Items</h3>
+                            <div class="border-b border-slate-700">
+                                <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue"
+                                        class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button
+                                        data-tab="upcoming"
+                                        class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming
+                                        Payments</button><button data-tab="recent"
+                                        class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
+                                        Paid</button><button data-tab="toComplete"
+                                        class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
+                                        Complete</button></nav>
+                            </div>
+                            <div class="mt-4 min-h-[250px] relative">
+                                <div id="overdueContent" class="tab-content active"></div>
+                                <div id="upcomingContent" class="tab-content"></div>
+                                <div id="recentContent" class="tab-content"></div>
+                                <div id="toCompleteContent" class="tab-content">
+                                    <div id="upcomingTasksList" class="space-y-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card p-4 sm:p-6">
+                            <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+                            <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                        </div>
                     </div>
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Gate Progress</h3><div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div></div>
-                </div>
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Payment Forecast</h3><canvas id="forecastChart" class="max-h-64"></canvas></div>
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3><div id="topVendors" class="space-y-4"></div></div>
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="card p-4 sm:p-6">
+                            <h3 class="text-lg font-semibold mb-4">Payment Forecast</h3><canvas id="forecastChart"
+                                class="max-h-64"></canvas>
+                        </div>
+                        <div class="card p-4 sm:p-6">
+                            <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                            <div id="topVendors" class="space-y-4"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
     </main>
 
     <script>
@@ -194,7 +344,7 @@
                 return `<${cardTag} ${cardProps} class="card p-5 ${k.title === 'Deliverables' ? 'hover:border-blue-500' : ''}"><div class="flex justify-between items-start"><div class="flex-1"><p class="text-sm font-medium text-slate-400">${k.title}</p><p class="text-3xl font-bold mt-2">${k.value}</p><p class="text-xs text-slate-500 mt-1">${k.subValue}</p></div><div class="kpi-icon text-slate-600">${k.icon}</div></div></${cardTag}>`;
             }).join('');
         }
-        
+
         function renderTabs(data) {
             const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
             const renderList = (items, type) => {
@@ -225,17 +375,17 @@
                 const offset = circ - (progress / 100) * circ;
                 let color = 'hsl(var(--ring))';
                 if (progress === 100) color = '#10b981'; else if (progress < 50) color = '#f59e0b';
-                return `<div class="flex flex-col items-center text-center"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="${r}" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round" stroke="${color}" fill="transparent" r="${r}" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%; animation-delay: ${Math.random()*0.5}s;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></div>`;
+                return `<div class="flex flex-col items-center text-center"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="${r}" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round" stroke="${color}" fill="transparent" r="${r}" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%; animation-delay: ${Math.random() * 0.5}s;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></div>`;
             }).join('');
         }
-        
+
         function renderUpcomingTasks(deliverables) {
             const container = document.getElementById('upcomingTasksList');
             if (!container) return;
             const tasks = deliverables.filter(d => d.dueDate && ['Missing', 'Submitted', 'Rejected'].includes(d.status)).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
             if (tasks.length === 0) { container.innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">No upcoming tasks scheduled.</div>'; return; }
             container.innerHTML = tasks.map(task => {
-                const colors = {'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500'};
+                const colors = { 'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500' };
                 const badge = task.confirmed ? '<span class="px-2 py-0.5 bg-green-900/40 text-green-300 rounded-full text-xs font-medium">Confirmed</span>' : '<span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 rounded-full text-xs font-medium">Tentative</span>';
                 return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div class="flex justify-between items-start"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)} ${task.dueTime || ''}</p></div></div><div class="grid grid-cols-3 gap-2 text-xs mt-3 pt-2 border-t border-slate-700/50"><div><span class="text-slate-500 block">Vendor:</span> <span class="text-slate-300">${task.vendor || 'N/A'}</span></div><div><span class="text-slate-500 block">Gate:</span> <span class="text-slate-300">${task.gate}</span></div><div><span class="text-slate-500 block">Assigned:</span> <span class="text-slate-300">${task.assignees.join(', ') || 'HAM'}</span></div></div></div>`;
             }).join('');
@@ -247,7 +397,7 @@
             const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
             container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join('');
         }
-        
+
         function renderCharts(data) {
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
@@ -264,26 +414,95 @@
 
         function renderCriticalPath(alerts) {
             const container = document.getElementById('critical-path-section');
-            if (!alerts) { container.innerHTML = ''; return; }
-            
+            if (!alerts) {
+                container.innerHTML = '';
+                return;
+            }
+
             const { daysToConstructionStart, paymentsOverdue = [], contractorAwarded, mbsaPermitApproved } = alerts;
-            
+
             let blockers = [];
-            if (paymentsOverdue.length > 0) blockers.push({ icon: '💰', text: `${formatMYRShort(paymentsOverdue.reduce((s, p) => s + p.amount, 0))} in overdue payments`, impact: 'Can block permits and vendor work' });
-            if (!mbsaPermitApproved) blockers.push({ icon: '📜', text: 'MBSA permit not approved', impact: 'Construction cannot legally start' });
-            if (!contractorAwarded) blockers.push({ icon: '👷', text: 'Main contractor not awarded', impact: 'Cannot begin mobilization' });
-            
+            if (paymentsOverdue.length > 0) {
+                blockers.push({
+                    icon: '💰',
+                    text: `${formatMYRShort(paymentsOverdue.reduce((s, p) => s + p.amount, 0))} in overdue payments`,
+                    impact: 'Can block permits and vendor work'
+                });
+            }
+            if (!mbsaPermitApproved) {
+                blockers.push({
+                    icon: '📜',
+                    text: 'MBSA permit not approved',
+                    impact: 'Construction cannot legally start'
+                });
+            }
+            if (!contractorAwarded) {
+                blockers.push({
+                    icon: '👷',
+                    text: 'Main contractor not awarded',
+                    impact: 'Cannot begin mobilization'
+                });
+            }
+
             let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
-            if (blockers.length === 0 && daysToConstructionStart > 60) { riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢'; } 
-            else if (blockers.length <= 1 && daysToConstructionStart > 30) { riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡'; }
-            
-            const bannerHTML = `<div class="countdown-banner ${riskLevel}" id="countdown-banner"><div class="countdown-content"><div class="countdown-icon">⏱️</div><div class="countdown-text"><div class="countdown-days">${daysToConstructionStart} DAYS</div><div class="countdown-label">TO CONSTRUCTION START (NOV 22, 2025)</div></div><div class="countdown-status"><span class="status-indicator">${riskIcon}</span><span class="status-text">${riskText}</span></div></div></div>`;
-            
-            const blockersHTML = `<div class="blocker-card"><div class="blocker-header"><h3 class="blocker-title">CRITICAL BLOCKERS</h3><span class="blocker-count">${blockers.length}</span></div><div class="space-y-3">${blockers.length > 0 ? blockers.map(b => `<div class="blocker-item p-3 rounded-md"><div class="flex items-start gap-3"><div class="text-xl mt-0.5">${b.icon}</div><div><p class="font-semibold text-slate-200">${b.text}</p><p class="text-xs text-red-400">${b.impact}</p></div></div></div>`).join('') : '<div class="blocker-item resolved p-3 rounded-md"><div class="flex items-center gap-3"><div class="text-xl">✅</div><p class="font-semibold">No critical blockers - timeline on track</p></div></div>'}</div></div>`;
+            if (blockers.length === 0 && daysToConstructionStart > 60) {
+                riskLevel = 'low-risk';
+                riskText = 'ON TRACK';
+                riskIcon = '🟢';
+            } else if (blockers.length <= 1 && daysToConstructionStart > 30) {
+                riskLevel = 'medium-risk';
+                riskText = 'AT RISK';
+                riskIcon = '🟡';
+            }
+
+            const bannerHTML = `
+    <div class="countdown-banner ${riskLevel}" id="countdown-banner">
+      <div class="countdown-content">
+        <div class="countdown-icon">⏱️</div>
+        <div class="countdown-text">
+          <div class="countdown-days">${daysToConstructionStart} DAYS</div>
+          <div class="countdown-label">TO CONSTRUCTION START (NOV 22, 2025)</div>
+        </div>
+        <div class="countdown-status">
+          <span class="status-indicator">${riskIcon}</span>
+          <span class="status-text">${riskText}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+            const blockersHTML = `
+    <div class="blocker-card">
+      <div class="blocker-header">
+        <h3 class="blocker-title">CRITICAL BLOCKERS</h3>
+        <span class="blocker-count">${blockers.length}</span>
+      </div>
+      <div class="space-y-3">
+        ${blockers.length > 0 ? blockers.map(b => `
+          <div class="blocker-item p-3 rounded-md">
+            <div class="flex items-start gap-3">
+              <div class="text-xl mt-0.5">${b.icon}</div>
+              <div>
+                <p class="font-semibold text-slate-200">${b.text}</p>
+                <p class="text-xs text-red-400">${b.impact}</p>
+              </div>
+            </div>
+          </div>
+        `).join('') : `
+          <div class="blocker-item resolved p-3 rounded-md">
+            <div class="flex items-center gap-3">
+              <div class="text-xl">✅</div>
+              <p class="font-semibold">No critical blockers - timeline on track</p>
+            </div>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
 
             container.innerHTML = bannerHTML + blockersHTML;
         }
-        
+
         async function getAISummary() {
             const el = document.getElementById('aiSummary'), btn = document.getElementById('aiSummaryBtn');
             el.textContent = 'Generating summary...'; btn.disabled = true;
@@ -291,7 +510,7 @@
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(dashboardData) });
                 if (!res.ok) throw new Error('Failed to get AI summary');
                 el.textContent = (await res.json()).summary;
-            } catch (e) { console.error('AI Summary Error:', e); el.textContent = 'Could not generate summary.'; } 
+            } catch (e) { console.error('AI Summary Error:', e); el.textContent = 'Could not generate summary.'; }
             finally { btn.disabled = false; }
         }
 
@@ -300,7 +519,7 @@
                 const response = await fetch(API_URL);
                 if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
                 dashboardData = await response.json();
-                
+
                 renderCriticalPath(dashboardData.alerts);
                 renderKPIs(dashboardData.kpis);
                 renderTabs(dashboardData);
@@ -326,6 +545,5 @@
         init();
     </script>
 </body>
+
 </html>
-
-
