@@ -67,28 +67,28 @@ async function queryNotionDB(dbId, filter = {}) {
 }
 
 async function callGemini(prompt) {
-  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  let delay = 1000;
-  for (let i = 0; i < 3; i++) {
-    try {
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-      if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (res.status === 503) {
-        console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
-        await sleep(delay);
-        delay *= 2;
-        continue;
-      }
-      throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
-    } catch (error) {
-      if (i === 2) throw error;
-      console.warn(`Network error calling Gemini. Retrying...`, error.message);
-      await sleep(delay);
-      delay *= 2;
+    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    let delay = 1000;
+    for (let i = 0; i < 3; i++) {
+        try {
+            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+            if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (res.status === 503) {
+                console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
+                await sleep(delay);
+                delay *= 2;
+                continue;
+            }
+            throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
+        } catch (error) {
+            if (i === 2) throw error;
+            console.warn(`Network error calling Gemini. Retrying...`, error.message);
+            await sleep(delay);
+            delay *= 2;
+        }
     }
-  }
-  throw new Error('Gemini API is unavailable after multiple retries.');
+    throw new Error('Gemini API is unavailable after multiple retries.');
 }
 
 function getProp(page, name, fallback) {
@@ -130,7 +130,7 @@ export const handler = async (event) => {
       ]);
 
       const now = new Date();
-
+      
       // --- Process Financials ---
       const budgetSubtotal = (budgetData.results || [])
         .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
@@ -167,7 +167,7 @@ export const handler = async (event) => {
           }
         });
       });
-
+      
       const gates = Object.entries(REQUIRED_BY_GATE)
         .map(([gateName, requiredDocs]) => {
           const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved').length;
@@ -176,7 +176,7 @@ export const handler = async (event) => {
         })
         .filter(g => g.total > 0)
         .sort((a, b) => a.gate.localeCompare(b.gate));
-
+      
       // --- Process Payments ---
       const paymentPages = paymentsData.results || [];
       const overduePayments = paymentPages.filter(p => {
@@ -194,12 +194,12 @@ export const handler = async (event) => {
         paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
       })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
-
+      
       const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
         paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
       })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
-
+      
       // --- Process Forecast ---
       const forecastMonths = [];
       const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
@@ -219,60 +219,58 @@ export const handler = async (event) => {
         forecastMonths.push({ month: monthName, totalAmount: monthTotal });
       }
 
-      // --- Critical Path Analysis (NEW) ---
+      // --- Critical Path Analysis ---
       const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
       const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
-
       const alerts = {
-        daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
-        g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
-        paymentsOverdue: overduePayments,
-        mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
-        contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
+          daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
+          g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
+          paymentsOverdue: overduePayments,
+          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
+          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
       };
-    };
 
-    // --- Assemble Final Response ---
-    const responseData = {
-      kpis: {
-        budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
-        deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
-        deliverablesTotal: allDeliverablesIncludingMissing.length,
-        totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
-        totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
-        paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-        deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
-        milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
-      },
-      gates,
-      topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
-        const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
-        acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-        return acc;
-      }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
-      deliverables: allDeliverablesIncludingMissing,
-      paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
-      alerts,
-      timestamp: new Date().toISOString()
-    };
-
-    return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-  }
+      // --- Assemble Final Response ---
+      const responseData = {
+        kpis: {
+          budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
+          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
+          deliverablesTotal: allDeliverablesIncludingMissing.length,
+          totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
+          totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
+          paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
+          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
+          milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
+        },
+        gates,
+        topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
+          const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
+          acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
+          return acc;
+        }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
+        deliverables: allDeliverablesIncludingMissing,
+        paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
+        alerts,
+        timestamp: new Date().toISOString()
+      };
+      
+      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+    }
 
     // --- POST Request: AI Summary ---
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-    const body = JSON.parse(event.body || '{}');
-    const prompt = `Summarize this renovation project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
-    const summary = await callGemini(prompt);
-    return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+      const body = JSON.parse(event.body || '{}');
+      const prompt = `Summarize this renovation project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
+      const summary = await callGemini(prompt);
+      return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+    }
+
+    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
+  } catch (error) {
+    console.error('Handler error:', error);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
   }
-
-  return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-} catch (error) {
-  console.error('Handler error:', error);
-  return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
-}
 };
 
 
