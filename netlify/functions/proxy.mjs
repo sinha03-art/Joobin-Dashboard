@@ -1,11 +1,12 @@
 /**
- * JOOBIN Renovation Hub Proxy v9.0.0
- * REFRACTOR: Complete backend script rewrite for clarity, robustness, and new features.
- * - Integrated Work Package database for critical path analysis.
- * - Finalized and verified budget calculation logic.
- * - Streamlined data processing for all Notion databases.
- * - Hardened API calls and data extraction to prevent errors.
- * - This version serves as the definitive, stable backend for the Command Center.
+ * JOOBIN Renovation Hub Proxy v10.0.0
+ * MIGRATION: Implemented Unified Deliverables Architecture (v6.8.0+ spec).
+ * - Rewrote deliverables processing to support the new unified database schema.
+ * - Added logic to differentiate between "Design Document" and "Construction Certificate" categories.
+ * - Implemented status mapping for construction-phase deliverables ('Review Status').
+ * - Updated REQUIRED_BY_GATE constant to include 20 items for G5, reflecting new project scope.
+ * - Switched to using new Notion properties like 'Select Deliverable:', 'Gate (Auto)', and 'Target Due'.
+ * - This version is the new definitive backend, built from the v9.0.0 base.
  */
 
 // --- Environment Variables ---
@@ -26,13 +27,37 @@ const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
 const CONSTRUCTION_START_DATE = '2025-11-22';
 
+// NEW (v6.8.0+): Updated G5 with 20 required items.
 const REQUIRED_BY_GATE = {
   "G0 Pre Construction": ['Move Out to Temporary Residence'],
   "G1 Concept": ["MOODBOARD", "PROPOSED RENOVATION FLOOR PLAN"],
   "G2 Schematic": [],
   "G3 Design Development": ["DOORS AND WINDOWS", "Construction Drawings", "MEP Drawings", "Interior Design Plans", "Schedules", "Finishes"],
   "G4 Authority Submission": ["RENOVATION PERMIT", "Structural Drawings", "BQ Complete", "Quotation Package Ready"],
-  "G5 Construction Documentation": ["Contractor Awarded", "Tender Package Issued", "Site Mobilization Complete", "Demolition Complete Certificate", "Structural Works Complete", "Carpentry Complete", "Finishes Complete"],
+  "G5 Construction Documentation": [
+    // Design milestones (3):
+    "Contractor Awarded",
+    "Tender Package Issued",
+    "Site Mobilization Complete",
+    // Construction completion certificates (17):
+    "Demolition Complete Certificate",
+    "Structural Works Complete",
+    "Carpentry Complete",
+    "Finishes Complete",
+    "MEP Rough-in Complete",
+    "MEP Final Complete",
+    "Plumbing Complete",
+    "Electrical Complete",
+    "HVAC Complete",
+    "Painting Complete",
+    "Tiling Complete",
+    "Joinery Complete",
+    "Hardware Installation Complete",
+    "Testing & Commissioning Complete",
+    "Defects Rectification Complete",
+    "Site Cleanup Complete",
+    "Pre-handover Inspection Complete"
+  ],
   "G6 Design Close-out": ["Final Inspection Complete", "Handover Certificate"]
 };
 
@@ -104,9 +129,24 @@ function extractText(prop) {
   if (propType === 'status') return prop.status?.name || '';
   if (propType === 'number') return prop.number;
   if (propType === 'date') return prop.date?.start || null;
-  if (propType === 'formula') return prop.formula?.number;
+  if (propType === 'formula') {
+      // Handle different formula return types if necessary, but assuming text for Gate (Auto)
+      if (prop.formula.type === 'string') return prop.formula.string;
+      if (prop.formula.type === 'number') return prop.formula.number;
+      return '';
+  }
   if (propType === 'checkbox') return prop.checkbox;
   return '';
+}
+
+// NEW (v6.8.0+): Status mapping for construction certificates
+function mapConstructionStatus(reviewStatus) {
+    const normalized = norm(reviewStatus);
+    if (normalized === 'approved') return 'Approved';
+    if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) {
+        return 'Submitted';
+    }
+    return 'Missing';
 }
 
 
@@ -117,7 +157,6 @@ export const handler = async (event) => {
   if (httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
 
   try {
-    // --- GET Request: Fetch and process all data ---
     if (httpMethod === 'GET' && path.endsWith('/proxy')) {
       const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData, workPackagesData] = await Promise.all([
         queryNotionDB(NOTION_BUDGET_DB_ID),
@@ -131,28 +170,43 @@ export const handler = async (event) => {
 
       const now = new Date();
       
-      // --- Process Financials ---
       const budgetSubtotal = (budgetData.results || [])
         .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
         .reduce((sum, p) => (sum + (extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0)), 0);
       const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
-
       const paidMYR = (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
 
-      // --- Process Deliverables & Gates ---
-      const processedDeliverables = (deliverablesData.results || []).map(p => ({
-        title: extractText(getProp(p, 'Deliverable Name')),
-        deliverableType: extractText(getProp(p, 'Deliverable Name')),
-        gate: extractText(getProp(p, 'Gate')),
-        status: extractText(getProp(p, 'Status')),
-        assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
-        url: p.url,
-        dueDate: extractText(getProp(p, 'Due Date')),
-        dueTime: extractText(getProp(p, 'Due Time')),
-        confirmed: extractText(getProp(p, 'Confirmed?')),
-        vendor: extractText(getProp(p, 'Vendor')),
-        priority: extractText(getProp(p, 'Priority'))
-      }));
+      // --- NEW (v6.8.0+): Unified Deliverables Processing ---
+      const processedDeliverables = (deliverablesData.results || []).map(p => {
+          const category = extractText(getProp(p, 'Category'));
+          const isConstruction = category === 'Construction Certificate';
+          
+          let status;
+          if (isConstruction) {
+              const reviewStatus = extractText(getProp(p, 'Review Status'));
+              status = mapConstructionStatus(reviewStatus);
+          } else {
+              status = extractText(getProp(p, 'Status'));
+          }
+
+          return {
+            // Use new property names from the brief
+            title: extractText(getProp(p, 'Select Deliverable:')),
+            deliverableType: extractText(getProp(p, 'Select Deliverable:')), // Used for matching
+            gate: extractText(getProp(p, 'Gate (Auto)')), // CRITICAL: Use the formula property
+            status: status,
+            category: category,
+            assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''), // Kept from base script for consistency
+            url: p.url,
+            dueDate: extractText(getProp(p, 'Target Due')), // Replaces 'Due Date'
+            dueTime: extractText(getProp(p, 'Due Time')), // Assuming this remains
+            confirmed: !extractText(getProp(p, 'Tentative?')), // Inverted logic from 'Confirmed?'
+            vendor: extractText(getProp(p, 'Vendor')),
+            priority: extractText(getProp(p, 'Priority')),
+            submittedBy: extractText(getProp(p, 'Submitted By')),
+            trade: extractText(getProp(p, 'Trade')),
+          };
+      });
 
       const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
@@ -170,16 +224,16 @@ export const handler = async (event) => {
       
       const gates = Object.entries(REQUIRED_BY_GATE)
         .map(([gateName, requiredDocs]) => {
-          const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved').length;
+          const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length;
           const totalInGate = requiredDocs.length;
           return { gate: gateName, total: totalInGate, approved: approvedCount, gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0 };
         })
         .filter(g => g.total > 0)
         .sort((a, b) => a.gate.localeCompare(b.gate));
       
-      // --- Process Payments ---
+      // --- Payments, Forecast, etc. (No changes from base script) ---
       const paymentPages = paymentsData.results || [];
-      const overduePayments = paymentPages.filter(p => {
+      const overduePayments = paymentPages.filter(p => { /* ... unchanged ... */
         const dueDate = extractText(getProp(p, 'DueDate'));
         return (extractText(getProp(p, 'Status')) === 'Outstanding' || extractText(getProp(p, 'Status')) === 'Overdue') && dueDate && new Date(dueDate) < now;
       }).map(p => ({
@@ -187,7 +241,7 @@ export const handler = async (event) => {
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
       })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
 
-      const upcomingPayments = paymentPages.filter(p => {
+      const upcomingPayments = paymentPages.filter(p => { /* ... unchanged ... */
         const dueDate = extractText(getProp(p, 'DueDate'));
         return extractText(getProp(p, 'Status')) === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
       }).map(p => ({
@@ -195,17 +249,16 @@ export const handler = async (event) => {
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
       })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
       
-      const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
+      const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({ /* ... unchanged ... */
         paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
       })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
       
-      // --- Process Forecast ---
       const forecastMonths = [];
       const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
       const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
       const cumulativeUnscheduled = outstandingAndOverdue.filter(p => !extractText(getProp(p, 'DueDate')) || new Date(extractText(getProp(p, 'DueDate'))) < firstMonthDate).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 4; i++) { /* ... unchanged ... */
         const monthStart = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
         const monthName = monthStart.toLocaleString('en-US', { month: 'short' });
@@ -219,10 +272,9 @@ export const handler = async (event) => {
         forecastMonths.push({ month: monthName, totalAmount: monthTotal });
       }
 
-      // --- Critical Path Analysis ---
       const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
       const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
-      const alerts = {
+      const alerts = { /* ... unchanged ... */
           daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
           g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
           paymentsOverdue: overduePayments,
@@ -234,12 +286,12 @@ export const handler = async (event) => {
       const responseData = {
         kpis: {
           budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
-          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
+          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'Approved').length, // Corrected to check for 'Approved'
           deliverablesTotal: allDeliverablesIncludingMissing.length,
           totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
           totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
           paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
+          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'Approved').length / allDeliverablesIncludingMissing.length : 0, // Corrected
           milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
         },
         gates,
@@ -257,8 +309,7 @@ export const handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     }
 
-    // --- POST Request: AI Summary ---
-    if (httpMethod === 'POST' && path.endsWith('/proxy')) {
+    if (httpMethod === 'POST' && path.endsWith('/proxy')) { /* ... unchanged ... */
       const body = JSON.parse(event.body || '{}');
       const prompt = `Summarize this renovation project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
       const summary = await callGemini(prompt);
@@ -272,5 +323,4 @@ export const handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
   }
 };
-
 
