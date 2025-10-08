@@ -191,7 +191,7 @@ export const handler = async (event) => {
           return {
             title: extractText(getProp(p, 'Select Deliverable:')),
             deliverableType: extractText(getProp(p, 'Select Deliverable:')),
-            gate: extractText(getProp(p, 'Gate (Auto)')),
+            gate: extractText(getProp(p, 'Gate')) ,
             status: status || 'Missing', // Default to Missing if no status is found
             category: category,
             assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
