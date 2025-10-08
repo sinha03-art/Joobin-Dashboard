@@ -130,7 +130,6 @@ function extractText(prop) {
   if (propType === 'number') return prop.number;
   if (propType === 'date') return prop.date?.start || null;
   if (propType === 'formula') {
-      // Handle different formula return types if necessary, but assuming text for Gate (Auto)
       if (prop.formula.type === 'string') return prop.formula.string;
       if (prop.formula.type === 'number') return prop.formula.number;
       return '';
@@ -190,17 +189,16 @@ export const handler = async (event) => {
           }
 
           return {
-            // Use new property names from the brief
             title: extractText(getProp(p, 'Select Deliverable:')),
-            deliverableType: extractText(getProp(p, 'Select Deliverable:')), // Used for matching
-            gate: extractText(getProp(p, 'Gate (Auto)')), // CRITICAL: Use the formula property
-            status: status,
+            deliverableType: extractText(getProp(p, 'Select Deliverable:')),
+            gate: extractText(getProp(p, 'Gate (Auto)')),
+            status: status || 'Missing', // Default to Missing if no status is found
             category: category,
-            assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''), // Kept from base script for consistency
+            assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
             url: p.url,
-            dueDate: extractText(getProp(p, 'Target Due')), // Replaces 'Due Date'
-            dueTime: extractText(getProp(p, 'Due Time')), // Assuming this remains
-            confirmed: !extractText(getProp(p, 'Tentative?')), // Inverted logic from 'Confirmed?'
+            dueDate: extractText(getProp(p, 'Target Due')),
+            dueTime: extractText(getProp(p, 'Due Time')),
+            confirmed: !extractText(getProp(p, 'Tentative?')),
             vendor: extractText(getProp(p, 'Vendor')),
             priority: extractText(getProp(p, 'Priority')),
             submittedBy: extractText(getProp(p, 'Submitted By')),
@@ -231,9 +229,8 @@ export const handler = async (event) => {
         .filter(g => g.total > 0)
         .sort((a, b) => a.gate.localeCompare(b.gate));
       
-      // --- Payments, Forecast, etc. (No changes from base script) ---
       const paymentPages = paymentsData.results || [];
-      const overduePayments = paymentPages.filter(p => { /* ... unchanged ... */
+      const overduePayments = paymentPages.filter(p => {
         const dueDate = extractText(getProp(p, 'DueDate'));
         return (extractText(getProp(p, 'Status')) === 'Outstanding' || extractText(getProp(p, 'Status')) === 'Overdue') && dueDate && new Date(dueDate) < now;
       }).map(p => ({
@@ -241,7 +238,7 @@ export const handler = async (event) => {
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
       })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
 
-      const upcomingPayments = paymentPages.filter(p => { /* ... unchanged ... */
+      const upcomingPayments = paymentPages.filter(p => {
         const dueDate = extractText(getProp(p, 'DueDate'));
         return extractText(getProp(p, 'Status')) === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
       }).map(p => ({
@@ -249,7 +246,7 @@ export const handler = async (event) => {
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
       })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
       
-      const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({ /* ... unchanged ... */
+      const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
         paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
         amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
       })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
@@ -258,7 +255,7 @@ export const handler = async (event) => {
       const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
       const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
       const cumulativeUnscheduled = outstandingAndOverdue.filter(p => !extractText(getProp(p, 'DueDate')) || new Date(extractText(getProp(p, 'DueDate'))) < firstMonthDate).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-      for (let i = 0; i < 4; i++) { /* ... unchanged ... */
+      for (let i = 0; i < 4; i++) {
         const monthStart = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
         const monthName = monthStart.toLocaleString('en-US', { month: 'short' });
@@ -274,24 +271,23 @@ export const handler = async (event) => {
 
       const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
       const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
-      const alerts = { /* ... unchanged ... */
+      const alerts = {
           daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
           g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
           paymentsOverdue: overduePayments,
-          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
-          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
+          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
+          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
       };
-
-      // --- Assemble Final Response ---
+      
       const responseData = {
         kpis: {
           budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
-          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'Approved').length, // Corrected to check for 'Approved'
+          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
           deliverablesTotal: allDeliverablesIncludingMissing.length,
           totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
           totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
           paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'Approved').length / allDeliverablesIncludingMissing.length : 0, // Corrected
+          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
           milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
         },
         gates,
@@ -309,9 +305,9 @@ export const handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     }
 
-    if (httpMethod === 'POST' && path.endsWith('/proxy')) { /* ... unchanged ... */
+    if (httpMethod === 'POST' && path.endsWith('/proxy')) {
       const body = JSON.parse(event.body || '{}');
-      const prompt = `Summarize this renovation project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
+      const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
       const summary = await callGemini(prompt);
       return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
     }
