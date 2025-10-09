@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JOOBIN Command Center v12.2.1</title>
+    <title>JOOBIN Command Center v12.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,17 +23,30 @@
         .tab-button.active { color: hsl(var(--ring)); border-bottom-color: hsl(var(--ring)); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
         #passwordModal { transition: opacity 0.3s ease; }
         .modal-content { transition: transform 0.3s ease; }
+
         .update-btn {
-            background-color: hsla(213, 94%, 68%, 0.1); color: hsl(var(--ring)); border: 1px solid hsl(var(--ring));
-            padding: 4px 8px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: background-color 0.2s; cursor: pointer;
+            background-color: hsla(213, 94%, 68%, 0.1);
+            color: hsl(var(--ring));
+            border: 1px solid hsl(var(--ring));
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            cursor: pointer;
         }
         .update-btn:hover { background-color: hsla(213, 94%, 68%, 0.2); }
         .copy-btn {
-            background-color: hsla(250, 50%, 80%, 0.1); color: hsl(250, 50%, 80%); border: 1px solid hsl(250, 50%, 80%);
+            background-color: hsla(250, 50%, 80%, 0.1);
+            color: hsl(250, 50%, 80%);
+            border: 1px solid hsl(250, 50%, 80%);
         }
          .copy-btn:hover { background-color: hsla(250, 50%, 80%, 0.2); }
+
+
         @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0); } }
         @keyframes draw-circle { to { stroke-dashoffset: 0; } }
         .countdown-banner { background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%); padding: 24px; margin-bottom: 24px; border-radius: 12px; border: 1px solid #dc2626; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15); }
@@ -42,7 +55,7 @@
         .countdown-icon { font-size: 40px; animation: pulse 2.5s ease-out infinite; }
         .countdown-days { font-size: 36px; font-weight: 800; }
         .blocker-card { border: 1px solid #b91c1c; margin-bottom: 24px; }
-        .blocker-header { display: flex; justify-content: space-between; align-items: center; }
+        .blocker-header { display: flex; justify-content: space-between; align-items: center; } /* FIX: Alignment */
         .blocker-title { color: #f87171; }
         .blocker-count { background: #dc2626; }
         .gate-circle { animation: draw-circle 1.5s ease-out forwards; }
@@ -102,7 +115,7 @@
 
     <script>
         /* =====================================================================================
-         * JOOBIN Command Center - Frontend Script v12.2.1
+         * JOOBIN Command Center - Frontend Script v12.2.0
          * - FIX: Restored missing renderTopVendors and renderCharts functions to fix empty cards.
          * - FIX: Added missing 'norm' utility function to prevent script errors.
          * ===================================================================================== */
@@ -114,10 +127,57 @@
         
         const norm = (s) => String(s || '').trim().toLowerCase();
 
-        function promptForUpdate(pageId, action, gateName = null) { /* ... unchanged ... */ }
-        function cancelUpdate() { /* ... unchanged ... */ }
-        async function executeUpdate() { /* ... unchanged ... */ }
-        function copyReminder(payment) { /* ... unchanged ... */ }
+        function promptForUpdate(pageId, action, gateName = null) {
+            pendingUpdate = { pageId, action, gateName };
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            if (action === 'mark_gate_approved') {
+                modalTitle.textContent = `Approve Gate: ${gateName}`;
+                modalMessage.textContent = `This will mark all required deliverables for ${gateName} as "Approved". Are you sure?`;
+            } else {
+                modalTitle.textContent = 'Authentication Required';
+                modalMessage.textContent = 'Please enter the update password to proceed.';
+            }
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').classList.add('hidden');
+            document.getElementById('passwordModal').style.display = 'flex';
+        }
+
+        function cancelUpdate() { document.getElementById('passwordModal').style.display = 'none'; }
+
+        async function executeUpdate() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) { document.getElementById('passwordError').textContent = "Password cannot be empty."; document.getElementById('passwordError').classList.remove('hidden'); return; }
+            
+            const updateBtn = document.getElementById('executeUpdateBtn');
+            updateBtn.disabled = true;
+            document.getElementById('passwordError').classList.add('hidden');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...pendingUpdate, password })
+                });
+                if (!response.ok) { const errData = await response.json(); throw new Error(errData.error || 'Update failed.'); }
+                cancelUpdate();
+                document.getElementById('loader').style.display = 'flex';
+                document.getElementById('dashboardContent').classList.add('hidden');
+                setTimeout(() => { init(); }, 300);
+            } catch (error) {
+                document.getElementById('passwordError').textContent = error.message;
+                document.getElementById('passwordError').classList.remove('hidden');
+            } finally {
+                updateBtn.disabled = false;
+            }
+        }
+
+        function copyReminder(payment) {
+            const message = `Hi Finance, this is a reminder for an overdue payment on the Sri Suria project:\n\n- Item: ${payment.paymentFor}\n- Vendor: ${payment.vendor}\n- Amount: ${formatMYR(payment.amount)}\n- Due On: ${formatDate(payment.dueDate)}\n\nThis payment is currently blocking our MBSA submission. Appreciate your prompt action. Thanks!`;
+            navigator.clipboard.writeText(message).then(() => {
+                alert('Reminder message copied to clipboard!');
+            });
+        }
         
         function renderKPIs(kpis) {
             const kpiData = [
@@ -133,10 +193,57 @@
             }).join('');
         }
 
-        function renderTabs(data) { /* ... unchanged ... */ }
-        function renderGates(gates) { /* ... unchanged ... */ }
-        function renderUpcomingTasks(deliverables) { /* ... unchanged ... */ }
+        function renderTabs(data) {
+            const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
+            const renderList = (items, type) => {
+                if (!items || items.length === 0) return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments found.</div>`;
+                return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
+                    const buttons = (type === 'overdue' || type === 'upcoming')
+                        ? `<div class="mt-2 flex gap-2"><button onclick="promptForUpdate('${item.id}', 'mark_payment_paid')" class="update-btn">Mark Paid</button>${type === 'overdue' ? `<button onclick='copyReminder(${JSON.stringify(item)})' class="update-btn copy-btn">Copy Reminder</button>` : ''}</div>`
+                        : '';
+                    return `<li class="py-4"><div class="flex items-center space-x-4"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${item.paymentFor}</p><p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p></div><div class="text-right"><p class="text-sm font-semibold">${formatMYR(item.amount)}</p><p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p></div></div>${buttons}</li>`;
+                }).join('')}</ul></div>`;
+            }
+            document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
+            document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
+            document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
+            document.getElementById('tabs').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { const tab = e.target.dataset.tab; document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById(`${tab}Content`).classList.add('active'); } });
+        }
         
+        function renderGates(gates) {
+            const container = document.getElementById('gates');
+            if (!gates || gates.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`; return; }
+            container.innerHTML = gates.map(gate => {
+                const progress = Math.round(gate.gateApprovalRate * 100);
+                let color = progress === 100 ? '#10b981' : (progress < 50 ? '#f59e0b' : 'hsl(var(--ring))');
+                return `<button onclick="promptForUpdate(null, 'mark_gate_approved', '${gate.gate}')" class="flex flex-col items-center text-center p-2 rounded-lg hover:bg-slate-800 transition-colors"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="36" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="226" stroke-dashoffset="${226 - (progress/100)*226}" stroke-linecap="round" stroke="${color}" fill="transparent" r="36" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></button>`;
+            }).join('');
+        }
+        
+        function renderUpcomingTasks(deliverables) {
+            const container = document.getElementById('upcomingTasksList');
+            if (!container) return;
+            const tasks = deliverables.filter(d => d.dueDate && norm(d.status) !== 'approved').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            if (tasks.length === 0) { container.innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">No upcoming tasks scheduled.</div>'; return; }
+            container.innerHTML = tasks.map(task => { const colors = {'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500'}; const badge = !task.confirmed ? '<span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 rounded-full text-xs font-medium">Tentative</span>' : ''; return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)}</p></div></div>`; }).join('');
+        }
+        
+        function renderCriticalPath(alerts) {
+            const container = document.getElementById('critical-path-section');
+            if (!alerts) { container.innerHTML = ''; return; }
+            const { daysToConstructionStart, paymentsOverdue = [], contractorAwarded, mbsaPermitApproved } = alerts;
+            let blockers = [];
+            if (paymentsOverdue.length > 0) blockers.push({ icon: '💰', text: `${formatMYRShort(paymentsOverdue.reduce((s, p) => s + p.amount, 0))} in overdue payments`, impact: 'Can block permits and vendor work' });
+            if (!mbsaPermitApproved) blockers.push({ icon: '📜', text: 'MBSA permit not approved', impact: 'Construction cannot legally start' });
+            if (!contractorAwarded) blockers.push({ icon: '👷', text: 'Main contractor not awarded', impact: 'Cannot begin mobilization' });
+            let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
+            if (blockers.length === 0 && daysToConstructionStart > 60) { riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢'; } 
+            else if (blockers.length <= 1 && daysToConstructionStart > 30) { riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡'; }
+            const bannerHTML = `<div class="countdown-banner ${riskLevel}"><div class="countdown-content"><div class="countdown-icon">⏱️</div><div class="countdown-text"><div class="countdown-days">${daysToConstructionStart} DAYS</div><div class="countdown-label">TO CONSTRUCTION START</div></div><div class="countdown-status"><span>${riskIcon}</span><span class="font-bold">${riskText}</span></div></div></div>`;
+            const blockersHTML = `<div class="blocker-card card p-4"><div class="blocker-header mb-4 pb-4 border-b border-slate-700"><h3 class="blocker-title font-semibold">CRITICAL BLOCKERS</h3><span class="blocker-count font-bold text-sm rounded-full px-3 py-1">${blockers.length}</span></div><div class="space-y-3">${blockers.length > 0 ? blockers.map(b => `<div class="flex items-start gap-3"><div class="text-xl mt-0.5">${b.icon}</div><div><p class="font-semibold text-slate-200 flex items-center gap-2">${b.text} <span class="text-blue-400 cursor-pointer" title="${b.impact}">ⓘ</span></p></div></div>`).join('') : '<div class="flex items-center gap-3 text-green-400"><div class="text-xl">✅</div><p class="font-semibold">No critical blockers</p></div>'}</div></div>`;
+            container.innerHTML = bannerHTML + blockersHTML;
+        }
+
         // --- ADDED v12.2.1: Restored missing functions ---
         function renderTopVendors(vendors) {
             const container = document.getElementById('topVendors');
@@ -160,8 +267,6 @@
         }
         // --- END ADDED SECTION ---
 
-        function renderCriticalPath(alerts) { /* ... unchanged ... */ }
-
         async function init() { 
             try { 
                 const response = await fetch(API_URL); 
@@ -172,8 +277,8 @@
                 renderTabs(dashboardData); 
                 renderUpcomingTasks(dashboardData.deliverables);
                 renderGates(dashboardData.gates);
-                renderTopVendors(dashboardData.topVendors); // This call will now work
-                renderCharts(dashboardData); // This call will now work
+                renderTopVendors(dashboardData.topVendors);
+                renderCharts(dashboardData); 
                 document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
                 updateClock(); setInterval(updateClock, 1000);
                 document.getElementById('loader').style.display = 'none';
@@ -186,7 +291,7 @@
             } 
         }
 
-        // --- Other utility functions (unchanged) ---
+        // --- Other utility functions ---
         function updateClock() { /*...*/ }
         const formatMYR = (amount) => `RM ${Math.round(amount).toLocaleString()}`;
         const formatMYRShort = (amount) => { if (amount >= 1e6) return `RM ${(amount / 1e6).toFixed(1)}m`; if (amount >= 1e3) return `RM ${(amount / 1e3).toFixed(0)}k`; return `RM ${amount}`; }

@@ -1,8 +1,8 @@
 /**
- * JOOBIN Renovation Hub Proxy v12.0.1
- * - FIX: Correctly resolved vendor names by querying the Vendor_Registry relation 
- * instead of a text field. This fixes the "Unknown" vendor issue in the "Top Vendors by Spend" chart.
- * - This version is based on the v12.0.0 codebase.
+ * JOOBIN Renovation Hub Proxy v12.0.0
+ * - FEATURE: Added "Approve Gate" functionality, allowing all deliverables in a gate to be updated to "Approved".
+ * - FIX: Correctly resolved vendor names by querying the Vendor_Registry relation instead of a text field, fixing the "Unknown" vendor issue.
+ * - ENHANCEMENT: Deliverable objects now include their Notion page ID to be targetable for updates.
  */
 
 // --- Environment Variables ---
@@ -77,6 +77,7 @@ async function callGemini(prompt) {
 }
 
 function getProp(page, name, fallback) { return page.properties?.[name] || page.properties?.[fallback];}
+
 function extractText(prop) {
   if (!prop) return '';
   const propType = prop.type;
@@ -92,10 +93,10 @@ function extractText(prop) {
       return '';
   }
   if (propType === 'checkbox') return prop.checkbox;
-  // FIX: Make sure relation extraction returns the ID
   if (propType === 'relation') return prop.relation?.[0]?.id || null;
   return '';
 }
+
 function mapConstructionStatus(reviewStatus) {
     const normalized = norm(reviewStatus);
     if (normalized === 'approved') return 'Approved';
@@ -214,7 +215,14 @@ export const handler = async (event) => {
           
           case 'mark_gate_approved':
             const allDeliverables = (await queryNotionDB(DELIVERABLES_DB_ID)).results;
-            const deliverablesToUpdate = allDeliverables.filter(p => extractText(getProp(p, 'Gate (Auto)')) === body.gateName);
+            // Filter for deliverables that are part of the required list for that gate
+            const requiredDocsForGate = REQUIRED_BY_GATE[body.gateName] || [];
+            const deliverablesToUpdate = allDeliverables.filter(p => {
+                const gate = extractText(getProp(p, 'Gate (Auto)'));
+                const type = extractText(getProp(p, 'Select Deliverable:'));
+                return gate === body.gateName && requiredDocsForGate.some(req => norm(req) === norm(type));
+            });
+
             const updatePromises = deliverablesToUpdate.map(p => {
                 const category = extractText(getProp(p, 'Category'));
                 const isConstruction = category === 'Construction Certificate';
