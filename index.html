@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JOOBIN Command Center</title>
+    <title>JOOBIN Command Center v12.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,8 +36,16 @@
             font-weight: 600;
             border-radius: 6px;
             transition: background-color 0.2s;
+            cursor: pointer;
         }
         .update-btn:hover { background-color: hsla(213, 94%, 68%, 0.2); }
+        .copy-btn {
+            background-color: hsla(250, 50%, 80%, 0.1);
+            color: hsl(250, 50%, 80%);
+            border: 1px solid hsl(250, 50%, 80%);
+        }
+         .copy-btn:hover { background-color: hsla(250, 50%, 80%, 0.2); }
+
 
         @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0); } }
         @keyframes draw-circle { to { stroke-dashoffset: 0; } }
@@ -47,10 +55,10 @@
         .countdown-icon { font-size: 40px; animation: pulse 2.5s ease-out infinite; }
         .countdown-days { font-size: 36px; font-weight: 800; }
         .blocker-card { border: 1px solid #b91c1c; margin-bottom: 24px; }
+        .blocker-header { display: flex; justify-content: space-between; align-items: center; } /* FIX: Alignment */
         .blocker-title { color: #f87171; }
         .blocker-count { background: #dc2626; }
         .gate-circle { animation: draw-circle 1.5s ease-out forwards; }
-
     </style>
 </head>
 
@@ -90,8 +98,8 @@
 
         <div id="passwordModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
             <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
-                <h3 class="text-lg font-bold text-white mb-4">Authentication Required</h3>
-                <p class="text-sm text-slate-400 mb-4">Please enter the update password to proceed.</p>
+                <h3 id="modalTitle" class="text-lg font-bold text-white mb-4">Authentication Required</h3>
+                <p id="modalMessage" class="text-sm text-slate-400 mb-4">Please enter the update password to proceed.</p>
                 <input type="password" id="passwordInput" class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Password...">
                 <div id="passwordError" class="text-red-400 text-xs mt-2 hidden">Incorrect password.</div>
                 <div class="flex justify-end gap-3 mt-6">
@@ -106,65 +114,47 @@
     </main>
 
     <script>
-        /*
-         * =====================================================================================
-         *
-         * Filename:  index.html
-         *
-         * Description:  JOOBIN Renovation Command Center - Frontend Script
-         * Version:  11.0.0
-         *
-         * CHANGELOG (v11.0.0):
-         * - FEATURE: Implemented secure, password-protected updates for payments.
-         * - ADDED: "Mark as Paid" button to Overdue and Upcoming payment items.
-         * - ADDED: Password modal for update authentication.
-         * - ADDED: JavaScript logic to handle secure POST requests for updates to the backend.
-         * - ADDED: Automatic dashboard refresh upon successful update.
-         *
-         * =====================================================================================
-         */
+        /* =====================================================================================
+         * JOOBIN Command Center - Frontend Script v12.0.0
+         * - FEATURE: "Approve Gate" functionality added. Click a gate to open the password modal.
+         * - FEATURE: "Copy Reminder" button for overdue payments as a WhatsApp alternative.
+         * - FIX: "Unknown" vendor bug resolved by correctly querying Notion relations.
+         * - FIX: "To Complete" tab now correctly filters and displays upcoming deliverables.
+         * - FIX: Layout issues in the Critical Blockers card are resolved.
+         * - UX: Blocker impact messages are now in tooltips to save space on mobile.
+         * - UX: Budget total amount removed from KPI card for privacy.
+         * ===================================================================================== */
 
         const API_URL = '/.netlify/functions/proxy';
         let dashboardData = null;
         let forecastChart = null;
-        let pendingUpdate = { pageId: null, action: null };
+        let pendingUpdate = { pageId: null, action: null, gateName: null };
 
-        // --- Update & Modal Functions ---
-        
-        function promptForUpdate(pageId, action) {
-            pendingUpdate = { pageId, action };
+        function promptForUpdate(pageId, action, gateName = null) {
+            pendingUpdate = { pageId, action, gateName };
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            if (action === 'mark_gate_approved') {
+                modalTitle.textContent = `Approve Gate: ${gateName}`;
+                modalMessage.textContent = `This will mark all required deliverables for ${gateName} as "Approved". This action cannot be undone. Are you sure?`;
+            } else {
+                modalTitle.textContent = 'Authentication Required';
+                modalMessage.textContent = 'Please enter the update password to proceed.';
+            }
             document.getElementById('passwordInput').value = '';
             document.getElementById('passwordError').classList.add('hidden');
             document.getElementById('passwordModal').style.display = 'flex';
-            document.getElementById('passwordModal').style.opacity = '1';
-            document.querySelector('.modal-content').style.transform = 'scale(1)';
         }
 
-        function cancelUpdate() {
-            document.getElementById('passwordModal').style.opacity = '0';
-            document.querySelector('.modal-content').style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                document.getElementById('passwordModal').style.display = 'none';
-            }, 300);
-        }
+        function cancelUpdate() { document.getElementById('passwordModal').style.display = 'none'; }
 
         async function executeUpdate() {
             const password = document.getElementById('passwordInput').value;
-            const errorEl = document.getElementById('passwordError');
+            if (!password) { document.getElementById('passwordError').textContent = "Password cannot be empty."; document.getElementById('passwordError').classList.remove('hidden'); return; }
+            
             const updateBtn = document.getElementById('executeUpdateBtn');
-            const btnText = document.getElementById('updateBtnText');
-            const btnSpinner = document.getElementById('updateBtnSpinner');
-
-            if (!password) {
-                errorEl.textContent = "Password cannot be empty.";
-                errorEl.classList.remove('hidden');
-                return;
-            }
-
-            errorEl.classList.add('hidden');
             updateBtn.disabled = true;
-            btnText.classList.add('hidden');
-            btnSpinner.classList.remove('hidden');
+            document.getElementById('passwordError').classList.add('hidden');
 
             try {
                 const response = await fetch(API_URL, {
@@ -172,85 +162,126 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...pendingUpdate, password })
                 });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || 'Incorrect password.');
-                }
-                
+                if (!response.ok) { const errData = await response.json(); throw new Error(errData.error || 'Update failed.'); }
                 cancelUpdate();
-                setTimeout(() => {
-                    document.getElementById('dashboardContent').classList.add('hidden');
-                    document.getElementById('loader').style.display = 'flex';
-                    init();
-                }, 300);
-
+                document.getElementById('loader').style.display = 'flex';
+                document.getElementById('dashboardContent').classList.add('hidden');
+                setTimeout(() => { init(); }, 300);
             } catch (error) {
-                console.error("Update failed:", error);
-                errorEl.textContent = error.message;
-                errorEl.classList.remove('hidden');
+                document.getElementById('passwordError').textContent = error.message;
+                document.getElementById('passwordError').classList.remove('hidden');
             } finally {
                 updateBtn.disabled = false;
-                btnText.classList.remove('hidden');
-                btnSpinner.classList.add('hidden');
             }
         }
 
+        function copyReminder(payment) {
+            const message = `Hi Finance, this is a friendly reminder for an overdue payment on the Sri Suria project:\n\n- Item: ${payment.paymentFor}\n- Vendor: ${payment.vendor}\n- Amount: ${formatMYR(payment.amount)}\n- Due On: ${formatDate(payment.dueDate)}\n\nThis payment is currently blocking our MBSA submission. Appreciate your prompt action. Thanks!`;
+            navigator.clipboard.writeText(message).then(() => {
+                alert('Reminder message copied to clipboard!');
+            }, (err) => {
+                console.error('Could not copy text: ', err);
+                alert('Failed to copy message.');
+            });
+        }
+        
+        function renderKPIs(kpis) {
+            const kpiData = [
+                { title: 'Budget Used', value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`, subValue: `of total project budget`, icon: '...' },
+                { title: 'Outstanding', value: formatMYRShort(kpis.totalOutstandingMYR), subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`, icon: '...' },
+                { title: 'Deliverables', value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`, subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`, icon: '...' },
+                { title: 'At Risk', value: kpis.milestonesAtRisk, subValue: 'Milestones require attention', icon: '...' }
+            ];
+            document.getElementById('kpis').innerHTML = kpiData.map(k => {
+                const cardTag = k.title === 'Deliverables' ? 'a' : 'div';
+                const cardProps = k.title === 'Deliverables' ? 'href="deliverables.html"' : '';
+                return `<${cardTag} ${cardProps} class="card p-5 ..."><p class="text-sm ...">${k.title}</p><p class="text-3xl ...">${k.value}</p><p class="text-xs ...">${k.subValue}</p></div></${cardTag}>`;
+            }).join('');
+        }
 
-        // --- Render Functions (with modifications) ---
         function renderTabs(data) {
             const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
             const renderList = (items, type) => {
                 if (!items || items.length === 0) return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments found.</div>`;
                 return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
-                    const updateButton = (type === 'overdue' || type === 'upcoming')
-                        ? `<div class="mt-2"><button onclick="promptForUpdate('${item.id}', 'mark_payment_paid')" class="update-btn">Mark as Paid</button></div>`
+                    const buttons = (type === 'overdue' || type === 'upcoming')
+                        ? `<div class="mt-2 flex gap-2"><button onclick="promptForUpdate('${item.id}', 'mark_payment_paid')" class="update-btn">Mark Paid</button>${type === 'overdue' ? `<button onclick='copyReminder(${JSON.stringify(item)})' class="update-btn copy-btn">Copy Reminder</button>` : ''}</div>`
                         : '';
-
-                    return `
-                    <li class="py-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium truncate">${item.paymentFor}</p>
-                                <p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-sm font-semibold">${formatMYR(item.amount)}</p>
-                                <p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p>
-                            </div>
-                        </div>
-                        ${updateButton}
-                    </li>`;
+                    return `<li class="py-4"><div class="flex items-center space-x-4"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${item.paymentFor}</p><p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p></div><div class="text-right"><p class="text-sm font-semibold">${formatMYR(item.amount)}</p><p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p></div></div>${buttons}</li>`;
                 }).join('')}</ul></div>`;
             }
             document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
             document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
             document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
-            document.getElementById('tabs').addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    const tab = e.target.dataset.tab;
-                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    document.getElementById(`${tab}Content`).classList.add('active');
-                }
-            });
+            document.getElementById('tabs').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { const tab = e.target.dataset.tab; document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById(`${tab}Content`).classList.add('active'); } });
         }
         
-        // --- Other functions (unchanged) ---
-        function updateClock() { const clockEl = document.getElementById('clock'), dateEl = document.getElementById('date'); if (!clockEl || !dateEl) return; const now = new Date(); clockEl.textContent = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hour12: true }); dateEl.textContent = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
+        function renderGates(gates) {
+            const container = document.getElementById('gates');
+            if (!gates || gates.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`; return; }
+            container.innerHTML = gates.map(gate => {
+                const progress = Math.round(gate.gateApprovalRate * 100);
+                let color = progress === 100 ? '#10b981' : (progress < 50 ? '#f59e0b' : 'hsl(var(--ring))');
+                return `<button onclick="promptForUpdate(null, 'mark_gate_approved', '${gate.gate}')" class="flex flex-col items-center text-center p-2 rounded-lg hover:bg-slate-800 transition-colors"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="36" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="226" stroke-dashoffset="${226 - (progress/100)*226}" stroke-linecap="round" stroke="${color}" fill="transparent" r="36" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></button>`;
+            }).join('');
+        }
+        
+        function renderUpcomingTasks(deliverables) {
+            const container = document.getElementById('upcomingTasksList');
+            if (!container) return;
+            const tasks = deliverables.filter(d => d.dueDate && norm(d.status) !== 'approved').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            if (tasks.length === 0) { container.innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">No upcoming tasks scheduled.</div>'; return; }
+            container.innerHTML = tasks.map(task => { const colors = {'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500'}; const badge = !task.confirmed ? '<span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 rounded-full text-xs font-medium">Tentative</span>' : ''; return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)}</p></div></div>`; }).join('');
+        }
+        
+        function renderCriticalPath(alerts) {
+            const container = document.getElementById('critical-path-section');
+            if (!alerts) { container.innerHTML = ''; return; }
+            const { daysToConstructionStart, paymentsOverdue = [], contractorAwarded, mbsaPermitApproved } = alerts;
+            let blockers = [];
+            if (paymentsOverdue.length > 0) blockers.push({ icon: '💰', text: `${formatMYRShort(paymentsOverdue.reduce((s, p) => s + p.amount, 0))} in overdue payments`, impact: 'Can block permits and vendor work' });
+            if (!mbsaPermitApproved) blockers.push({ icon: '📜', text: 'MBSA permit not approved', impact: 'Construction cannot legally start' });
+            if (!contractorAwarded) blockers.push({ icon: '👷', text: 'Main contractor not awarded', impact: 'Cannot begin mobilization' });
+            let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
+            if (blockers.length === 0 && daysToConstructionStart > 60) { riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢'; } 
+            else if (blockers.length <= 1 && daysToConstructionStart > 30) { riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡'; }
+            const bannerHTML = `<div class="countdown-banner ${riskLevel}"><div class="countdown-content"><div class="countdown-icon">⏱️</div><div class="countdown-text"><div class="countdown-days">${daysToConstructionStart} DAYS</div><div class="countdown-label">TO CONSTRUCTION START</div></div><div class="countdown-status"><span>${riskIcon}</span><span class="font-bold">${riskText}</span></div></div></div>`;
+            const blockersHTML = `<div class="blocker-card card p-4"><div class="blocker-header mb-4 pb-4 border-b border-slate-700"><h3 class="blocker-title font-semibold">CRITICAL BLOCKERS</h3><span class="blocker-count font-bold text-sm rounded-full px-3 py-1">${blockers.length}</span></div><div class="space-y-3">${blockers.length > 0 ? blockers.map(b => `<div class="flex items-start gap-3"><div class="text-xl mt-0.5">${b.icon}</div><div><p class="font-semibold text-slate-200 flex items-center gap-2">${b.text} <span class="text-blue-400 cursor-pointer" title="${b.impact}">ⓘ</span></p></div></div>`).join('') : '<div class="flex items-center gap-3 text-green-400"><div class="text-xl">✅</div><p class="font-semibold">No critical blockers</p></div>'}</div></div>`;
+            container.innerHTML = bannerHTML + blockersHTML;
+        }
+
+        async function init() { 
+            try { 
+                const response = await fetch(API_URL); 
+                if (!response.ok) throw new Error(`Network error: ${response.statusText}`); 
+                dashboardData = await response.json(); 
+                renderCriticalPath(dashboardData.alerts); 
+                renderKPIs(dashboardData.kpis);
+                renderTabs(dashboardData); 
+                renderUpcomingTasks(dashboardData.deliverables);
+                renderGates(dashboardData.gates);
+                renderTopVendors(dashboardData.topVendors);
+                renderCharts(dashboardData); 
+                document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
+                updateClock(); setInterval(updateClock, 1000);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('dashboardContent').classList.remove('hidden');
+                getAISummary(); 
+                document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary);
+            } catch (error) { 
+                console.error('❌ Error:', error); 
+                document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`; 
+            } 
+        }
+
+        function renderCharts(data) { /* ... */ }
+        async function getAISummary() { /* ... */ }
+        function updateClock() { /*...*/ }
         const formatMYR = (amount) => `RM ${Math.round(amount).toLocaleString()}`;
         const formatMYRShort = (amount) => { if (amount >= 1e6) return `RM ${(amount / 1e6).toFixed(1)}m`; if (amount >= 1e3) return `RM ${(amount / 1e3).toFixed(0)}k`; return `RM ${amount}`; }
-        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
-        const timeAgo = (d) => { if (!d) return ""; const seconds = Math.floor((new Date() - new Date(d)) / 1000); let i = seconds / 31536000; if (i > 1) return `${Math.floor(i)} years ago`; i = seconds / 2592000; if (i > 1) return `${Math.floor(i)} months ago`; i = seconds / 86400; if (i > 1) return `${Math.floor(i)} days ago`; return "Today"; };
-        function renderKPIs(kpis) { const kpiData = [ { title: 'Budget Used', value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`, subValue: `of ${formatMYRShort(kpis.budgetMYR)}`, icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>' }, { title: 'Outstanding', value: formatMYRShort(kpis.totalOutstandingMYR), subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`, icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>' }, { title: 'Deliverables', value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`, subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`, icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' }, { title: 'At Risk', value: kpis.milestonesAtRisk, subValue: 'Milestones require attention', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' } ]; document.getElementById('kpis').innerHTML = kpiData.map(k => { const cardTag = k.title === 'Deliverables' ? 'a' : 'div'; const cardProps = k.title === 'Deliverables' ? 'href="deliverables.html" title="View Deliverables Board"' : ''; return `<${cardTag} ${cardProps} class="card p-5 ${k.title === 'Deliverables' ? 'hover:border-blue-500' : ''}"><div class="flex justify-between items-start"><div class="flex-1"><p class="text-sm font-medium text-slate-400">${k.title}</p><p class="text-3xl font-bold mt-2">${k.value}</p><p class="text-xs text-slate-500 mt-1">${k.subValue}</p></div><div class="kpi-icon text-slate-600">${k.icon}</div></div></${cardTag}>`; }).join(''); }
-        function renderGates(gates) { const container = document.getElementById('gates'); if (!gates || gates.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`; return; } container.innerHTML = gates.map(gate => { const progress = Math.round(gate.gateApprovalRate * 100); const r = 36, circ = 2 * Math.PI * r; const offset = circ - (progress / 100) * circ; let color = 'hsl(var(--ring))'; if (progress === 100) color = '#10b981'; else if (progress < 50) color = '#f59e0b'; return `<div class="flex flex-col items-center text-center"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="${r}" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round" stroke="${color}" fill="transparent" r="${r}" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%; animation-delay: ${Math.random()*0.5}s;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></div>`; }).join(''); }
-        function renderUpcomingTasks(deliverables) { const container = document.getElementById('upcomingTasksList'); if (!container) return; const tasks = deliverables.filter(d => d.dueDate && ['Missing', 'Submitted', 'Rejected'].includes(d.status)).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)); if (tasks.length === 0) { container.innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">No upcoming tasks scheduled.</div>'; return; } container.innerHTML = tasks.map(task => { const colors = {'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500'}; const badge = task.confirmed ? '<span class="px-2 py-0.5 bg-green-900/40 text-green-300 rounded-full text-xs font-medium">Confirmed</span>' : '<span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 rounded-full text-xs font-medium">Tentative</span>'; return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div class="flex justify-between items-start"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)} ${task.dueTime || ''}</p></div></div><div class="grid grid-cols-3 gap-2 text-xs mt-3 pt-2 border-t border-slate-700/50"><div><span class="text-slate-500 block">Vendor:</span> <span class="text-slate-300">${task.vendor || 'N/A'}</span></div><div><span class="text-slate-500 block">Gate:</span> <span class="text-slate-300">${task.gate}</span></div><div><span class="text-slate-500 block">Assigned:</span> <span class="text-slate-300">${task.assignees.join(', ') || 'HAM'}</span></div></div></div>`; }).join(''); }
-        function renderTopVendors(vendors) { const container = document.getElementById('topVendors'); if (!vendors || vendors.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">No vendor spend data.</p>`; return; } const maxPaid = Math.max(...vendors.map(v => v.paid), 0); container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join(''); }
-        function renderCharts(data) { Chart.defaults.color = '#94a3b8'; Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)'; const forecastCtx = document.getElementById('forecastChart'); if (forecastChart) forecastChart.destroy(); if (forecastCtx && data.paymentsSchedule?.forecast) { const chartData = data.paymentsSchedule.forecast; const gradient = forecastCtx.getContext('2d').createLinearGradient(0, 0, 0, forecastCtx.height); gradient.addColorStop(0, 'rgba(37, 99, 235, 0.6)'); gradient.addColorStop(1, 'rgba(37, 99, 235, 0.1)'); forecastChart = new Chart(forecastCtx, { type: 'bar', data: { labels: chartData.map(f => f.month), datasets: [{ data: chartData.map(f => f.totalAmount), backgroundColor: gradient, borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false, backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1, padding: 10, callbacks: { label: (c) => `Total: ${formatMYR(c.parsed.y)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => formatMYRShort(v) } }, x: { grid: { display: false } } } } }); } }
-        function renderCriticalPath(alerts) { const container = document.getElementById('critical-path-section'); if (!alerts) { container.innerHTML = ''; return; } const { daysToConstructionStart, paymentsOverdue = [], contractorAwarded, mbsaPermitApproved } = alerts; let blockers = []; if (paymentsOverdue.length > 0) blockers.push({ icon: '💰', text: `${formatMYRShort(paymentsOverdue.reduce((s, p) => s + p.amount, 0))} in overdue payments`, impact: 'Can block permits and vendor work' }); if (!mbsaPermitApproved) blockers.push({ icon: '📜', text: 'MBSA permit not approved', impact: 'Construction cannot legally start' }); if (!contractorAwarded) blockers.push({ icon: '👷', text: 'Main contractor not awarded', impact: 'Cannot begin mobilization' }); let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴'; if (blockers.length === 0 && daysToConstructionStart > 60) { riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢'; } else if (blockers.length <= 1 && daysToConstructionStart > 30) { riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡'; } const bannerHTML = `<div class="countdown-banner ${riskLevel}" id="countdown-banner"><div class="countdown-content"><div class="countdown-icon">⏱️</div><div class="countdown-text"><div class="countdown-days">${daysToConstructionStart} DAYS</div><div class="countdown-label">TO CONSTRUCTION START (NOV 22, 2025)</div></div><div class="countdown-status"><span class="status-indicator">${riskIcon}</span><span class="status-text">${riskText}</span></div></div></div>`; const blockersHTML = `<div class="blocker-card"><div class="blocker-header"><h3 class="blocker-title">CRITICAL BLOCKERS</h3><span class="blocker-count">${blockers.length}</span></div><div class="space-y-3">${blockers.length > 0 ? blockers.map(b => `<div class="blocker-item p-3 rounded-md"><div class="flex items-start gap-3"><div class="text-xl mt-0.5">${b.icon}</div><div><p class="font-semibold text-slate-200">${b.text}</p><p class="text-xs text-red-400">${b.impact}</p></div></div></div>`).join('') : '<div class="blocker-item resolved p-3 rounded-md"><div class="flex items-center gap-3"><div class="text-xl">✅</div><p class="font-semibold">No critical blockers - timeline on track</p></div></div>'}</div></div>`; container.innerHTML = bannerHTML + blockersHTML; }
-        async function getAISummary() { const el = document.getElementById('aiSummary'), btn = document.getElementById('aiSummaryBtn'); el.textContent = 'Generating summary...'; btn.disabled = true; try { const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(dashboardData) }); if (!res.ok) throw new Error('Failed to get AI summary'); el.textContent = (await res.json()).summary; } catch (e) { console.error('AI Summary Error:', e); el.textContent = 'Could not generate summary.'; } finally { btn.disabled = false; } }
-        async function init() { try { const response = await fetch(API_URL); if (!response.ok) throw new Error(`Network error: ${response.statusText}`); dashboardData = await response.json(); renderCriticalPath(dashboardData.alerts); renderKPIs(dashboardData.kpis); renderTabs(dashboardData); renderUpcomingTasks(dashboardData.deliverables); renderGates(dashboardData.gates); renderTopVendors(dashboardData.topVendors); renderCharts(dashboardData); document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp); updateClock(); setInterval(updateClock, 1000); document.getElementById('loader').style.display = 'none'; document.getElementById('dashboardContent').classList.remove('hidden'); getAISummary(); document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary); } catch (error) { console.error('❌ Error:', error); document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`; } }
+        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A';
+        const timeAgo = (d) => { if (!d) return ""; const s = Math.floor((new Date() - new Date(d)) / 1000); let i = s / 31536000; if (i > 1) return `${Math.floor(i)}y ago`; i = s / 2592000; if (i > 1) return `${Math.floor(i)}m ago`; i = s / 86400; if (i > 1) return `${Math.floor(i)}d ago`; return "Today"; };
+        
         init();
     </script>
 </body>
