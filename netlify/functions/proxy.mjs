@@ -11,7 +11,7 @@
 
 // --- Environment Variables ---
 const {
-  GEMINI_API_KEY, a
+  GEMINI_API_KEY, 
   NOTION_API_KEY,
   NOTION_BUDGET_DB_ID,
   NOTION_ACTUALS_DB_ID,
