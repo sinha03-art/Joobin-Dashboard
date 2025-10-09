@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JOOBIN Command Center v12.1.1</title>
+    <title>JOOBIN Command Center v12.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,24 +28,14 @@
         .modal-content { transition: transform 0.3s ease; }
 
         .update-btn {
-            background-color: hsla(213, 94%, 68%, 0.1);
-            color: hsl(var(--ring));
-            border: 1px solid hsl(var(--ring));
-            padding: 4px 8px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 6px;
-            transition: background-color 0.2s;
-            cursor: pointer;
+            background-color: hsla(213, 94%, 68%, 0.1); color: hsl(var(--ring)); border: 1px solid hsl(var(--ring));
+            padding: 4px 8px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: background-color 0.2s; cursor: pointer;
         }
         .update-btn:hover { background-color: hsla(213, 94%, 68%, 0.2); }
         .copy-btn {
-            background-color: hsla(250, 50%, 80%, 0.1);
-            color: hsl(250, 50%, 80%);
-            border: 1px solid hsl(250, 50%, 80%);
+            background-color: hsla(250, 50%, 80%, 0.1); color: hsl(250, 50%, 80%); border: 1px solid hsl(250, 50%, 80%);
         }
          .copy-btn:hover { background-color: hsla(250, 50%, 80%, 0.2); }
-
 
         @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0); } }
         @keyframes draw-circle { to { stroke-dashoffset: 0; } }
@@ -115,8 +105,7 @@
 
     <script>
         /* =====================================================================================
-         * JOOBIN Command Center - Frontend Script v12.1.1
-         * - FIX: Added missing 'norm' utility function which was causing a script-breaking error.
+         * JOOBIN Command Center - Frontend Script v12.2.0
          * - UX: Budget total amount removed from the "Budget Used" KPI card for privacy.
          * ===================================================================================== */
 
@@ -125,7 +114,6 @@
         let forecastChart = null;
         let pendingUpdate = { pageId: null, action: null, gateName: null };
         
-        // --- ADDED v12.1.1: Missing utility function ---
         const norm = (s) => String(s || '').trim().toLowerCase();
 
         function promptForUpdate(pageId, action, gateName = null) {
@@ -182,6 +170,7 @@
         
         function renderKPIs(kpis) {
             const kpiData = [
+                // CHANGE v12.2.0: Removed the total budget amount from the subValue for privacy.
                 { title: 'Budget Used', value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`, subValue: `of total project budget`, icon: '...' },
                 { title: 'Outstanding', value: formatMYRShort(kpis.totalOutstandingMYR), subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`, icon: '...' },
                 { title: 'Deliverables', value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`, subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`, icon: '...' },
@@ -269,7 +258,7 @@
             } 
         }
 
-        // --- Dummy functions for brevity in this example ---
+        // --- Dummy functions for brevity ---
         function renderCharts(data) { /* ... */ }
         async function getAISummary() { /* ... */ }
         function updateClock() { /*...*/ }
@@ -277,6 +266,7 @@
         const formatMYRShort = (amount) => { if (amount >= 1e6) return `RM ${(amount / 1e6).toFixed(1)}m`; if (amount >= 1e3) return `RM ${(amount / 1e3).toFixed(0)}k`; return `RM ${amount}`; }
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A';
         const timeAgo = (d) => { if (!d) return ""; const s = Math.floor((new Date() - new Date(d)) / 1000); let i = s / 31536000; if (i > 1) return `${Math.floor(i)}y ago`; i = s / 2592000; if (i > 1) return `${Math.floor(i)}m ago`; i = s / 86400; if (i > 1) return `${Math.floor(i)}d ago`; return "Today"; };
+        function renderTopVendors(data) { /* ... */ }
         
         init();
     </script>
