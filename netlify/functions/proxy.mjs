@@ -92,28 +92,28 @@ async function queryNotionDB(dbId, filter = {}) {
 }
 
 async function callGemini(prompt) {
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    let delay = 1000;
-    for (let i = 0; i < 3; i++) {
-        try {
-            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-            if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (res.status === 503) {
-                console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
-                await sleep(delay);
-                delay *= 2;
-                continue;
-            }
-            throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
-        } catch (error) {
-            if (i === 2) throw error;
-            console.warn(`Network error calling Gemini. Retrying...`, error.message);
-            await sleep(delay);
-            delay *= 2;
-        }
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  let delay = 1000;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+      if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (res.status === 503) {
+        console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
+        await sleep(delay);
+        delay *= 2;
+        continue;
+      }
+      throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
+    } catch (error) {
+      if (i === 2) throw error;
+      console.warn(`Network error calling Gemini. Retrying...`, error.message);
+      await sleep(delay);
+      delay *= 2;
     }
-    throw new Error('Gemini API is unavailable after multiple retries.');
+  }
+  throw new Error('Gemini API is unavailable after multiple retries.');
 }
 
 function getProp(page, name, fallback) {
@@ -130,9 +130,9 @@ function extractText(prop) {
   if (propType === 'number') return prop.number;
   if (propType === 'date') return prop.date?.start || null;
   if (propType === 'formula') {
-      if (prop.formula.type === 'string') return prop.formula.string;
-      if (prop.formula.type === 'number') return prop.formula.number;
-      return '';
+    if (prop.formula.type === 'string') return prop.formula.string;
+    if (prop.formula.type === 'number') return prop.formula.number;
+    return '';
   }
   if (propType === 'checkbox') return prop.checkbox;
   return '';
@@ -140,14 +140,37 @@ function extractText(prop) {
 
 // NEW (v6.8.0+): Status mapping for construction certificates
 function mapConstructionStatus(reviewStatus) {
-    const normalized = norm(reviewStatus);
-    if (normalized === 'approved') return 'Approved';
-    if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) {
-        return 'Submitted';
-    }
-    return 'Missing';
+  const normalized = norm(reviewStatus);
+  if (normalized === 'approved') return 'Approved';
+  if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) {
+    return 'Submitted';
+  }
+  return 'Missing';
+}
+// NEW (v6.8.0+): Status mapping for construction certificates
+function mapConstructionStatus(reviewStatus) {
+  const normalized = norm(reviewStatus);
+  if (normalized === 'approved') return 'Approved';
+  if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) {
+    return 'Submitted';
+  }
+  return 'Missing';
 }
 
+// ADD THIS NEW FUNCTION HERE:
+function calculatePriority(dueDate, isCriticalPath) {
+  if (!dueDate) return 'Low';
+  if (isCriticalPath === '__YES__') return 'Critical';
+
+  const now = new Date();
+  const due = new Date(dueDate);
+  const daysUntilDue = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+
+  if (daysUntilDue < 0) return 'Critical';  // Overdue
+  if (daysUntilDue <= 3) return 'High';      // Due within 3 days
+  if (daysUntilDue <= 7) return 'Medium';    // Due within a week
+  return 'Low';
+}
 
 // --- Main Handler ---
 export const handler = async (event) => {
@@ -168,7 +191,7 @@ export const handler = async (event) => {
       ]);
 
       const now = new Date();
-      
+
       const budgetSubtotal = (budgetData.results || [])
         .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
         .reduce((sum, p) => (sum + (extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0)), 0);
@@ -177,146 +200,148 @@ export const handler = async (event) => {
 
       // --- NEW (v6.8.0+): Unified Deliverables Processing ---
       const processedDeliverables = (deliverablesData.results || []).map(p => {
-          const category = extractText(getProp(p, 'Category'));
-          const isConstruction = category === 'Construction Certificate';
-          
-          let status;
-          if (isConstruction) {
-              const reviewStatus = extractText(getProp(p, 'Review Status'));
-              status = mapConstructionStatus(reviewStatus);
-          } else {
-              status = extractText(getProp(p, 'Status'));
-          }
+        const category = extractText(getProp(p, 'Category'));
+        const isConstruction = category === 'Construction Certificate';
 
-          return {
-            title: extractText(getProp(p, 'Select Deliverable:')),
-            deliverableType: extractText(getProp(p, 'Select Deliverable:')),
-            gate: extractText(getProp(p, 'Gate')) ,
-            status: status || 'Missing', // Default to Missing if no status is found
-            category: category,
-            assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
-            url: p.url,
-            dueDate: extractText(getProp(p, 'Target Due')),
-            dueTime: extractText(getProp(p, 'Due Time')),
-            confirmed: !extractText(getProp(p, 'Tentative?')),
-            vendor: extractText(getProp(p, 'Vendor')),
-            priority: extractText(getProp(p, 'Priority')),
-            submittedBy: extractText(getProp(p, 'Submitted By')),
-            trade: extractText(getProp(p, 'Trade')),
-          };
-      });
+        let status;
+        if (isConstruction) {
+          const reviewStatus = extractText(getProp(p, 'Review Status'));
+          status = mapConstructionStatus(reviewStatus);
+        } else {
+          status = extractText(getProp(p, 'Status'));
+        }
 
-      const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
-      const allDeliverablesIncludingMissing = [...processedDeliverables];
+        const targetDue = extractText(getProp(p, 'Target Due'));
+        const criticalPath = extractText(getProp(p, 'Critical Path'));
 
-      Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
-        requiredDocs.forEach(requiredTitle => {
-          if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
-            allDeliverablesIncludingMissing.push({
-              title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
-              status: 'Missing', assignees: [], url: '#'
-            });
-          }
+        return {
+          title: extractText(getProp(p, 'Select Deliverable:')),
+          deliverableType: extractText(getProp(p, 'Select Deliverable:')),
+          gate: extractText(getProp(p, 'Gate')),
+          status: status || 'Missing',
+          category: category,
+          assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
+          url: p.url,
+          dueDate: targetDue,
+          dueTime: null,  // No time field in database
+          confirmed: !extractText(getProp(p, 'Tentative?')),
+          vendor: extractText(getProp(p, 'Submitted By')),
+          priority: calculatePriority(targetDue, criticalPath),
+          submittedBy: extractText(getProp(p, 'Submitted By')),
+          trade: extractText(getProp(p, 'Trade')),
+        };
+
+        const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
+        const allDeliverablesIncludingMissing = [...processedDeliverables];
+
+        Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
+          requiredDocs.forEach(requiredTitle => {
+            if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
+              allDeliverablesIncludingMissing.push({
+                title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
+                status: 'Missing', assignees: [], url: '#'
+              });
+            }
+          });
         });
-      });
-      
-      const gates = Object.entries(REQUIRED_BY_GATE)
-        .map(([gateName, requiredDocs]) => {
-          const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length;
-          const totalInGate = requiredDocs.length;
-          return { gate: gateName, total: totalInGate, approved: approvedCount, gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0 };
-        })
-        .filter(g => g.total > 0)
-        .sort((a, b) => a.gate.localeCompare(b.gate));
-      
-      const paymentPages = paymentsData.results || [];
-      const overduePayments = paymentPages.filter(p => {
-        const dueDate = extractText(getProp(p, 'DueDate'));
-        return (extractText(getProp(p, 'Status')) === 'Outstanding' || extractText(getProp(p, 'Status')) === 'Overdue') && dueDate && new Date(dueDate) < now;
-      }).map(p => ({
-        paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
-        amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
-      })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
 
-      const upcomingPayments = paymentPages.filter(p => {
-        const dueDate = extractText(getProp(p, 'DueDate'));
-        return extractText(getProp(p, 'Status')) === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
-      }).map(p => ({
-        paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
-        amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
-      })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
-      
-      const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
-        paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
-        amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
-      })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
-      
-      const forecastMonths = [];
-      const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
-      const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      const cumulativeUnscheduled = outstandingAndOverdue.filter(p => !extractText(getProp(p, 'DueDate')) || new Date(extractText(getProp(p, 'DueDate'))) < firstMonthDate).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-      for (let i = 0; i < 4; i++) {
-        const monthStart = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
-        const monthName = monthStart.toLocaleString('en-US', { month: 'short' });
-        let monthTotal = outstandingAndOverdue.filter(p => {
+        const gates = Object.entries(REQUIRED_BY_GATE)
+          .map(([gateName, requiredDocs]) => {
+            const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length;
+            const totalInGate = requiredDocs.length;
+            return { gate: gateName, total: totalInGate, approved: approvedCount, gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0 };
+          })
+          .filter(g => g.total > 0)
+          .sort((a, b) => a.gate.localeCompare(b.gate));
+
+        const paymentPages = paymentsData.results || [];
+        const overduePayments = paymentPages.filter(p => {
           const dueDate = extractText(getProp(p, 'DueDate'));
-          if (!dueDate) return false;
-          const paymentDate = new Date(dueDate);
-          return paymentDate >= monthStart && paymentDate < monthEnd;
-        }).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-        if (i === 0) monthTotal += cumulativeUnscheduled;
-        forecastMonths.push({ month: monthName, totalAmount: monthTotal });
-      }
+          return (extractText(getProp(p, 'Status')) === 'Outstanding' || extractText(getProp(p, 'Status')) === 'Overdue') && dueDate && new Date(dueDate) < now;
+        }).map(p => ({
+          paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
+          amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
+        })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
 
-      const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
-      const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
-      const alerts = {
+        const upcomingPayments = paymentPages.filter(p => {
+          const dueDate = extractText(getProp(p, 'DueDate'));
+          return extractText(getProp(p, 'Status')) === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
+        }).map(p => ({
+          paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
+          amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
+        })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
+
+        const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
+          paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
+          amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
+        })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
+
+        const forecastMonths = [];
+        const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
+        const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        const cumulativeUnscheduled = outstandingAndOverdue.filter(p => !extractText(getProp(p, 'DueDate')) || new Date(extractText(getProp(p, 'DueDate'))) < firstMonthDate).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
+        for (let i = 0; i < 4; i++) {
+          const monthStart = new Date(now.getFullYear(), now.getMonth() + i, 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+          const monthName = monthStart.toLocaleString('en-US', { month: 'short' });
+          let monthTotal = outstandingAndOverdue.filter(p => {
+            const dueDate = extractText(getProp(p, 'DueDate'));
+            if (!dueDate) return false;
+            const paymentDate = new Date(dueDate);
+            return paymentDate >= monthStart && paymentDate < monthEnd;
+          }).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
+          if (i === 0) monthTotal += cumulativeUnscheduled;
+          forecastMonths.push({ month: monthName, totalAmount: monthTotal });
+        }
+
+        const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
+        const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
+        const alerts = {
           daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
           g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
           paymentsOverdue: overduePayments,
           mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
           contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
-      };
-      
-      const responseData = {
-        kpis: {
-          budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
-          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
-          deliverablesTotal: allDeliverablesIncludingMissing.length,
-          totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
-          totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
-          paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
-          milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
-        },
-        gates,
-        topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
-          const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
-          acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-          return acc;
-        }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
-        deliverables: allDeliverablesIncludingMissing,
-        paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
-        alerts,
-        timestamp: new Date().toISOString()
-      };
-      
-      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-    }
+        };
+
+        const responseData = {
+          kpis: {
+            budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
+            deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
+            deliverablesTotal: allDeliverablesIncludingMissing.length,
+            totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
+            totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
+            paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
+            deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
+            milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
+          },
+          gates,
+          topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
+            const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
+            acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
+            return acc;
+          }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
+          deliverables: allDeliverablesIncludingMissing,
+          paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
+          alerts,
+          timestamp: new Date().toISOString()
+        };
+
+        return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+      }
 
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-      const body = JSON.parse(event.body || '{}');
-      const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
-      const summary = await callGemini(prompt);
-      return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+        const body = JSON.parse(event.body || '{}');
+        const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
+        const summary = await callGemini(prompt);
+        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+      }
+
+      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
+    } catch (error) {
+      console.error('Handler error:', error);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
     }
-
-    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-  } catch (error) {
-    console.error('Handler error:', error);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
-  }
-};
+  };
 
