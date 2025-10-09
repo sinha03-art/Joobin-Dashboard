@@ -1,8 +1,8 @@
 /**
- * JOOBIN Renovation Hub Proxy v12.0.0
- * - FEATURE: Added "Approve Gate" functionality, allowing all deliverables in a gate to be updated to "Approved".
- * - FIX: Correctly resolved vendor names by querying the Vendor_Registry relation instead of a text field, fixing the "Unknown" vendor issue.
- * - ENHANCEMENT: Deliverable objects now include their Notion page ID to be targetable for updates.
+ * JOOBIN Renovation Hub Proxy v12.0.1
+ * - FIX: Correctly resolved vendor names by querying the Vendor_Registry relation 
+ * instead of a text field. This fixes the "Unknown" vendor issue in the "Top Vendors by Spend" chart.
+ * - This version is based on the v12.0.0 codebase.
  */
 
 // --- Environment Variables ---
@@ -92,6 +92,7 @@ function extractText(prop) {
       return '';
   }
   if (propType === 'checkbox') return prop.checkbox;
+  // FIX: Make sure relation extraction returns the ID
   if (propType === 'relation') return prop.relation?.[0]?.id || null;
   return '';
 }
@@ -166,12 +167,14 @@ export const handler = async (event) => {
           acc[p.id] = extractText(getProp(p, 'Company_Name', 'Name')) || 'Unknown';
           return acc;
       }, {});
+      
       const paidMYRByVendor = (actualsData.results || []).filter(p => norm(extractText(getProp(p, 'Status'))) === 'paid').reduce((acc, p) => {
           const vendorId = extractText(getProp(p, 'Vendor_Registry', 'Vendor'));
           const vendorName = vendorMap[vendorId] || 'Unknown';
           acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
           return acc;
       }, {});
+      
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' }));
       const paidMYR = Object.values(paidMYRByVendor).reduce((sum, amount) => sum + amount, 0);
 
@@ -212,7 +215,17 @@ export const handler = async (event) => {
           case 'mark_gate_approved':
             const allDeliverables = (await queryNotionDB(DELIVERABLES_DB_ID)).results;
             const deliverablesToUpdate = allDeliverables.filter(p => extractText(getProp(p, 'Gate (Auto)')) === body.gateName);
-            const updatePromises = deliverablesToUpdate.map(p => updateNotionPage(p.id, { "Status": { "select": { "name": "Approved" } } }));
+            const updatePromises = deliverablesToUpdate.map(p => {
+                const category = extractText(getProp(p, 'Category'));
+                const isConstruction = category === 'Construction Certificate';
+                let propertiesToUpdate;
+                if (isConstruction) {
+                    propertiesToUpdate = { "Review Status": { "select": { "name": "Approved" } } };
+                } else {
+                    propertiesToUpdate = { "Status": { "select": { "name": "Approved" } } };
+                }
+                return updateNotionPage(p.id, propertiesToUpdate);
+            });
             await Promise.all(updatePromises);
             return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: `All deliverables for ${body.gateName} approved.` }) };
 
@@ -220,8 +233,12 @@ export const handler = async (event) => {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action.' }) };
         }
       } 
-      // AI Summary request...
-      else { /* ... unchanged ... */ }
+      else { 
+        // AI Summary request...
+        const prompt = `Summarize this project data: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and progress.`;
+        const summary = await callGemini(prompt);
+        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+       }
     }
     return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
   } catch (error) {
