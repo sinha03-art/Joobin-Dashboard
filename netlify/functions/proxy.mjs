@@ -11,7 +11,7 @@
 
 // --- Environment Variables ---
 const {
-  GEMINI_API_KEY,
+  GEMINI_API_KEY, a
   NOTION_API_KEY,
   NOTION_BUDGET_DB_ID,
   NOTION_ACTUALS_DB_ID,
@@ -230,118 +230,119 @@ export const handler = async (event) => {
           submittedBy: extractText(getProp(p, 'Submitted By')),
           trade: extractText(getProp(p, 'Trade')),
         };
+      });
 
-        const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
-        const allDeliverablesIncludingMissing = [...processedDeliverables];
+      const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
+      const allDeliverablesIncludingMissing = [...processedDeliverables];
 
-        Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
-          requiredDocs.forEach(requiredTitle => {
-            if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
-              allDeliverablesIncludingMissing.push({
-                title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
-                status: 'Missing', assignees: [], url: '#'
-              });
-            }
-          });
+      Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
+        requiredDocs.forEach(requiredTitle => {
+          if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
+            allDeliverablesIncludingMissing.push({
+              title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
+              status: 'Missing', assignees: [], url: '#'
+            });
+          }
         });
+      });
 
-        const gates = Object.entries(REQUIRED_BY_GATE)
-          .map(([gateName, requiredDocs]) => {
-            const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length;
-            const totalInGate = requiredDocs.length;
-            return { gate: gateName, total: totalInGate, approved: approvedCount, gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0 };
-          })
-          .filter(g => g.total > 0)
-          .sort((a, b) => a.gate.localeCompare(b.gate));
+      const gates = Object.entries(REQUIRED_BY_GATE)
+        .map(([gateName, requiredDocs]) => {
+          const approvedCount = allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length;
+          const totalInGate = requiredDocs.length;
+          return { gate: gateName, total: totalInGate, approved: approvedCount, gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0 };
+        })
+        .filter(g => g.total > 0)
+        .sort((a, b) => a.gate.localeCompare(b.gate));
 
-        const paymentPages = paymentsData.results || [];
-        const overduePayments = paymentPages.filter(p => {
+      const paymentPages = paymentsData.results || [];
+      const overduePayments = paymentPages.filter(p => {
+        const dueDate = extractText(getProp(p, 'DueDate'));
+        return (extractText(getProp(p, 'Status')) === 'Outstanding' || extractText(getProp(p, 'Status')) === 'Overdue') && dueDate && new Date(dueDate) < now;
+      }).map(p => ({
+        paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
+        amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
+      })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
+
+      const upcomingPayments = paymentPages.filter(p => {
+        const dueDate = extractText(getProp(p, 'DueDate'));
+        return extractText(getProp(p, 'Status')) === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
+      }).map(p => ({
+        paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
+        amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
+      })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
+
+      const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
+        paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
+        amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
+      })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
+
+      const forecastMonths = [];
+      const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
+      const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const cumulativeUnscheduled = outstandingAndOverdue.filter(p => !extractText(getProp(p, 'DueDate')) || new Date(extractText(getProp(p, 'DueDate'))) < firstMonthDate).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
+      for (let i = 0; i < 4; i++) {
+        const monthStart = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+        const monthName = monthStart.toLocaleString('en-US', { month: 'short' });
+        let monthTotal = outstandingAndOverdue.filter(p => {
           const dueDate = extractText(getProp(p, 'DueDate'));
-          return (extractText(getProp(p, 'Status')) === 'Outstanding' || extractText(getProp(p, 'Status')) === 'Overdue') && dueDate && new Date(dueDate) < now;
-        }).map(p => ({
-          paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
-          amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
-        })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
-
-        const upcomingPayments = paymentPages.filter(p => {
-          const dueDate = extractText(getProp(p, 'DueDate'));
-          return extractText(getProp(p, 'Status')) === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
-        }).map(p => ({
-          paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
-          amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url
-        })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
-
-        const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
-          paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')),
-          amount: extractText(getProp(p, 'Amount (RM)')) || 0, paidDate: extractText(getProp(p, 'PaidDate')), url: p.url
-        })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
-
-        const forecastMonths = [];
-        const outstandingAndOverdue = paymentPages.filter(p => ['Outstanding', 'Overdue'].includes(extractText(getProp(p, 'Status'))));
-        const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        const cumulativeUnscheduled = outstandingAndOverdue.filter(p => !extractText(getProp(p, 'DueDate')) || new Date(extractText(getProp(p, 'DueDate'))) < firstMonthDate).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-        for (let i = 0; i < 4; i++) {
-          const monthStart = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const monthEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
-          const monthName = monthStart.toLocaleString('en-US', { month: 'short' });
-          let monthTotal = outstandingAndOverdue.filter(p => {
-            const dueDate = extractText(getProp(p, 'DueDate'));
-            if (!dueDate) return false;
-            const paymentDate = new Date(dueDate);
-            return paymentDate >= monthStart && paymentDate < monthEnd;
-          }).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-          if (i === 0) monthTotal += cumulativeUnscheduled;
-          forecastMonths.push({ month: monthName, totalAmount: monthTotal });
-        }
-
-        const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
-        const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
-        const alerts = {
-          daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
-          g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
-          paymentsOverdue: overduePayments,
-          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
-          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
-        };
-
-        const responseData = {
-          kpis: {
-            budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
-            deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
-            deliverablesTotal: allDeliverablesIncludingMissing.length,
-            totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
-            totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
-            paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-            deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
-            milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
-          },
-          gates,
-          topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
-            const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
-            acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-            return acc;
-          }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
-          deliverables: allDeliverablesIncludingMissing,
-          paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
-          alerts,
-          timestamp: new Date().toISOString()
-        };
-
-        return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+          if (!dueDate) return false;
+          const paymentDate = new Date(dueDate);
+          return paymentDate >= monthStart && paymentDate < monthEnd;
+        }).reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
+        if (i === 0) monthTotal += cumulativeUnscheduled;
+        forecastMonths.push({ month: monthName, totalAmount: monthTotal });
       }
+
+      const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
+      const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
+      const alerts = {
+        daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
+        g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
+        paymentsOverdue: overduePayments,
+        mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
+        contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
+      };
+
+      const responseData = {
+        kpis: {
+          budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
+          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
+          deliverablesTotal: allDeliverablesIncludingMissing.length,
+          totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
+          totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
+          paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
+          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
+          milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
+        },
+        gates,
+        topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
+          const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
+          acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
+          return acc;
+        }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
+        deliverables: allDeliverablesIncludingMissing,
+        paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
+        alerts,
+        timestamp: new Date().toISOString()
+      };
+
+      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+    }
 
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-        const body = JSON.parse(event.body || '{}');
-        const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
-        const summary = await callGemini(prompt);
-        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
-      }
-
-      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-    } catch (error) {
-      console.error('Handler error:', error);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
+      const body = JSON.parse(event.body || '{}');
+      const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
+      const summary = await callGemini(prompt);
+      return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
     }
-  };
+
+    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
+  } catch (error) {
+    console.error('Handler error:', error);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
+  }
+};
 
