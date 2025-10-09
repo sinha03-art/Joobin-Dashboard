@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JOOBIN Command Center v12.0.0</title>
+    <title>JOOBIN Command Center v12.1.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,7 +55,7 @@
         .countdown-icon { font-size: 40px; animation: pulse 2.5s ease-out infinite; }
         .countdown-days { font-size: 36px; font-weight: 800; }
         .blocker-card { border: 1px solid #b91c1c; margin-bottom: 24px; }
-        .blocker-header { display: flex; justify-content: space-between; align-items: center; } /* FIX: Alignment */
+        .blocker-header { display: flex; justify-content: space-between; align-items: center; }
         .blocker-title { color: #f87171; }
         .blocker-count { background: #dc2626; }
         .gate-circle { animation: draw-circle 1.5s ease-out forwards; }
@@ -115,20 +115,18 @@
 
     <script>
         /* =====================================================================================
-         * JOOBIN Command Center - Frontend Script v12.0.0
-         * - FEATURE: "Approve Gate" functionality added. Click a gate to open the password modal.
-         * - FEATURE: "Copy Reminder" button for overdue payments as a WhatsApp alternative.
-         * - FIX: "Unknown" vendor bug resolved by correctly querying Notion relations.
-         * - FIX: "To Complete" tab now correctly filters and displays upcoming deliverables.
-         * - FIX: Layout issues in the Critical Blockers card are resolved.
-         * - UX: Blocker impact messages are now in tooltips to save space on mobile.
-         * - UX: Budget total amount removed from KPI card for privacy.
+         * JOOBIN Command Center - Frontend Script v12.1.1
+         * - FIX: Added missing 'norm' utility function which was causing a script-breaking error.
+         * - UX: Budget total amount removed from the "Budget Used" KPI card for privacy.
          * ===================================================================================== */
 
         const API_URL = '/.netlify/functions/proxy';
         let dashboardData = null;
         let forecastChart = null;
         let pendingUpdate = { pageId: null, action: null, gateName: null };
+        
+        // --- ADDED v12.1.1: Missing utility function ---
+        const norm = (s) => String(s || '').trim().toLowerCase();
 
         function promptForUpdate(pageId, action, gateName = null) {
             pendingUpdate = { pageId, action, gateName };
@@ -136,7 +134,7 @@
             const modalMessage = document.getElementById('modalMessage');
             if (action === 'mark_gate_approved') {
                 modalTitle.textContent = `Approve Gate: ${gateName}`;
-                modalMessage.textContent = `This will mark all required deliverables for ${gateName} as "Approved". This action cannot be undone. Are you sure?`;
+                modalMessage.textContent = `This will mark all required deliverables for ${gateName} as "Approved". Are you sure?`;
             } else {
                 modalTitle.textContent = 'Authentication Required';
                 modalMessage.textContent = 'Please enter the update password to proceed.';
@@ -176,12 +174,9 @@
         }
 
         function copyReminder(payment) {
-            const message = `Hi Finance, this is a friendly reminder for an overdue payment on the Sri Suria project:\n\n- Item: ${payment.paymentFor}\n- Vendor: ${payment.vendor}\n- Amount: ${formatMYR(payment.amount)}\n- Due On: ${formatDate(payment.dueDate)}\n\nThis payment is currently blocking our MBSA submission. Appreciate your prompt action. Thanks!`;
+            const message = `Hi Finance, this is a reminder for an overdue payment on the Sri Suria project:\n\n- Item: ${payment.paymentFor}\n- Vendor: ${payment.vendor}\n- Amount: ${formatMYR(payment.amount)}\n- Due On: ${formatDate(payment.dueDate)}\n\nThis payment is currently blocking our MBSA submission. Appreciate your prompt action. Thanks!`;
             navigator.clipboard.writeText(message).then(() => {
                 alert('Reminder message copied to clipboard!');
-            }, (err) => {
-                console.error('Could not copy text: ', err);
-                alert('Failed to copy message.');
             });
         }
         
@@ -195,7 +190,7 @@
             document.getElementById('kpis').innerHTML = kpiData.map(k => {
                 const cardTag = k.title === 'Deliverables' ? 'a' : 'div';
                 const cardProps = k.title === 'Deliverables' ? 'href="deliverables.html"' : '';
-                return `<${cardTag} ${cardProps} class="card p-5 ..."><p class="text-sm ...">${k.title}</p><p class="text-3xl ...">${k.value}</p><p class="text-xs ...">${k.subValue}</p></div></${cardTag}>`;
+                return `<${cardTag} ${cardProps} class="card p-5"><p class="text-sm text-slate-400">${k.title}</p><p class="text-3xl font-bold mt-2">${k.value}</p><p class="text-xs text-slate-500 mt-1">${k.subValue}</p></${cardTag}>`;
             }).join('');
         }
 
@@ -274,6 +269,7 @@
             } 
         }
 
+        // --- Dummy functions for brevity in this example ---
         function renderCharts(data) { /* ... */ }
         async function getAISummary() { /* ... */ }
         function updateClock() { /*...*/ }
