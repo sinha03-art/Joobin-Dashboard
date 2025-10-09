@@ -147,15 +147,6 @@ function mapConstructionStatus(reviewStatus) {
   }
   return 'Missing';
 }
-// NEW (v6.8.0+): Status mapping for construction certificates
-function mapConstructionStatus(reviewStatus) {
-  const normalized = norm(reviewStatus);
-  if (normalized === 'approved') return 'Approved';
-  if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) {
-    return 'Submitted';
-  }
-  return 'Missing';
-}
 
 // ADD THIS NEW FUNCTION HERE:
 function calculatePriority(dueDate, isCriticalPath) {
