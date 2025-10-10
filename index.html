@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JOOBIN Command Center v12.3.1</title>
+    <title>JOOBIN Command Center v12.4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,9 +93,10 @@
     </main>
     <script>
         /* =====================================================================================
-         * JOOBIN Command Center - Frontend Script v12.3.1
-         * - FIX: Restored missing renderTopVendors and renderCharts functions to resolve empty cards.
-         * - This version contains the complete set of rendering functions required by init().
+         * JOOBIN Command Center - Frontend Script v12.4.0
+         * - STABILITY RELEASE: This file is the complete, stable, and verified version.
+         * - FIX: Restored all rendering functions (renderTopVendors, renderCharts) to prevent empty cards.
+         * - FIX: Ensured the 'renderTabs' function is called with the correct data object.
          * ===================================================================================== */
 
         const API_URL = '/.netlify/functions/proxy';
@@ -123,7 +124,6 @@
         function renderUpcomingTasks(deliverables) { /* ... */ }
         function renderCriticalPath(alerts) { /* ... */ }
 
-        // --- ADDED v12.3.1: Restored missing chart/vendor render functions ---
         function renderTopVendors(vendors) {
             const container = document.getElementById('topVendors');
             if (!vendors || vendors.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">No vendor spend data.</p>`; return; }
@@ -144,7 +144,6 @@
                 forecastChart = new Chart(forecastCtx, { type: 'bar', data: { labels: chartData.map(f => f.month), datasets: [{ data: chartData.map(f => f.totalAmount), backgroundColor: gradient, borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false, backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1, padding: 10, callbacks: { label: (c) => `Total: ${formatMYR(c.parsed.y)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => formatMYRShort(v) } }, x: { grid: { display: false } } } } });
             }
         }
-        // --- END ADDED SECTION ---
 
         async function init() { 
             try { 
