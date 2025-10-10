@@ -1,6 +1,6 @@
 /**
  * JOOBIN Renovation Hub Proxy v10.0.1
- * FIXES: Corrected API URLs and Gemini model name
+ * FIXES: Corrected API URLs, Gemini model name, and vendor name extraction
  */
 
 // --- Environment Variables ---
@@ -18,7 +18,7 @@ const {
 
 // --- Constants ---
 const NOTION_VERSION = '2022-06-28';
-const GEMINI_MODEL = 'gemini-1.5-flash'; // ← FIXED: Updated to stable model
+const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
 
 const REQUIRED_BY_GATE = {
@@ -67,7 +67,6 @@ async function queryNotionDB(dbId, filter = {}) {
     console.warn(`queryNotionDB called with no dbId. Skipping.`);
     return { results: [] };
   }
-  // ← FIXED: Removed incorrect   around URL
   const url = `https://api.notion.com/v1/databases/${dbId}/query`;
   try {
     const res = await fetch(url, { method: 'POST', headers: notionHeaders(), body: JSON.stringify(filter) });
@@ -85,7 +84,6 @@ async function queryNotionDB(dbId, filter = {}) {
 
 async function callGemini(prompt) {
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
-    // ← FIXED: Removed incorrect   around URL
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     let delay = 1000;
     for (let i = 0; i < 3; i++) {
@@ -157,6 +155,13 @@ export const handler = async (event) => {
         queryNotionDB(PAYMENTS_DB_ID),
         queryNotionDB(NOTION_WORK_PACKAGES_DB_ID, { sorts: [{ property: 'Start Date', direction: 'ascending' }] }),
       ]);
+
+      // NEW: Build vendor name lookup map
+      const vendorMap = new Map();
+      (vendorData.results || []).forEach(v => {
+        const vendorName = extractText(getProp(v, 'Company_Name')) || 'Unknown Vendor';
+        vendorMap.set(v.id, vendorName);
+      });
 
       const now = new Date();
       
@@ -281,11 +286,23 @@ export const handler = async (event) => {
           milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
         },
         gates,
-        topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
-          const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
-          acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-          return acc;
-        }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
+        // FIXED: Top vendors now correctly reads vendor names from Vendor_Registry
+        topVendors: Object.entries((actualsData.results || [])
+          .filter(p => extractText(getProp(p, 'Status')) === 'Paid')
+          .reduce((acc, p) => {
+            // Get vendor ID from Vendor_Registry relation
+            const vendorRelation = getProp(p, 'Vendor_Registry')?.relation || [];
+            const vendorId = vendorRelation[0]?.id || null;
+            
+            // Look up vendor name from map
+            const vendor = vendorId ? (vendorMap.get(vendorId) || 'Unknown Vendor') : 'Unknown Vendor';
+            
+            acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
+            return acc;
+          }, {}))
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name, paid]) => ({ name, paid, trade: '—' })),
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
         alerts,
