@@ -140,10 +140,39 @@ export const handler = async (event) => {
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' }));
       const paidMYR = Object.values(paidMYRByVendor).reduce((sum, amount) => sum + amount, 0);
 
-      const processedDeliverables = (deliverablesData.results || []).map(p => { /* ... (This logic is correct and restored) ... */ return {}; });
+      const processedDeliverables = (deliverablesData.results || []).map(p => {
+          const category = extractText(getProp(p, 'Category'));
+          const isConstruction = category === 'Construction Certificate';
+          let status = isConstruction ? mapConstructionStatus(extractText(getProp(p, 'Review Status'))) : extractText(getProp(p, 'Status'));
+          return {
+            id: p.id,
+            title: extractText(getProp(p, 'Select Deliverable:')),
+            deliverableType: extractText(getProp(p, 'Select Deliverable:')),
+            gate: extractText(getProp(p, 'Gate (Auto)')),
+            status: status || 'Missing',
+            assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
+            url: p.url,
+            dueDate: extractText(getProp(p, 'Target Due')),
+            priority: extractText(getProp(p, 'Priority')),
+          };
+      });
+
+      const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
-      Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => { /* ... (This logic is correct and restored) ... */ });
-      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => { /* ... (This logic is correct and restored) ... */ return {}; });
+      Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
+        requiredDocs.forEach(requiredTitle => {
+          if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
+            allDeliverablesIncludingMissing.push({ id: null, title: requiredTitle, deliverableType: requiredTitle, gate: gateName, status: 'Missing', assignees: [], url: '#' });
+          }
+        });
+      });
+      
+      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => ({
+          gate: gateName,
+          total: requiredDocs.length,
+          approved: allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length,
+          gateApprovalRate: requiredDocs.length > 0 ? allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length / requiredDocs.length : 0
+      })).filter(g => g.total > 0).sort((a, b) => a.gate.localeCompare(b.gate));
       
       const paymentPages = paymentsData.results || [];
       const overduePayments = paymentPages.filter(p => { const d = extractText(getProp(p, 'DueDate')); return (norm(extractText(getProp(p, 'Status'))) === 'outstanding' || norm(extractText(getProp(p, 'Status'))) === 'overdue') && d && new Date(d) < now; }).map(p => ({ id: p.id, paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')), amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
@@ -190,11 +219,54 @@ export const handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     }
 
-    if (httpMethod === 'POST' && path.endsWith('/proxy')) { /* ... unchanged ... */ }
-    
+    if (httpMethod === 'POST' && path.endsWith('/proxy')) {
+      const body = JSON.parse(event.body || '{}');
+      if (body.action) {
+        if (!UPDATE_PASSWORD || body.password !== UPDATE_PASSWORD) {
+          return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Incorrect password.' }) };
+        }
+        switch (body.action) {
+          case 'mark_payment_paid':
+            await updateNotionPage(body.pageId, { "Status": { "status": { "name": "Paid" } }, "PaidDate": { "date": { "start": new Date().toISOString().split('T')[0] } } });
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Payment marked as paid.' }) };
+          
+          case 'mark_gate_approved':
+            const allDeliverables = (await queryNotionDB(DELIVERABLES_DB_ID)).results;
+            const requiredDocsForGate = REQUIRED_BY_GATE[body.gateName] || [];
+            const deliverablesToUpdate = allDeliverables.filter(p => {
+                const gate = extractText(getProp(p, 'Gate (Auto)'));
+                const type = extractText(getProp(p, 'Select Deliverable:'));
+                return gate === body.gateName && requiredDocsForGate.some(req => norm(req) === norm(type));
+            });
+
+            const updatePromises = deliverablesToUpdate.map(p => {
+                const category = extractText(getProp(p, 'Category'));
+                const isConstruction = category === 'Construction Certificate';
+                let propertiesToUpdate;
+                if (isConstruction) {
+                    propertiesToUpdate = { "Review Status": { "select": { "name": "Approved" } } };
+                } else {
+                    propertiesToUpdate = { "Status": { "select": { "name": "Approved" } } };
+                }
+                return updateNotionPage(p.id, propertiesToUpdate);
+            });
+            await Promise.all(updatePromises);
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: `All deliverables for ${body.gateName} approved.` }) };
+
+          default:
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action.' }) };
+        }
+      } 
+      else { 
+        const prompt = `Summarize this project data: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and progress.`;
+        const summary = await callGemini(prompt);
+        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+       }
+    }
     return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
   } catch (error) {
     console.error('Handler error:', error);
     return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
   }
 };
+
