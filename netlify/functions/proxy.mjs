@@ -90,34 +90,34 @@ async function queryNotionDB(dbId, filter = {}) {
 }
 
 async function updateNotionPage(pageId, properties) {
-    if (!pageId) throw new Error("A page ID is required to update.");
-    const url = `https://api.notion.com/v1/pages/${pageId}`;
+  if (!pageId) throw new Error("A page ID is required to update.");
+  const url = `https://api.notion.com/v1/pages/${pageId}`;
+  try {
+    const res = await fetch(url, { method: 'PATCH', headers: notionHeaders(), body: JSON.stringify({ properties }) });
+    if (!res.ok) throw new Error(`Notion API PATCH error: ${res.status}: ${await res.text()}`);
+    return await res.json();
+  } catch (error) { console.error('updateNotionPage error:', error); throw error; }
+}
+
+async function callGemini(prompt) {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  let delay = 1000;
+  for (let i = 0; i < 3; i++) {
     try {
-        const res = await fetch(url, { method: 'PATCH', headers: notionHeaders(), body: JSON.stringify({ properties }) });
-        if (!res.ok) throw new Error(`Notion API PATCH error: ${res.status}: ${await res.text()}`);
-        return await res.json();
-    } catch (error) { console.error('updateNotionPage error:', error); throw error; }
-}
-
-async function callGemini(prompt) { 
-    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    let delay = 1000;
-    for (let i = 0; i < 3; i++) {
-        try {
-            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-            if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (res.status === 503) { await sleep(delay); delay *= 2; continue; }
-            throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
-        } catch (error) {
-            if (i === 2) throw error;
-            await sleep(delay); delay *= 2;
-        }
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+      if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (res.status === 503) { await sleep(delay); delay *= 2; continue; }
+      throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
+    } catch (error) {
+      if (i === 2) throw error;
+      await sleep(delay); delay *= 2;
     }
-    throw new Error('Gemini API is unavailable after multiple retries.');
+  }
+  throw new Error('Gemini API is unavailable after multiple retries.');
 }
 
-function getProp(page, name, fallback) { return page.properties?.[name] || page.properties?.[fallback];}
+function getProp(page, name, fallback) { return page.properties?.[name] || page.properties?.[fallback]; }
 function getProp(page, ...names) {
   if (!page?.properties) return null;
   for (const name of names) {
@@ -180,42 +180,42 @@ function extractText(prop) {
   if (propType === 'url') return prop.url || '';
   if (propType === 'email') return prop.email || '';
   if (propType === 'formula') {
-      if (prop.formula.type === 'string') return prop.formula.string;
-      if (prop.formula.type === 'number') return prop.formula.number;
-      return '';
+    if (prop.formula.type === 'string') return prop.formula.string;
+    if (prop.formula.type === 'number') return prop.formula.number;
+    return '';
   }
   if (propType === 'checkbox') return prop.checkbox;
   if (propType === 'relation') return prop.relation?.[0]?.id || null;
   if (propType === 'rollup') {
-      if (prop.rollup.type === 'array') {
-          const values = prop.rollup.array.map(item => {
-              if (item.type === 'title') return item.title?.[0]?.plain_text || '';
-              if (item.type === 'rich_text') return item.rich_text?.[0]?.plain_text || '';
-              if (item.type === 'people') return item.people?.map(person => person.name || person?.person?.email).filter(Boolean)[0] || '';
-              if (item.type === 'number') return item.number;
-              if (item.type === 'date') return item.date?.start || null;
-              if (item.type === 'checkbox') return item.checkbox;
-              return '';
-          }).filter(Boolean);
-          return values.length > 1 ? values.join(', ') : (values[0] || '');
-      }
-      if (prop.rollup.type === 'number') return prop.rollup.number;
-      if (prop.rollup.type === 'date') return prop.rollup.date?.start || null;
-      if (prop.rollup.type === 'rich_text') return prop.rollup.rich_text?.[0]?.plain_text || '';
-      return '';
+    if (prop.rollup.type === 'array') {
+      const values = prop.rollup.array.map(item => {
+        if (item.type === 'title') return item.title?.[0]?.plain_text || '';
+        if (item.type === 'rich_text') return item.rich_text?.[0]?.plain_text || '';
+        if (item.type === 'people') return item.people?.map(person => person.name || person?.person?.email).filter(Boolean)[0] || '';
+        if (item.type === 'number') return item.number;
+        if (item.type === 'date') return item.date?.start || null;
+        if (item.type === 'checkbox') return item.checkbox;
+        return '';
+      }).filter(Boolean);
+      return values.length > 1 ? values.join(', ') : (values[0] || '');
+    }
+    if (prop.rollup.type === 'number') return prop.rollup.number;
+    if (prop.rollup.type === 'date') return prop.rollup.date?.start || null;
+    if (prop.rollup.type === 'rich_text') return prop.rollup.rich_text?.[0]?.plain_text || '';
+    return '';
   }
   return '';
 }
 
 function mapConstructionStatus(reviewStatus) {
-    const normalized = norm(reviewStatus);
-    if (normalized === 'approved') return 'Approved';
-    if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) return 'Submitted';
-    if (!normalized) return null;
-    if ((normalized === 'approved' || (normalized.includes('approved') && !normalized.includes('not')))) return 'Approved';
-    if (normalized.includes('pending') || normalized.includes('comment') || normalized.includes('resubmission') || normalized.includes('submit')) return 'Submitted';
-    if (normalized.includes('reject')) return 'Rejected';
-    return 'Missing';
+  const normalized = norm(reviewStatus);
+  if (normalized === 'approved') return 'Approved';
+  if (normalized.includes('pending') || normalized.includes('comments') || normalized.includes('resubmission')) return 'Submitted';
+  if (!normalized) return null;
+  if ((normalized === 'approved' || (normalized.includes('approved') && !normalized.includes('not')))) return 'Approved';
+  if (normalized.includes('pending') || normalized.includes('comment') || normalized.includes('resubmission') || normalized.includes('submit')) return 'Submitted';
+  if (normalized.includes('reject')) return 'Rejected';
+  return 'Missing';
 }
 
 // --- Main Handler ---
@@ -234,36 +234,48 @@ export const handler = async (event) => {
       ]);
 
       const now = new Date();
-      
+
       const budgetSubtotal = (budgetData.results || []).filter(p => extractText(getProp(p, 'inScope', 'In Scope'))).reduce((sum, p) => (sum + (extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0)), 0);
       const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
-      
+
       const vendorMap = (vendorData.results || []).reduce((acc, p) => {
-          acc[p.id] = extractText(getProp(p, 'Company_Name', 'Name')) || 'Unknown';
-          return acc;
+        acc[p.id] = extractText(getProp(p, 'Company_Name', 'Name')) || 'Unknown';
+        return acc;
       }, {});
-      
+
       const paidMYRByVendor = (actualsData.results || []).filter(p => norm(extractText(getProp(p, 'Status'))) === 'paid').reduce((acc, p) => {
-          const vendorId = extractText(getProp(p, 'Vendor_Registry'));
-          const vendorName = vendorMap[vendorId] || 'Unknown';
-          acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-          return acc;
+        const vendorId = extractText(getProp(p, 'Vendor_Registry'));
+        const vendorName = vendorMap[vendorId] || 'Unknown';
+        acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
+        return acc;
       }, {});
-      
+
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' }));
       const paidMYR = Object.values(paidMYRByVendor).reduce((sum, amount) => sum + amount, 0);
 
-      const processedDeliverables = (deliverablesData.results || []).map(p => { /* ... (This logic is correct and restored) ... */ return {}; });
-      const workPackagesMap = (workPackagesData.results || []).reduce((acc, page) => {
-        const id = page.id;
-        const title = extractText(getProp(page, 'Name', 'Title')) || 'Untitled Work Package';
-        const dueDate = extractText(getProp(page, 'Due Date', 'Due', 'Deadline', 'Target Date'));
-        const priority = extractText(getProp(page, 'Priority', 'Risk Level', 'Severity', 'Urgency'));
-        const ownerProp = getProp(page, 'Owner', 'Owners', 'Lead', 'PIC', 'Assignee', 'Assignees');
-        const assignees = extractAssignees(ownerProp);
-        acc[id] = { id, title, dueDate: dueDate || null, priority: priority || null, assignees };
-        return acc;
-      }, {});
+      const processedDeliverables = (deliverablesData.results || []).map(p => {
+        const title = extractText(getProp(p, 'Select Deliverable', 'Deliverable')) || 'Untitled';
+        const category = extractText(getProp(p, 'Category'));
+        const gate = extractText(getProp(p, 'Gate (Auto)', 'Gate'));
+        const status = extractText(getProp(p, 'Status')) || extractText(getProp(p, 'Review Status')) || 'Missing';
+        const dueDate = extractText(getProp(p, 'Target Due'));
+        const url = p.url;
+        const assignees = (getProp(p, 'Owner')?.people || []).map(p => p.name).filter(Boolean);
+        const priority = getProp(p, 'Critical Path')?.checkbox ? 'Critical' : 'Low';
+
+        return {
+          title,
+          deliverableType: title,
+          category,
+          gate,
+          status,
+          dueDate,
+          url,
+          assignees,
+          confirmed: !!dueDate,
+          priority
+        };
+      });
 
       const deliverablesByGate = {};
       const processedDeliverables = (deliverablesData.results || []).map(page => {
@@ -337,8 +349,8 @@ export const handler = async (event) => {
         requiredDocs.forEach(doc => {
           const docKey = norm(doc);
           if (!existing.has(docKey)) {
-              const placeholder = {
-                id: `missing-${canonicalGateKey}-${docKey}`,
+            const placeholder = {
+              id: `missing-${canonicalGateKey}-${docKey}`,
               title: doc,
               gate: gateName,
               status: 'Missing',
@@ -388,7 +400,7 @@ export const handler = async (event) => {
       additionalGates.forEach(({ entry }) => {
         gates.push({ gate: entry.name || 'Uncategorized', ...gateStats(entry.items) });
       });
-      
+
       const paymentPages = paymentsData.results || [];
       const overduePayments = paymentPages.filter(p => { const d = extractText(getProp(p, 'DueDate')); return (norm(extractText(getProp(p, 'Status'))) === 'outstanding' || norm(extractText(getProp(p, 'Status'))) === 'overdue') && d && new Date(d) < now; }).map(p => ({ id: p.id, paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')), amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
       const upcomingPayments = paymentPages.filter(p => { const d = extractText(getProp(p, 'DueDate')); return norm(extractText(getProp(p, 'Status'))) === 'outstanding' && (!d || new Date(d) >= now); }).map(p => ({ id: p.id, paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')), amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
@@ -415,15 +427,15 @@ export const handler = async (event) => {
       const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'renovation permit');
       const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType) === 'contractor awarded');
       const alerts = {
-          daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
-          g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
-          paymentsOverdue: overduePayments,
-          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
-          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
-          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
-          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
+        daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
+        g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
+        paymentsOverdue: overduePayments,
+        mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
+        contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
+        mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
+        contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
       };
-      
+
       const responseData = {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
         gates,
@@ -437,7 +449,7 @@ export const handler = async (event) => {
     }
 
     if (httpMethod === 'POST' && path.endsWith('/proxy')) { /* ... unchanged ... */ }
-    
+
     return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
   } catch (error) {
     console.error('Handler error:', error);
