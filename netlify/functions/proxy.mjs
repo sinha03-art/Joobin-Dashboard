@@ -175,7 +175,22 @@ export const handler = async (event) => {
         acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
         return acc;
       }, {});
+      // === NEW: Budget by Trade aggregation ===
+      const budgetByTrade = {};
+      (budgetData.results || [])
+        .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
+        .forEach(p => {
+          const trade = extractText(getProp(p, 'Trade')) || 'Other';
+          const supply = extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0;
+          const install = extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0;
+          const total = supply + install;
+          budgetByTrade[trade] = (budgetByTrade[trade] || 0) + total;
+        });
 
+      // Convert to sorted array
+      const budgetByTradeArray = Object.entries(budgetByTrade)
+        .map(([trade, amount]) => ({ trade, amount }))
+        .sort((a, b) => b.amount - a.amount);
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' }));
       const paidMYR = Object.values(paidMYRByVendor).reduce((sum, amount) => sum + amount, 0);
       const forecastMonths = [];
@@ -209,6 +224,7 @@ export const handler = async (event) => {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
         gates,
         topVendors,
+        budgetByTrade: budgetByTradeArray,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: [] /* Placeholder */ },
         alerts,
