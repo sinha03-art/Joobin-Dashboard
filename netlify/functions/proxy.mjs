@@ -66,7 +66,21 @@ async function queryNotionDB(dbId, filter = {}) {
   if (!res.ok) throw new Error(await res.text());
   return await res.json();
 }
-
+// --- Update Records ---
+let updateRecords = [];
+try {
+  const updatesData = await queryNotionDB(CONFIG_DB_ID);
+  updateRecords = (updatesData.results || []).map(u => ({
+    id: u.id,
+    title: extractText(getProp(u, 'Title')),
+    summary: extractText(getProp(u, 'Summary')),
+    date: extractText(getProp(u, 'Date')),
+    author: extractText(getProp(u, 'Author')),
+    url: u.url
+  }));
+} catch (e) {
+  console.warn('UpdateRecords fetch failed:', e.message);
+}
 export const handler = async () => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   const now = new Date();
@@ -111,7 +125,15 @@ export const handler = async () => {
         }
       });
     });
-
+    // --- Reminders ---
+    const reminders = allDeliverablesIncludingMissing
+      .filter(d => !d.dueDate || norm(d.status) === 'submitted')
+      .map(d => ({
+        id: d.id || `missing-${d.deliverableType}`,
+        message: `Deliverable "${d.deliverableType}" is pending or missing a due date.`,
+        dueDate: d.dueDate,
+        type: (!d.dueDate ? 'warning' : 'info')
+      }));
     const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => {
       const approved = allDeliverablesIncludingMissing.filter(d =>
         d.gate === gateName &&
@@ -152,6 +174,18 @@ export const handler = async () => {
       dueDate: extractText(getProp(p, 'DueDate')),
       url: p.url
     }));
+    // --- Top Vendors ---
+    const topVendorsMap = {};
+    (actualsData.results || []).forEach(p => {
+      const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
+      const paid = extractText(getProp(p, 'Paid (MYR)')) || 0;
+      if (!topVendorsMap[vendor]) topVendorsMap[vendor] = 0;
+      topVendorsMap[vendor] += paid;
+    });
+    const topVendors = Object.entries(topVendorsMap)
+      .map(([vendor, paidMYR]) => ({ vendor, paidMYR }))
+      .sort((a, b) => b.paidMYR - a.paidMYR)
+      .slice(0, 5);
 
     const kpis = {
       budgetMYR,
@@ -176,16 +210,39 @@ export const handler = async () => {
       contractorAwarded: allDeliverablesIncludingMissing.some(d => norm(d.deliverableType) === 'contractor awarded' && norm(d.status) === 'approved'),
     };
 
+    // --- Final Response Data ---
     const responseData = {
       kpis,
       gates,
       deliverables: allDeliverablesIncludingMissing,
+      paymentsSchedule,
       alerts,
+      topVendors,
+      updateRecords,
+      reminders,
       timestamp: new Date().toISOString()
     };
 
-    return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-  } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    // ✅ Return the JSON response to the frontend
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(responseData)
+    };
+
+  } catch (error) {
+    // 🛑 Error fallback response
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ error: error.message })
+    };
   }
 };
+
