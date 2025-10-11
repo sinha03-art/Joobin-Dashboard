@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,104 +9,391 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --background: 222 47% 11%; --foreground: 210 40% 98%; --card: 222 47% 14%; --border: 217 33% 17%; --ring: 213 94% 68%; --danger: 220 84% 60%; --warning: 38 92% 50%; --success: 142 71% 45%; }
-        body { font-family: 'Inter', sans-serif; background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
-        .card { background-color: hsl(var(--card)); border-radius: 0.75rem; border: 1px solid hsl(var(--border)); }
-        .tab-button.active { color: hsl(var(--ring)); border-bottom-color: hsl(var(--ring)); }
-        .tab-content { display: none; } .tab-content.active { display: block; }
-        .update-btn { background-color: hsla(213, 94%, 68%, 0.1); color: hsl(var(--ring)); border: 1px solid hsl(var(--ring)); padding: 4px 8px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: background-color 0.2s; cursor: pointer; }
-        .update-btn:hover { background-color: hsla(213, 94%, 68%, 0.2); }
-        .risk-red { background: linear-gradient(135deg, hsl(var(--danger) / 0.2), hsl(var(--background))); border-color: hsl(var(--danger)); }
-        .risk-yellow { background: linear-gradient(135deg, hsl(var(--warning) / 0.2), hsl(var(--background))); border-color: hsl(var(--warning)); }
-        .risk-green { background: linear-gradient(135deg, hsl(var(--success) / 0.2), hsl(var(--background))); border-color: hsl(var(--success)); }
+        :root {
+            --background: 222 47% 11%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 14%;
+            --border: 217 33% 17%;
+            --ring: 213 94% 68%;
+            --danger: 220 84% 60%;
+            --warning: 38 92% 50%;
+            --success: 142 71% 45%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+
+        .card {
+            background-color: hsl(var(--card));
+            border-radius: 0.75rem;
+            border: 1px solid hsl(var(--border));
+        }
+
+        .tab-button.active {
+            color: hsl(var(--ring));
+            border-bottom-color: hsl(var(--ring));
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .update-btn {
+            background-color: hsla(213, 94%, 68%, 0.1);
+            color: hsl(var(--ring));
+            border: 1px solid hsl(var(--ring));
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .update-btn:hover {
+            background-color: hsla(213, 94%, 68%, 0.2);
+        }
+
+        .risk-red {
+            background: linear-gradient(135deg, hsl(var(--danger) / 0.2), hsl(var(--background)));
+            border-color: hsl(var(--danger));
+        }
+
+        .risk-yellow {
+            background: linear-gradient(135deg, hsl(var(--warning) / 0.2), hsl(var(--background)));
+            border-color: hsl(var(--warning));
+        }
+
+        .risk-green {
+            background: linear-gradient(135deg, hsl(var(--success) / 0.2), hsl(var(--background)));
+            border-color: hsl(var(--success));
+        }
     </style>
 </head>
+
 <body class="flex h-screen overflow-hidden">
     <aside class="w-72 border-r border-slate-800 p-6 flex flex-col space-y-6 overflow-y-auto">
-        <div class="flex items-center space-x-3"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1></div>
-        <div><h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2><p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p></div>
-        <div><h2 class="text-base font-semibold text-slate-400 mb-2 tracking-widest">ABOUT</h2><p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground up—blending structure, light, landscape, and livability into a fully modernized private residence.</p></div>
-        <div class="!mt-auto pt-6 text-center text-xs text-slate-600"><p>Last updated: <span id="lastUpdatedSidebar">--</span></p></div>
+        <div class="flex items-center space-x-3"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" class="text-blue-500">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1>
+        </div>
+        <div>
+            <h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2>
+            <p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p>
+        </div>
+        <div>
+            <h2 class="text-base font-semibold text-slate-400 mb-2 tracking-widest">ABOUT</h2>
+            <p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground
+                up—blending structure, light, landscape, and livability into a fully modernized private residence.</p>
+        </div>
+        <div class="!mt-auto pt-6 text-center text-xs text-slate-600">
+            <p>Last updated: <span id="lastUpdatedSidebar">--</span></p>
+        </div>
     </aside>
     <main class="flex-1 overflow-y-auto p-6 lg:p-8">
         <div id="loader" class="flex items-center justify-center h-full">
-            <div class="text-center"><svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="mt-2 text-sm text-slate-400">Loading Command Center...</p></div>
+            <div class="text-center"><svg class="animate-spin h-8 w-8 text-blue-500 mx-auto"
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                <p class="mt-2 text-sm text-slate-400">Loading Command Center...</p>
+            </div>
         </div>
         <div id="dashboardContent" class="hidden">
-            <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4"><div class="flex-shrink-0"><h2 class="text-3xl font-bold tracking-tight">Command Center</h2><p class="text-sm text-slate-400 mt-1">Project overview and key metrics.</p></div><div class="flex items-center justify-center text-center sm:text-left flex-grow"><div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn" class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" /></svg></button></div><div class="text-right flex-shrink-0"><div id="clock" class="text-2xl font-bold text-slate-200"></div><div id="date" class="text-xs text-slate-500"></div></div></header>
+            <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                <div class="flex-shrink-0">
+                    <h2 class="text-3xl font-bold tracking-tight">Command Center</h2>
+                    <p class="text-sm text-slate-400 mt-1">Project overview and key metrics.</p>
+                </div>
+                <div class="flex items-center justify-center text-center sm:text-left flex-grow">
+                    <div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn"
+                        class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-sparkles">
+                            <path
+                                d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                            <path d="M5 3v4" />
+                            <path d="M19 17v4" />
+                            <path d="M3 5h4" />
+                            <path d="M17 19h4" />
+                        </svg></button>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div id="clock" class="text-2xl font-bold text-slate-200"></div>
+                    <div id="date" class="text-xs text-slate-500"></div>
+                </div>
+            </header>
             <div id="criticalPathSection" class="mb-8"></div>
             <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="lg:col-span-2 space-y-6">
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Action Items</h3><div class="border-b border-slate-700"><nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Overdue</button><button data-tab="upcoming" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Upcoming</button><button data-tab="recent" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Recently Paid</button></nav></div><div class="mt-4 min-h-[250px] relative"><div id="overdueContent" class="tab-content active"></div><div id="upcomingContent" class="tab-content"></div><div id="recentContent" class="tab-content"></div></div></div>
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Gate Progress</h3><div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div></div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Action Items</h3>
+                        <div class="border-b border-slate-700">
+                            <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue"
+                                    class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Overdue</button><button
+                                    data-tab="upcoming"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Upcoming</button><button
+                                    data-tab="recent"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Recently
+                                    Paid</button></nav>
+                        </div>
+                        <div class="mt-4 min-h-[250px] relative">
+                            <div id="overdueContent" class="tab-content active"></div>
+                            <div id="upcomingContent" class="tab-content"></div>
+                            <div id="recentContent" class="tab-content"></div>
+                        </div>
+                    </div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+                        <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                    </div>
                 </div>
                 <div class="lg:col-span-1 space-y-6">
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Payment Forecast</h3><div class="h-64"><canvas id="forecastChart"></canvas></div></div>
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3><div id="topVendors" class="space-y-4"></div></div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Payment Forecast</h3>
+                        <div class="h-64"><canvas id="forecastChart"></canvas></div>
+                    </div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                        <div id="topVendors" class="space-y-4"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div id="passwordModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0"><div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95"><h3 id="modalTitle" class="text-lg font-bold"></h3><p id="modalMessage" class="text-sm text-slate-400 my-4"></p><input type="password" id="passwordInput" class="w-full p-2 rounded bg-slate-700 border border-slate-600 focus:ring-2 focus:ring-blue-500"><div id="passwordError" class="text-red-400 text-xs mt-2 hidden"></div><div class="flex justify-end gap-3 mt-6"><button onclick="cancelUpdate()" class="px-4 py-2 text-sm bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button><button onclick="executeUpdate()" id="executeUpdateBtn" class="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-500"><span id="updateBtnText">Confirm</span><span id="updateBtnSpinner" class="hidden">Updating...</span></button></div></div></div>
+        <div id="passwordModal" style="display: none;"
+            class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0">
+            <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
+                <h3 id="modalTitle" class="text-lg font-bold"></h3>
+                <p id="modalMessage" class="text-sm text-slate-400 my-4"></p><input type="password" id="passwordInput"
+                    class="w-full p-2 rounded bg-slate-700 border border-slate-600 focus:ring-2 focus:ring-blue-500">
+                <div id="passwordError" class="text-red-400 text-xs mt-2 hidden"></div>
+                <div class="flex justify-end gap-3 mt-6"><button onclick="cancelUpdate()"
+                        class="px-4 py-2 text-sm bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button><button
+                        onclick="executeUpdate()" id="executeUpdateBtn"
+                        class="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-500"><span
+                            id="updateBtnText">Confirm</span><span id="updateBtnSpinner"
+                            class="hidden">Updating...</span></button></div>
+            </div>
+        </div>
     </main>
 
     <script src="shared.js"></script>
     <script>
-        let dashboardData = null; let forecastChart = null;
+        let dashboardData = null;
+        let forecastChart = null;
         const aiSummaryBtn = document.getElementById('aiSummaryBtn');
+        const aiSummaryDiv = document.getElementById('aiSummary');
 
+        // --- Helper Functions ---
         const formatMYR = (amount) => `RM ${Math.round(amount || 0).toLocaleString()}`;
-        const formatMYRShort = (amount) => { if (!amount) return 'RM 0'; if (amount >= 1e6) return `RM ${(amount / 1e6).toFixed(1)}m`; if (amount >= 1e3) return `RM ${(amount / 1e3).toFixed(0)}k`; return `RM ${Math.round(amount)}`; };
+        const formatMYRShort = (amount) => {
+            if (!amount) return 'RM 0';
+            if (amount >= 1e6) return `RM ${(amount / 1e6).toFixed(1)}m`;
+            if (amount >= 1e3) return `RM ${(amount / 1e3).toFixed(0)}k`;
+            return `RM ${Math.round(amount)}`;
+        };
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A';
-        const timeAgo = (d) => { if (!d) return ""; const s = Math.floor((new Date() - new Date(d)) / 1000); let i = s / 31536000; if (i > 1) return `${Math.floor(i)}y ago`; i = s / 2592000; if (i > 1) return `${Math.floor(i)}m ago`; i = s / 86400; if (i > 1) return `${Math.floor(i)}d ago`; return "just now"; };
+        const timeAgo = (d) => {
+            if (!d) return "";
+            const s = Math.floor((new Date() - new Date(d)) / 1000);
+            let i = s / 31536000;
+            if (i > 1) return `${Math.floor(i)}y ago`;
+            i = s / 2592000;
+            if (i > 1) return `${Math.floor(i)}m ago`;
+            i = s / 86400;
+            if (i > 1) return `${Math.floor(i)}d ago`;
+            return "just now";
+        };
 
+        // --- Rendering Functions (IMPLEMENTED) ---
         function renderCriticalPath(cp) {
             document.getElementById('criticalPathSection').innerHTML = `
-            <div class="card p-6 border-2 risk-${cp.riskLevel}">
-                <div class="flex flex-col md:flex-row md:items-center gap-4">
-                    <div class="text-center">
-                        <div class="text-5xl font-bold text-slate-100">${cp.daysToConstructionStart}</div>
-                        <div class="text-sm text-slate-400">Days to Start</div>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="font-bold text-lg text-slate-100">Critical Path Status: <span class="uppercase">${cp.riskLevel}</span></h3>
-                        <p class="text-sm text-slate-400 mt-1">${cp.blockers.length > 0 ? 'Blockers identified:' : 'All clear. Project is on track.'}</p>
-                        <ul class="text-sm list-disc list-inside mt-2 space-y-1">${cp.blockers.map(b => `<li>${b}</li>`).join('')}</ul>
-                    </div>
+        <div class="card p-6 border-2 risk-${cp.riskLevel}">
+            <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                <div class="text-center flex-shrink-0">
+                    <div class="text-5xl font-bold text-slate-100">${cp.daysToConstructionStart}</div>
+                    <div class="text-sm text-slate-400">Days to Start</div>
                 </div>
-            </div>`;
+                <div class="flex-1">
+                    <h3 class="font-bold text-lg text-slate-100">Critical Path Status: <span class="uppercase">${cp.riskLevel}</span></h3>
+                    <p class="text-sm text-slate-400 mt-1">${cp.blockers.length > 0 ? 'Blockers identified:' : 'All clear. Project is on track.'}</p>
+                    <ul class="text-sm list-disc list-inside mt-2 space-y-1">${cp.blockers.map(b => `<li>${b}</li>`).join('')}</ul>
+                </div>
+            </div>
+        </div>`;
         }
-        function renderKPIs(kpis) { /* ... implementation ... */ }
-        function renderTabs(data) { /* ... implementation ... */ }
-        function renderGates(gates) { /* ... implementation ... */ }
-        function renderTopVendors(vendors) { /* ... implementation ... */ }
-        function renderCharts(data) { /* ... implementation ... */ }
-        async function getAISummary() { /* ... implementation ... */ }
-        function updateClock() { /* ... implementation ... */ }
 
-        async function loadData() { 
-            try { 
+        function renderKPIs(kpis) {
+            const kpiItems = [
+                { label: 'Total Budget', value: formatMYR(kpis.budgetMYR) },
+                { label: 'Total Paid', value: formatMYR(kpis.paidMYR) },
+                { label: 'Deliverables', value: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal}`, sub: `(${(kpis.deliverablesProgress * 100).toFixed(1)}%)` },
+                { label: 'Outstanding Payments', value: formatMYR(kpis.totalOutstandingMYR) }
+            ];
+            document.getElementById('kpis').innerHTML = kpiItems.map(k => `
+            <div class="card p-4">
+                <p class="text-sm text-slate-400">${k.label}</p>
+                <p class="text-2xl font-bold tracking-tight">${k.value} <span class="text-lg font-medium text-slate-400">${k.sub || ''}</span></p>
+            </div>
+        `).join('');
+        }
+
+        function renderTabs(data) {
+            const createPaymentItem = (p, isOverdue = false, isRecent = false) => `
+            <div class="flex items-center justify-between py-3 border-b border-slate-800/50 last:border-0">
+                <div>
+                    <a href="${p.url}" target="_blank" class="font-medium hover:text-blue-400">${p.paymentFor}</a>
+                    <p class="text-xs text-slate-400">${p.vendor}</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-semibold">${formatMYR(p.amount)}</p>
+                    <p class="text-xs ${isOverdue ? 'text-red-400' : 'text-slate-500'}">${isRecent ? `Paid ${formatDate(p.paidDate)}` : `Due ${formatDate(p.dueDate)}`}</p>
+                </div>
+                ${!isRecent ? `<button onclick="showPasswordModal('mark_payment_paid', '${p.id}', 'Mark \\'${p.paymentFor}\\' as Paid?')" class="update-btn ml-4">Mark Paid</button>` : ''}
+            </div>`;
+
+            document.getElementById('overdueContent').innerHTML = data.paymentsSchedule.overdue.length ? data.paymentsSchedule.overdue.map(p => createPaymentItem(p, true)).join('') : `<p class="text-center text-sm text-slate-500 pt-8">No overdue payments.</p>`;
+            document.getElementById('upcomingContent').innerHTML = data.paymentsSchedule.upcoming.length ? data.paymentsSchedule.upcoming.map(p => createPaymentItem(p)).join('') : `<p class="text-center text-sm text-slate-500 pt-8">No upcoming payments.</p>`;
+            document.getElementById('recentContent').innerHTML = data.paymentsSchedule.recentPaid.length ? data.paymentsSchedule.recentPaid.map(p => createPaymentItem(p, false, true)).join('') : `<p class="text-center text-sm text-slate-500 pt-8">No recently paid items.</p>`;
+        }
+
+        function renderGates(gates) {
+            document.getElementById('gates').innerHTML = gates.map(g => `
+            <div class="flex items-center space-x-3">
+                <div class="relative h-2.5 w-full rounded-full bg-slate-700">
+                    <div class="absolute h-2.5 rounded-full bg-green-500" style="width: ${g.total > 0 ? (g.approved / g.total) * 100 : 0}%;"></div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <p class="text-xs font-semibold">${g.approved}/${g.total}</p>
+                    <p class="text-xs text-slate-400 whitespace-nowrap">${g.gate}</p>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        function renderTopVendors(vendors) {
+            document.getElementById('topVendors').innerHTML = vendors.map(v => `
+            <div>
+                <div class="flex justify-between items-baseline mb-1">
+                    <p class="text-sm font-medium">${v.name}</p>
+                    <p class="text-sm text-slate-400">${formatMYRShort(v.paid)}</p>
+                </div>
+                <div class="h-1.5 w-full rounded-full bg-slate-700">
+                    <div class="h-1.5 rounded-full bg-blue-500" style="width: ${v.paid / vendors[0].paid * 100}%"></div>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        function renderCharts(data) {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            if (forecastChart) forecastChart.destroy();
+            forecastChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.paymentsSchedule.forecast.map(f => f.month),
+                    datasets: [{
+                        label: 'Forecasted Payments',
+                        data: data.paymentsSchedule.forecast.map(f => f.totalAmount),
+                        backgroundColor: 'hsl(var(--ring) / 0.5)',
+                        borderColor: 'hsl(var(--ring))',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { ticks: { color: '#9ca3af', callback: (v) => formatMYRShort(v) }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        x: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatMYR(c.raw) } } }
+                }
+            });
+        }
+
+        async function getAISummary() {
+            aiSummaryBtn.disabled = true;
+            aiSummaryDiv.textContent = 'Generating summary...';
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(dashboardData)
+                });
+                if (!res.ok) throw new Error('AI summary generation failed.');
+                const { summary } = await res.json();
+                aiSummaryDiv.textContent = summary;
+            } catch (error) {
+                aiSummaryDiv.textContent = error.message;
+            } finally {
+                aiSummaryBtn.disabled = false;
+            }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB');
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // --- Main Data Loading ---
+        async function loadData() {
+            try {
                 const res = await fetch(API_URL);
-                if (!res.ok) throw new Error(`Network error: ${res.statusText}`); 
-                dashboardData = await res.json(); 
+                if (!res.ok) throw new Error(`Network error: ${res.statusText}`);
+                dashboardData = await res.json();
+
+                // Call all rendering functions with the fetched data
                 renderCriticalPath(dashboardData.criticalPath);
                 renderKPIs(dashboardData.kpis);
                 renderTabs(dashboardData);
                 renderGates(dashboardData.gates);
                 renderTopVendors(dashboardData.topVendors);
                 renderCharts(dashboardData);
+
                 document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
-                updateClock(); setInterval(updateClock, 1000);
+                updateClock();
+                setInterval(updateClock, 1000);
+
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('dashboardContent').classList.remove('hidden');
-                getAISummary(); 
+
+                getAISummary();
                 aiSummaryBtn.addEventListener('click', getAISummary);
-            } catch (error) { 
-                console.error('Error loading dashboard:', error); 
-                document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold">Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`; 
-            } 
+
+                // Tab switching logic
+                document.getElementById('tabs').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab-button')) {
+                        const tab = e.target.dataset.tab;
+                        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                        document.getElementById(tab + 'Content').classList.add('active');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6 text-center"><h3 class="font-bold">Error Loading Dashboard</h3><p class="text-sm mt-2">${error.message}</p><p class="text-xs mt-2 text-slate-400">Please check the function logs in Netlify and ensure the Notion API is accessible.</p></div>`;
+            }
         }
+
         loadData();
     </script>
 </body>
+
 </html>
