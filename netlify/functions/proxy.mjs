@@ -26,7 +26,7 @@ const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
 const CONSTRUCTION_START_DATE = '2025-11-22';
 const REQUIRED_BY_GATE = {
   "G0 Pre Construction": ['Move Out to Temporary Residence'],
-  "G1 Concept": ["MOODBOARD", "PROPOSED fRENOVATION FLOOR PLAN"],
+  "G1 Concept": ["MOODBOARD", "PROPOSED RENOVATION FLOOR PLAN"],
   "G2 Schematic": [],
   "G3 Design Development": ["DOORS AND WINDOWS", "Construction Drawings", "MEP Drawings", "Interior Design Plans", "Schedules", "Finishes"],
   "G4 Authority Submission": ["RENOVATION PERMIT", "Structural Drawings", "BQ Complete", "Quotation Package Ready"],
