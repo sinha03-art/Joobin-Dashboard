@@ -1,5 +1,7 @@
 /**
- * JOOBIN Renovation Hub Proxy v13.0.0
+ * JOOBIN Renovation Hub Proxy v13.0.1 (Corrected)
+ * - FIX: Corrected vendor name property lookup to fix "Top Vendors by Spend".
+ * - FIX: Reverted "Approve Gate" logic to be more robust, fetching and then filtering deliverables in code.
  * - This version is a complete implementation of the technical framework document.
  * - Includes stable API endpoints, critical path logic, and all data processing.
  */
@@ -159,10 +161,12 @@ export const handler = async (event) => {
         }
       });
       const forecast = Object.entries(forecastData).map(([month, totalAmount]) => ({ month, totalAmount }));
-
-      const vendorMap = (vendorData.results || []).reduce((acc, p) => { acc[p.id] = extractText(getProp(p, 'Vendor Name')) || 'Unknown'; return acc; }, {});
+      
+      // --- FIX #1: Corrected vendor name property lookup ---
+      const vendorMap = (vendorData.results || []).reduce((acc, p) => { acc[p.id] = extractText(getProp(p, 'Company_Name', 'Name')) || 'Unknown'; return acc; }, {});
+      
       const paidMYRByVendor = (actualsData.results || []).filter(p => norm(extractText(getProp(p, 'Status'))) === 'paid').reduce((acc, p) => {
-          const vendorId = extractText(getProp(p, 'Vendor'));
+          const vendorId = extractText(getProp(p, 'Vendor_Registry', 'Vendor'));
           const vendorName = vendorMap[vendorId] || 'Unknown';
           acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
           return acc;
@@ -200,11 +204,30 @@ export const handler = async (event) => {
           case 'mark_payment_paid':
             await updateNotionPage(body.pageId, { "Status": { "status": { "name": "Paid" } }, "PaidDate": { "date": { "start": new Date().toISOString().split('T')[0] } } });
             return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+          
+          // --- FIX #2: Reverted to more robust "Approve Gate" logic ---
           case 'mark_gate_approved':
-            const deliverables = (await queryNotionDB(DELIVERABLES_DB_ID, { filter: { property: 'Gate (Auto)', rollup: { any: { rich_text: { contains: body.gateName } } } } })).results;
-            const updatePromises = deliverables.map(p => updateNotionPage(p.id, { "Status": { "status": { "name": "Approved" } }, "Review Status": { "select": { "name": "Approved" } } }));
+            const allDeliverables = (await queryNotionDB(DELIVERABLES_DB_ID)).results;
+            const requiredDocsForGate = REQUIRED_BY_GATE[body.gateName] || [];
+            const deliverablesToUpdate = allDeliverables.filter(p => {
+                const gate = extractText(getProp(p, 'Gate (Auto)'));
+                const type = extractText(getProp(p, 'Select Deliverable:'));
+                return gate === body.gateName && requiredDocsForGate.some(req => norm(req) === norm(type));
+            });
+
+            const updatePromises = deliverablesToUpdate.map(p => {
+                const category = extractText(getProp(p, 'Category'));
+                const isConstruction = category === 'Construction Certificate';
+                let propertiesToUpdate;
+                if (isConstruction) {
+                    propertiesToUpdate = { "Review Status": { "select": { "name": "Approved" } } };
+                } else {
+                    propertiesToUpdate = { "Status": { "select": { "name": "Approved" } } };
+                }
+                return updateNotionPage(p.id, propertiesToUpdate);
+            });
             await Promise.all(updatePromises);
-            return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: `All deliverables for ${body.gateName} approved.` }) };
         }
       } 
       else { 
