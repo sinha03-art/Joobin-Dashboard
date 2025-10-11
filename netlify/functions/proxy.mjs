@@ -298,48 +298,71 @@ export const handler = async (event) => {
 
       const responseData = {
         kpis: {
-          budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
+          budgetMYR,
+          paidMYR,
+          remainingMYR: budgetMYR - paidMYR,
           deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
           deliverablesTotal: allDeliverablesIncludingMissing.length,
           totalOutstandingMYR: outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0),
           totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
           paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
-          milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
+          deliverablesProgress: allDeliverablesIncludingMissing.length > 0
+            ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length
+            : 0,
+          milestonesAtRisk: (milestonesData.results || []).filter(
+            m => extractText(getProp(m, 'Risk_Status')) === 'At Risk'
+          ).length,
         },
+
         gates,
-        const topVendorsMap = {};
-          (actualsData.results || []).forEach(p => {
+        deliverables: allDeliverablesIncludingMissing,
+
+        paymentsSchedule: {
+          upcoming: upcomingPayments,
+          overdue: overduePayments,
+          recentPaid: recentPaidPayments,
+          forecast: forecastMonths  // <-- if this is already defined above
+        },
+
+        topVendors,
+        updateRecords,
+        reminders,
+        alerts,
+        timestamp: new Date().toISOString()
+      };
+      gates,
+        // --- Top Vendors with name, paid, and placeholder trade ---
+        const topVendorsMap = {}; (actualsData.results || [])
+        .filter(p => norm(extractText(getProp(p, 'Status'))) === 'paid')
+        .forEach(p => {
           const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
           const paid = extractText(getProp(p, 'Paid (MYR)')) || 0;
           if (!topVendorsMap[vendor]) topVendorsMap[vendor] = 0;
           topVendorsMap[vendor] += paid;
         });
       const topVendors = Object.entries(topVendorsMap)
-        .map(([vendor, paidMYR]) => ({ vendor, paidMYR }))
-        .sort((a, b) => b.paidMYR - a.paidMYR)
+        .map(([vendor, paid]) => ({
+          name: vendor,
+          paid,
+          trade: '—' // optional: replace with actual trade if needed from vendorData
+        }))
+        .sort((a, b) => b.paid - a.paid)
         .slice(0, 5);
-      deliverables: allDeliverablesIncludingMissing,
-          paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
-      alerts,
-        timestamp: new Date().toISOString()
-    };
-
-    return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-  }
+      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+    }
 
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-    const body = JSON.parse(event.body || '{}');
-    const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
-    const summary = await callGemini(prompt);
-    return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+      const body = JSON.parse(event.body || '{}');
+      const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
+      const summary = await callGemini(prompt);
+      return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+    }
+
+    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
+  } catch (error) {
+    console.error('Handler error:', error);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
   }
-
-  return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-} catch (error) {
-  console.error('Handler error:', error);
-  return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
-}
 };
 
