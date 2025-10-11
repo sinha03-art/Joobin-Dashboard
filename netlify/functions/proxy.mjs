@@ -244,17 +244,6 @@ export const handler = async (event) => {
         acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
         return acc;
       }, {});
-      // === NEW: Budget by Trade aggregation ===
-      const budgetByTrade = {};
-      (budgetData.results || [])
-        .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
-        .forEach(p => {
-          const trade = extractText(getProp(p, 'Trade')) || 'Other';
-          const supply = extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0;
-          const install = extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0;
-          const total = supply + install;
-          budgetByTrade[trade] = (budgetByTrade[trade] || 0) + total;
-        });
 
       // Convert to sorted array
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' }));
