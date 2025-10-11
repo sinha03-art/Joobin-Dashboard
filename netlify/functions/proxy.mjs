@@ -24,13 +24,60 @@ const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
 const CONSTRUCTION_START_DATE = '2025-11-22';
 const REQUIRED_BY_GATE = {
-  "G0 Pre Construction": ['Move Out to Temporary Residence'],
-  "G1 Concept": ["MOODBOARD", "PROPOSED RENOVATION FLOOR PLAN"],
+  "G0 Pre Construction": [
+    "G0 — Move Out to Temporary Residence"
+  ],
+
+  "G1 Concept": [
+    "G1 — Moodboard",
+    "G1 — Floor Plan"
+  ],
+
   "G2 Schematic": [],
-  "G3 Design Development": ["DOORS AND WINDOWS", "Construction Drawings", "MEP Drawings", "Interior Design Plans", "Schedules", "Finishes"],
-  "G4 Authority Submission": ["RENOVATION PERMIT", "Structural Drawings", "BQ Complete", "Quotation Package Ready"],
-  "G5 Construction Documentation": ["Contractor Awarded", "Tender Package Issued", "Site Mobilization Complete", "Demolition Complete Certificate", "Structural Works Complete", "Carpentry Complete", "Finishes Complete", "MEP Rough-in Complete", "MEP Final Complete", "Plumbing Complete", "Electrical Complete", "HVAC Complete", "Painting Complete", "Tiling Complete", "Joinery Complete", "Hardware Installation Complete", "Testing & Commissioning Complete", "Defects Rectification Complete", "Site Cleanup Complete", "Pre-handover Inspection Complete"],
-  "G6 Design Close-out": ["Final Inspection Complete", "Handover Certificate"]
+
+  "G3 Design Development": [
+    "G3 — Doors and Windows",
+    "G3 — Construction Drawings",
+    "G3 — MEP Drawings",
+    "G3 — Interior Design Plans",
+    "G3 — Schedules",
+    "G3 — Finishes"
+  ],
+``
+  "G4 Authority Submission": [
+    "G4 — Renovation Permit",
+    "G4 — Structural Drawings",
+    "G4 — BQ Complete",
+    "G4 — Quotation Package Ready"
+  ],
+
+  "G5 Construction Documentation": [
+    "G5 — Contractor Awarded",
+    "G5 — Tender Package Issued",
+    "G5 — Site Mobilization Complete",
+    "G5 — Demolition Complete Certificate",
+    "G5 — Structural Works Complete",
+    "G5 — Carpentry Complete",
+    "G5 — Finishes Complete",
+    "G5 — MEP Rough-in Complete",
+    "G5 — MEP Final Complete",
+    "G5 — Plumbing Complete",
+    "G5 — Electrical Complete",
+    "G5 — HVAC Complete",
+    "G5 — Painting Complete",
+    "G5 — Tiling Complete",
+    "G5 — Joinery Complete",
+    "G5 — Hardware Installation Complete",
+    "G5 — Testing & Commissioning Complete",
+    "G5 — Defects Rectification Complete",
+    "G5 — Site Cleanup Complete",
+    "G5 — Pre-handover Inspection Complete"
+  ],
+
+  "G6 Design Close-out": [
+    "G6 — Final Inspection Complete",
+    "G6 — Handover Certificate"
+  ]
 };
 
 // --- API & Utility Helpers ---
