@@ -82,7 +82,15 @@ const REQUIRED_BY_GATE = {
 function notionHeaders() {
   return ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
 }
-const norm = (s) => String(s || '').trim().toLowerCase();
+const norm = (s) => {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')  // Normalize Unicode
+    .replace(/[\u0300-\u036f]/g, '')  // Remove diacritics
+    .replace(/[—–−]/g, '-')  // Convert all dash types to regular hyphen
+    .replace(/\s+/g, ' ');  // Normalize whitespace
+};
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function queryNotionDB(dbId, filter = {}) {
