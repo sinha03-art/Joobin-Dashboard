@@ -179,7 +179,13 @@ export const handler = async (event) => {
           id: p.id,
           title: extractText(getProp(p, 'Select Deliverable:')),
           deliverableType: extractText(getProp(p, 'Select Deliverable:')),
-          gate: extractText(getProp(p, 'Gate')),  // ✅ Multi-select field - works!
+          gate: (() => {
+            const gateProp = getProp(p, 'Gate');
+            if (gateProp?.type === 'multi_select' && gateProp.multi_select?.length > 0) {
+              return gateProp.multi_select[0].name;  // Get first gate name
+            }
+            return '';
+          })(),
           status: status || 'Missing',
           assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
           url: p.url,
