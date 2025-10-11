@@ -22,7 +22,7 @@ const {
 // --- Constants ---
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
-const CONSTRUCTION_START_DATE = '2025-11-22';
+const CONSTRUCTION_START_DATE = '2025-12-22';
 const REQUIRED_BY_GATE = {
   "G0 Pre Construction": [
     "G0 — Move Out to Temporary Residence"
