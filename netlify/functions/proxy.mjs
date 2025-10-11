@@ -203,7 +203,15 @@ export const handler = async (event) => {
           }
         });
       });
-
+      console.log('DEBUG - Sample G1 items:',
+        allDeliverablesIncludingMissing
+          .filter(d => d.gate === 'G1 Concept')
+          .map(d => ({
+            title: d.deliverableType,
+            status: norm(d.status),
+            matches: REQUIRED_BY_GATE['G1 Concept'].some(r => norm(d.deliverableType) === norm(r))
+          }))
+      );
       const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => ({
         gate: gateName,
         total: requiredDocs.length,
