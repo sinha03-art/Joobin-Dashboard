@@ -420,91 +420,102 @@
             container.innerHTML = bannerHTML + blockersHTML;
         }
 
-        // --- ADDED v12.2.1: Restored missing functions ---
-        function renderTopVendors(vendors) {
-            const container = document.getElementById('topVendors');
-            if (!vendors || vendors.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">No vendor spend data.</p>`; return; }
-            const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
-            container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join('');
-        }
+// --- ADDED v12.2.1: Restored missing functions ---
+function renderTopVendors(vendors) {
+    const container = document.getElementById('topVendors');
+    if (!vendors || vendors.length === 0) { 
+        container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">No vendor spend data.</p>`; 
+        return; 
+    }
+    const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
+    container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join('');
+}
 
-        function renderCharts(data) {
-            Chart.defaults.color = '#94a3b8';
-            Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
-            const budgetCtx = document.getElementById('forecastChart');
-            if (forecastChart) forecastChart.destroy();
-
-            if (budgetCtx && data.budgetByTrade) {
-                const tradeColors = {
-                    'Structural & Core': '#ef4444',      // Red
-                    'Building Envelope': '#f59e0b',      // Amber
-                    'MEP Systems': '#10b981',            // Emerald
-                    'Interior Finishes': '#3b82f6',      // Blue
-                    'External Works': '#8b5cf6',         // Violet
-                    'Professional Services': '#ec4899',  // Pink
-                    'Doors & Windows': '#14b8a6',        // Teal
-                    'Other': '#6b7280'                   // Gray
-                };
-
-                const labels = data.budgetByTrade.map(t => t.trade);
-                const amounts = data.budgetByTrade.map(t => t.amount);
-                const colors = labels.map(trade => tradeColors[trade] || tradeColors['Other']);
-
-                forecastChart = new Chart(budgetCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: amounts,
-                            backgroundColor: colors,
-                            borderColor: '#1e293b',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'bottom',
-                                labels: {
-                                    padding: 15,
-                                    font: { size: 11 },
-                                    generateLabels: (chart) => {
-                                        const data = chart.data;
-                                        return data.labels.map((label, i) => ({
-                                            text: `${label}: ${formatMYRShort(data.datasets[0].data[i])}`,
-                                            fillStyle: data.datasets[0].backgroundColor[i],
-                                            hidden: false,
-                                            index: i
-                                        }));
-                                    }
-                                }
+function renderCharts(data) {
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+    const budgetCtx = document.getElementById('forecastChart');
+    if (forecastChart) forecastChart.destroy();
+    
+    if (budgetCtx && data.budgetByTrade) {
+        const tradeColors = {
+            'Structural & Core': '#ef4444',
+            'Building Envelope': '#f59e0b',
+            'MEP Systems': '#10b981',
+            'Interior Finishes': '#3b82f6',
+            'External Works': '#8b5cf6',
+            'Professional Services': '#ec4899',
+            'Doors & Windows': '#14b8a6',
+            'Other': '#6b7280'
+        };
+        
+        const labels = data.budgetByTrade.map(t => t.trade);
+        const amounts = data.budgetByTrade.map(t => t.amount);
+        const total = amounts.reduce((sum, val) => sum + val, 0);
+        const colors = labels.map(label => tradeColors[label] || '#6b7280');
+        
+        forecastChart = new Chart(budgetCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: amounts,
+                    backgroundColor: colors,
+                    borderColor: '#1f2937',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 13,
+                                family: "'Inter', sans-serif",
+                                weight: '500'
                             },
-                            tooltip: {
-                                enabled: true,
-                                backgroundColor: '#1e293b',
-                                titleColor: '#f8fafc',
-                                bodyColor: '#cbd5e1',
-                                borderColor: '#334155',
-                                borderWidth: 1,
-                                padding: 12,
-                                callbacks: {
-                                    label: (context) => {
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                        return `${context.label}: ${formatMYR(context.parsed)} (${percentage}%)`;
-                                    }
-                                }
+                            color: '#cbd5e1',
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return {
+                                        text: `${label}: ${percentage}%`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        hidden: false,
+                                        index: i
+                                    };
+                                });
                             }
-                        },
-                        cutout: '60%'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${formatMYR(value)} (${percentage}%)`;
+                            }
+                        }
                     }
-                });
+                }
             }
-        }
-        // --- END ADDED SECTION ---
+        });
+    }
+}
+// --- END ADDED SECTION ---
 
         async function init() {
             try {
