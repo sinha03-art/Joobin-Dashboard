@@ -257,9 +257,6 @@ export const handler = async (event) => {
         });
 
       // Convert to sorted array
-      const budgetByTradeArray = Object.entries(budgetByTrade)
-        .map(([trade, amount]) => ({ trade, amount }))
-        .sort((a, b) => b.amount - a.amount);
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' }));
       const paidMYR = Object.values(paidMYRByVendor).reduce((sum, amount) => sum + amount, 0);
       const forecastMonths = [];
