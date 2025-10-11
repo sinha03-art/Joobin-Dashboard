@@ -432,21 +432,21 @@
         }
 
         function renderCharts(data) {
-            Chart.defaults.color = '#ffffff';  // WHITE legend text
+            Chart.defaults.color = '#ffffff';
             Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
             const budgetCtx = document.getElementById('forecastChart');
             if (forecastChart) forecastChart.destroy();
 
             if (budgetCtx && data.budgetByTrade) {
                 const tradeColors = {
-                    'Structural & Core': '#ef4444',      // Red
-                    'Building Envelope': '#f59e0b',      // Amber
-                    'MEP Systems': '#10b981',            // Emerald
-                    'Interior Finishes': '#3b82f6',      // Blue
-                    'External Works': '#8b5cf6',         // Violet
-                    'Professional Services': '#ec4899',  // Pink
-                    'Doors & Windows': '#14b8a6',        // Teal
-                    'Other': '#6b7280'                   // Gray
+                    'Structural & Core': '#ef4444',
+                    'Building Envelope': '#f59e0b',
+                    'MEP Systems': '#10b981',
+                    'Interior Finishes': '#3b82f6',
+                    'External Works': '#8b5cf6',
+                    'Professional Services': '#ec4899',
+                    'Doors & Windows': '#14b8a6',
+                    'Other': '#6b7280'
                 };
 
                 const trades = Object.keys(data.budgetByTrade);
@@ -472,17 +472,20 @@
                             legend: {
                                 position: 'right',
                                 labels: {
-                                    color: '#ffffff',  // WHITE text
+                                    color: '#ffffff',
                                     font: { size: 13, weight: '500' },
                                     padding: 12,
-                                    generateLabels: (chart) => {
-                                        const data = chart.data;
-                                        return data.labels.map((label, i) => {
-                                            const value = data.datasets[0].data[i];
-                                            const percentage = ((value / total) * 100).toFixed(1);
+                                    generateLabels: function (chart) {
+                                        const dataset = chart.data.datasets[0];
+                                        const labels = chart.data.labels;
+                                        const dataTotal = dataset.data.reduce((a, b) => a + b, 0);
+
+                                        return labels.map((label, i) => {
+                                            const value = dataset.data[i];
+                                            const percentage = ((value / dataTotal) * 100).toFixed(1);
                                             return {
-                                                text: `${label}: ${percentage}%`,  // ONLY %
-                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                text: `${label}: ${percentage}%`,
+                                                fillStyle: dataset.backgroundColor[i],
                                                 hidden: false,
                                                 index: i
                                             };
@@ -492,9 +495,10 @@
                             },
                             tooltip: {
                                 callbacks: {
-                                    label: (context) => {
+                                    label: function (context) {
                                         const value = context.parsed;
-                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        const dataTotal = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / dataTotal) * 100).toFixed(1);
                                         return `${context.label}: ${percentage}% (${formatMYR(value)})`;
                                     }
                                 }

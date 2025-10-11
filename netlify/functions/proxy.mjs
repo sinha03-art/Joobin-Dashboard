@@ -288,12 +288,22 @@ export const handler = async (event) => {
         mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
         contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'Approved',
       };
-
+      // NEW: Budget breakdown by trade for doughnut chart
+      const budgetByTrade = (budgetData.results || [])
+        .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
+        .reduce((acc, p) => {
+          const trade = extractText(getProp(p, 'Trade')) || 'Other';
+          const supply = extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0;
+          const install = extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0;
+          const total = supply + install;
+          acc[trade] = (acc[trade] || 0) + total;
+          return acc;
+        }, {});
       const responseData = {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
         gates,
         topVendors,
-        budgetByTrade: budgetByTradeArray,
+        budgetByTrade,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: [] /* Placeholder */ },
         alerts,
