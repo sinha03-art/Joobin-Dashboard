@@ -27,14 +27,11 @@ const REQUIRED_BY_GATE = {
   "G0 Pre Construction": [
     "G0 — Move Out to Temporary Residence"
   ],
-
   "G1 Concept": [
     "G1 — Moodboard",
     "G1 — Floor Plan"
   ],
-
   "G2 Schematic": [],
-
   "G3 Design Development": [
     "G3 — Doors and Windows",
     "G3 — Construction Drawings",
@@ -43,14 +40,12 @@ const REQUIRED_BY_GATE = {
     "G3 — Schedules",
     "G3 — Finishes"
   ],
-``
   "G4 Authority Submission": [
     "G4 — Renovation Permit",
     "G4 — Structural Drawings",
     "G4 — BQ Complete",
     "G4 — Quotation Package Ready"
   ],
-
   "G5 Construction Documentation": [
     "G5 — Contractor Awarded",
     "G5 — Tender Package Issued",
@@ -73,7 +68,6 @@ const REQUIRED_BY_GATE = {
     "G5 — Site Cleanup Complete",
     "G5 — Pre-handover Inspection Complete"
   ],
-
   "G6 Design Close-out": [
     "G6 — Final Inspection Complete",
     "G6 — Handover Certificate"
@@ -81,7 +75,9 @@ const REQUIRED_BY_GATE = {
 };
 
 // --- API & Utility Helpers ---
-const notionHeaders = () => ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
+function notionHeaders() {
+  return ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
+}
 const norm = (s) => String(s || '').trim().toLowerCase();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
