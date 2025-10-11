@@ -11,7 +11,7 @@
 
 // --- Environment Variables ---
 const {
-  GEMINI_API_KEY, 
+  GEMINI_API_KEY,
   NOTION_API_KEY,
   NOTION_BUDGET_DB_ID,
   NOTION_ACTUALS_DB_ID,
@@ -308,32 +308,38 @@ export const handler = async (event) => {
           milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length,
         },
         gates,
-        topVendors: Object.entries((actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((acc, p) => {
+        const topVendorsMap = {};
+          (actualsData.results || []).forEach(p => {
           const vendor = extractText(getProp(p, 'Vendor')) || 'Unknown';
-          acc[vendor] = (acc[vendor] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-          return acc;
-        }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, paid]) => ({ name, paid, trade: '—' })),
-        deliverables: allDeliverablesIncludingMissing,
-        paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
-        alerts,
+          const paid = extractText(getProp(p, 'Paid (MYR)')) || 0;
+          if (!topVendorsMap[vendor]) topVendorsMap[vendor] = 0;
+          topVendorsMap[vendor] += paid;
+        });
+      const topVendors = Object.entries(topVendorsMap)
+        .map(([vendor, paidMYR]) => ({ vendor, paidMYR }))
+        .sort((a, b) => b.paidMYR - a.paidMYR)
+        .slice(0, 5);
+      deliverables: allDeliverablesIncludingMissing,
+          paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: forecastMonths },
+      alerts,
         timestamp: new Date().toISOString()
-      };
+    };
 
-      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-    }
+    return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+  }
 
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-      const body = JSON.parse(event.body || '{}');
-      const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
-      const summary = await callGemini(prompt);
-      return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
-    }
-
-    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-
-  } catch (error) {
-    console.error('Handler error:', error);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
+    const body = JSON.parse(event.body || '{}');
+    const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
+    const summary = await callGemini(prompt);
+    return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
   }
+
+  return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
+} catch (error) {
+  console.error('Handler error:', error);
+  return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
+}
 };
 
