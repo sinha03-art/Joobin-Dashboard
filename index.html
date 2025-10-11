@@ -18,14 +18,39 @@
             --border: 217 33% 17%;
             --ring: 213 94% 68%;
         }
-        body { font-family: 'Inter', sans-serif; background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
-        .card { background-color: hsl(var(--card)); border-radius: 0.75rem; border: 1px solid hsl(var(--border)); }
-        .tab-button.active { color: hsl(var(--ring)); border-bottom-color: hsl(var(--ring)); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
-        #passwordModal { transition: opacity 0.3s ease; }
-        .modal-content { transition: transform 0.3s ease; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+
+        .card {
+            background-color: hsl(var(--card));
+            border-radius: 0.75rem;
+            border: 1px solid hsl(var(--border));
+        }
+
+        .tab-button.active {
+            color: hsl(var(--ring));
+            border-bottom-color: hsl(var(--ring));
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        #passwordModal {
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
 
         .update-btn {
             background-color: hsla(213, 94%, 68%, 0.1);
@@ -38,73 +63,224 @@
             transition: background-color 0.2s;
             cursor: pointer;
         }
-        .update-btn:hover { background-color: hsla(213, 94%, 68%, 0.2); }
+
+        .update-btn:hover {
+            background-color: hsla(213, 94%, 68%, 0.2);
+        }
+
         .copy-btn {
             background-color: hsla(250, 50%, 80%, 0.1);
             color: hsl(250, 50%, 80%);
             border: 1px solid hsl(250, 50%, 80%);
         }
-         .copy-btn:hover { background-color: hsla(250, 50%, 80%, 0.2); }
+
+        .copy-btn:hover {
+            background-color: hsla(250, 50%, 80%, 0.2);
+        }
 
 
-        @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0); } }
-        @keyframes draw-circle { to { stroke-dashoffset: 0; } }
-        .countdown-banner { background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%); padding: 24px; margin-bottom: 24px; border-radius: 12px; border: 1px solid #dc2626; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15); }
-        .countdown-banner.low-risk { background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%); border-color: #16a34a; }
-        .countdown-banner.medium-risk { background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%); border-color: #ea580c; }
-        .countdown-icon { font-size: 40px; animation: pulse 2.5s ease-out infinite; }
-        .countdown-days { font-size: 36px; font-weight: 800; }
-        .blocker-card { border: 1px solid #b91c1c; margin-bottom: 24px; }
-        .blocker-header { display: flex; justify-content: space-between; align-items: center; } /* FIX: Alignment */
-        .blocker-title { color: #f87171; }
-        .blocker-count { background: #dc2626; }
-        .gate-circle { animation: draw-circle 1.5s ease-out forwards; }
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0);
+            }
+        }
+
+        @keyframes draw-circle {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .countdown-banner {
+            background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%);
+            padding: 24px;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            border: 1px solid #dc2626;
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+        }
+
+        .countdown-banner.low-risk {
+            background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%);
+            border-color: #16a34a;
+        }
+
+        .countdown-banner.medium-risk {
+            background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%);
+            border-color: #ea580c;
+        }
+
+        .countdown-icon {
+            font-size: 40px;
+            animation: pulse 2.5s ease-out infinite;
+        }
+
+        .countdown-days {
+            font-size: 36px;
+            font-weight: 800;
+        }
+
+        .blocker-card {
+            border: 1px solid #b91c1c;
+            margin-bottom: 24px;
+        }
+
+        .blocker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* FIX: Alignment */
+        .blocker-title {
+            color: #f87171;
+        }
+
+        .blocker-count {
+            background: #dc2626;
+        }
+
+        .gate-circle {
+            animation: draw-circle 1.5s ease-out forwards;
+        }
     </style>
 </head>
 
 <body class="flex h-screen overflow-hidden">
 
     <aside class="w-72 border-r border-slate-800 p-6 flex flex-col space-y-6 overflow-y-auto">
-        <div class="flex items-center space-x-3"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1></div>
-        <div class="aspect-video"><iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" class="w-full h-full rounded-lg" title="Project Demo"></iframe></div>
-        <div><h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2><p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p><p class="text-xs text-slate-500 mt-1">Target Completion: Q2 2026</p></div>
-        <div><h2 class="text-base font-semibold text-slate-400 mb-2 tracking-widest">ABOUT</h2><p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground up—blending structure, light, landscape, and livability into a fully modernized private residence.</p></div>
-        <div class="!mt-auto pt-6 text-center text-xs text-slate-600"><p>Last updated: <span id="lastUpdatedSidebar">--</span></p></div>
+        <div class="flex items-center space-x-3"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" class="text-blue-500">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1>
+        </div>
+        <div class="aspect-video"><iframe
+                src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479"
+                frameborder="0" allow="autoplay; fullscreen; picture-in-picture" class="w-full h-full rounded-lg"
+                title="Project Demo"></iframe></div>
+        <div>
+            <h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2>
+            <p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p>
+            <p class="text-xs text-slate-500 mt-1">Target Completion: Q2 2026</p>
+        </div>
+        <div>
+            <h2 class="text-base font-semibold text-slate-400 mb-2 tracking-widest">ABOUT</h2>
+            <p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground
+                up—blending structure, light, landscape, and livability into a fully modernized private residence.</p>
+        </div>
+        <div class="!mt-auto pt-6 text-center text-xs text-slate-600">
+            <p>Last updated: <span id="lastUpdatedSidebar">--</span></p>
+        </div>
     </aside>
 
     <main class="flex-1 overflow-y-auto p-6 lg:p-8">
         <div id="loader" class="flex items-center justify-center h-full">
             <div class="text-center">
-                <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
                 <p class="mt-2 text-sm text-slate-400">Loading Command Center...</p>
             </div>
         </div>
 
         <div id="dashboardContent" class="hidden">
-            <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4"><div class="flex-shrink-0"><h2 class="text-3xl font-bold tracking-tight">Command Center</h2><p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p></div><div class="flex items-center justify-center text-center sm:text-left flex-grow"><div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn" class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" /></svg></button></div><div class="text-right flex-shrink-0"><div id="clock" class="text-2xl font-bold text-slate-200"></div><div id="date" class="text-xs text-slate-500"></div></div></header>
+            <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                <div class="flex-shrink-0">
+                    <h2 class="text-3xl font-bold tracking-tight">Command Center</h2>
+                    <p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p>
+                </div>
+                <div class="flex items-center justify-center text-center sm:text-left flex-grow">
+                    <div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn"
+                        class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-sparkles">
+                            <path
+                                d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                            <path d="M5 3v4" />
+                            <path d="M19 17v4" />
+                            <path d="M3 5h4" />
+                            <path d="M17 19h4" />
+                        </svg></button>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div id="clock" class="text-2xl font-bold text-slate-200"></div>
+                    <div id="date" class="text-xs text-slate-500"></div>
+                </div>
+            </header>
             <div id="critical-path-section"></div>
             <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="lg:col-span-2 space-y-6">
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Action Items</h3><div class="border-b border-slate-700"><nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button data-tab="upcoming" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming Payments</button><button data-tab="recent" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently Paid</button><button data-tab="toComplete" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To Complete</button></nav></div><div class="mt-4 min-h-[250px] relative"><div id="overdueContent" class="tab-content active"></div><div id="upcomingContent" class="tab-content"></div><div id="recentContent" class="tab-content"></div><div id="toCompleteContent" class="tab-content"><div id="upcomingTasksList" class="space-y-3"></div></div></div></div>
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Gate Progress</h3><div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div></div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Action Items</h3>
+                        <div class="border-b border-slate-700">
+                            <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue"
+                                    class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button
+                                    data-tab="upcoming"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming
+                                    Payments</button><button data-tab="recent"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
+                                    Paid</button><button data-tab="toComplete"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
+                                    Complete</button></nav>
+                        </div>
+                        <div class="mt-4 min-h-[250px] relative">
+                            <div id="overdueContent" class="tab-content active"></div>
+                            <div id="upcomingContent" class="tab-content"></div>
+                            <div id="recentContent" class="tab-content"></div>
+                            <div id="toCompleteContent" class="tab-content">
+                                <div id="upcomingTasksList" class="space-y-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+                        <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                    </div>
                 </div>
                 <div class="lg:col-span-1 space-y-6">
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Payment Forecast</h3><canvas id="forecastChart" class="max-h-64"></canvas></div>
-                    <div class="card p-4 sm:p-6"><h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3><div id="topVendors" class="space-y-4"></div></div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Budget Distribution by Trade</h3>
+                        <canvas id="budgetChart" class="max-h-64"></canvas>
+                    </div>
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                        <div id="topVendors" class="space-y-4"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="passwordModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div id="passwordModal" style="display: none;"
+            class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
             <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
                 <h3 id="modalTitle" class="text-lg font-bold text-white mb-4">Authentication Required</h3>
-                <p id="modalMessage" class="text-sm text-slate-400 mb-4">Please enter the update password to proceed.</p>
-                <input type="password" id="passwordInput" class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Password...">
+                <p id="modalMessage" class="text-sm text-slate-400 mb-4">Please enter the update password to proceed.
+                </p>
+                <input type="password" id="passwordInput"
+                    class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Password...">
                 <div id="passwordError" class="text-red-400 text-xs mt-2 hidden">Incorrect password.</div>
                 <div class="flex justify-end gap-3 mt-6">
-                    <button onclick="cancelUpdate()" class="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
-                    <button onclick="executeUpdate()" id="executeUpdateBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500">
+                    <button onclick="cancelUpdate()"
+                        class="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
+                    <button onclick="executeUpdate()" id="executeUpdateBtn"
+                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500">
                         <span id="updateBtnText">Confirm</span>
                         <span id="updateBtnSpinner" class="hidden">Updating...</span>
                     </button>
@@ -124,7 +300,7 @@
         let dashboardData = null;
         let forecastChart = null;
         let pendingUpdate = { pageId: null, action: null, gateName: null };
-        
+
         const norm = (s) => String(s || '').trim().toLowerCase();
 
         function promptForUpdate(pageId, action, gateName = null) {
@@ -148,7 +324,7 @@
         async function executeUpdate() {
             const password = document.getElementById('passwordInput').value;
             if (!password) { document.getElementById('passwordError').textContent = "Password cannot be empty."; document.getElementById('passwordError').classList.remove('hidden'); return; }
-            
+
             const updateBtn = document.getElementById('executeUpdateBtn');
             updateBtn.disabled = true;
             document.getElementById('passwordError').classList.add('hidden');
@@ -178,7 +354,7 @@
                 alert('Reminder message copied to clipboard!');
             });
         }
-        
+
         function renderKPIs(kpis) {
             const kpiData = [
                 { title: 'Budget Used', value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`, subValue: `of total project budget`, icon: '...' },
@@ -209,25 +385,25 @@
             document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
             document.getElementById('tabs').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { const tab = e.target.dataset.tab; document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById(`${tab}Content`).classList.add('active'); } });
         }
-        
+
         function renderGates(gates) {
             const container = document.getElementById('gates');
             if (!gates || gates.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`; return; }
             container.innerHTML = gates.map(gate => {
                 const progress = Math.round(gate.gateApprovalRate * 100);
                 let color = progress === 100 ? '#10b981' : (progress < 50 ? '#f59e0b' : 'hsl(var(--ring))');
-                return `<button onclick="promptForUpdate(null, 'mark_gate_approved', '${gate.gate}')" class="flex flex-col items-center text-center p-2 rounded-lg hover:bg-slate-800 transition-colors"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="36" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="226" stroke-dashoffset="${226 - (progress/100)*226}" stroke-linecap="round" stroke="${color}" fill="transparent" r="36" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></button>`;
+                return `<button onclick="promptForUpdate(null, 'mark_gate_approved', '${gate.gate}')" class="flex flex-col items-center text-center p-2 rounded-lg hover:bg-slate-800 transition-colors"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="36" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="226" stroke-dashoffset="${226 - (progress / 100) * 226}" stroke-linecap="round" stroke="${color}" fill="transparent" r="36" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></button>`;
             }).join('');
         }
-        
+
         function renderUpcomingTasks(deliverables) {
             const container = document.getElementById('upcomingTasksList');
             if (!container) return;
             const tasks = deliverables.filter(d => d.dueDate && norm(d.status) !== 'approved').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
             if (tasks.length === 0) { container.innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">No upcoming tasks scheduled.</div>'; return; }
-            container.innerHTML = tasks.map(task => { const colors = {'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500'}; const badge = !task.confirmed ? '<span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 rounded-full text-xs font-medium">Tentative</span>' : ''; return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)}</p></div></div>`; }).join('');
+            container.innerHTML = tasks.map(task => { const colors = { 'Critical': 'border-red-500', 'High': 'border-orange-500', 'Medium': 'border-yellow-500', 'Low': 'border-blue-500' }; const badge = !task.confirmed ? '<span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 rounded-full text-xs font-medium">Tentative</span>' : ''; return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md"><div><div class="flex items-center gap-3 mb-1"><h4 class="font-semibold text-white">${task.title}</h4>${badge}</div><p class="text-xs text-slate-400">Due: ${formatDate(task.dueDate)}</p></div></div>`; }).join('');
         }
-        
+
         function renderCriticalPath(alerts) {
             const container = document.getElementById('critical-path-section');
             if (!alerts) { container.innerHTML = ''; return; }
@@ -237,7 +413,7 @@
             if (!mbsaPermitApproved) blockers.push({ icon: '📜', text: 'MBSA permit not approved', impact: 'Construction cannot legally start' });
             if (!contractorAwarded) blockers.push({ icon: '👷', text: 'Main contractor not awarded', impact: 'Cannot begin mobilization' });
             let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
-            if (blockers.length === 0 && daysToConstructionStart > 60) { riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢'; } 
+            if (blockers.length === 0 && daysToConstructionStart > 60) { riskLevel = 'low-risk'; riskText = 'ON TRACK'; riskIcon = '🟢'; }
             else if (blockers.length <= 1 && daysToConstructionStart > 30) { riskLevel = 'medium-risk'; riskText = 'AT RISK'; riskIcon = '🟡'; }
             const bannerHTML = `<div class="countdown-banner ${riskLevel}"><div class="countdown-content"><div class="countdown-icon">⏱️</div><div class="countdown-text"><div class="countdown-days">${daysToConstructionStart} DAYS</div><div class="countdown-label">TO CONSTRUCTION START</div></div><div class="countdown-status"><span>${riskIcon}</span><span class="font-bold">${riskText}</span></div></div></div>`;
             const blockersHTML = `<div class="blocker-card card p-4"><div class="blocker-header mb-4 pb-4 border-b border-slate-700"><h3 class="blocker-title font-semibold">CRITICAL BLOCKERS</h3><span class="blocker-count font-bold text-sm rounded-full px-3 py-1">${blockers.length}</span></div><div class="space-y-3">${blockers.length > 0 ? blockers.map(b => `<div class="flex items-start gap-3"><div class="text-xl mt-0.5">${b.icon}</div><div><p class="font-semibold text-slate-200 flex items-center gap-2">${b.text} <span class="text-blue-400 cursor-pointer" title="${b.impact}">ⓘ</span></p></div></div>`).join('') : '<div class="flex items-center gap-3 text-green-400"><div class="text-xl">✅</div><p class="font-semibold">No critical blockers</p></div>'}</div></div>`;
@@ -251,44 +427,107 @@
             const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
             container.innerHTML = vendors.map(v => `<div class="group"><div class="flex items-center space-x-3 mb-1"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${v.name}</p></div><div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div></div><div class="w-full bg-slate-700 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div></div></div>`).join('');
         }
-        
+
         function renderCharts(data) {
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
-            const forecastCtx = document.getElementById('forecastChart');
+            const budgetCtx = document.getElementById('forecastChart');
             if (forecastChart) forecastChart.destroy();
-            if (forecastCtx && data.paymentsSchedule?.forecast) {
-                const chartData = data.paymentsSchedule.forecast;
-                const gradient = forecastCtx.getContext('2d').createLinearGradient(0, 0, 0, forecastCtx.height);
-                gradient.addColorStop(0, 'rgba(37, 99, 235, 0.6)');
-                gradient.addColorStop(1, 'rgba(37, 99, 235, 0.1)');
-                forecastChart = new Chart(forecastCtx, { type: 'bar', data: { labels: chartData.map(f => f.month), datasets: [{ data: chartData.map(f => f.totalAmount), backgroundColor: gradient, borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false, backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1, padding: 10, callbacks: { label: (c) => `Total: ${formatMYR(c.parsed.y)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => formatMYRShort(v) } }, x: { grid: { display: false } } } } });
+
+            if (budgetCtx && data.budgetByTrade) {
+                const tradeColors = {
+                    'Structural & Core': '#ef4444',      // Red
+                    'Building Envelope': '#f59e0b',      // Amber
+                    'MEP Systems': '#10b981',            // Emerald
+                    'Interior Finishes': '#3b82f6',      // Blue
+                    'External Works': '#8b5cf6',         // Violet
+                    'Professional Services': '#ec4899',  // Pink
+                    'Doors & Windows': '#14b8a6',        // Teal
+                    'Other': '#6b7280'                   // Gray
+                };
+
+                const labels = data.budgetByTrade.map(t => t.trade);
+                const amounts = data.budgetByTrade.map(t => t.amount);
+                const colors = labels.map(trade => tradeColors[trade] || tradeColors['Other']);
+
+                forecastChart = new Chart(budgetCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: amounts,
+                            backgroundColor: colors,
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    font: { size: 11 },
+                                    generateLabels: (chart) => {
+                                        const data = chart.data;
+                                        return data.labels.map((label, i) => ({
+                                            text: `${label}: ${formatMYRShort(data.datasets[0].data[i])}`,
+                                            fillStyle: data.datasets[0].backgroundColor[i],
+                                            hidden: false,
+                                            index: i
+                                        }));
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                backgroundColor: '#1e293b',
+                                titleColor: '#f8fafc',
+                                bodyColor: '#cbd5e1',
+                                borderColor: '#334155',
+                                borderWidth: 1,
+                                padding: 12,
+                                callbacks: {
+                                    label: (context) => {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        return `${context.label}: ${formatMYR(context.parsed)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
             }
         }
         // --- END ADDED SECTION ---
 
-        async function init() { 
-            try { 
-                const response = await fetch(API_URL); 
-                if (!response.ok) throw new Error(`Network error: ${response.statusText}`); 
-                dashboardData = await response.json(); 
-                renderCriticalPath(dashboardData.alerts); 
+        async function init() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
+                dashboardData = await response.json();
+                renderCriticalPath(dashboardData.alerts);
                 renderKPIs(dashboardData.kpis);
-                renderTabs(dashboardData); 
+                renderTabs(dashboardData);
                 renderUpcomingTasks(dashboardData.deliverables);
                 renderGates(dashboardData.gates);
                 renderTopVendors(dashboardData.topVendors);
-                renderCharts(dashboardData); 
+                renderCharts(dashboardData);
                 document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
                 updateClock(); setInterval(updateClock, 1000);
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('dashboardContent').classList.remove('hidden');
-                getAISummary(); 
+                getAISummary();
                 document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary);
-            } catch (error) { 
-                console.error('❌ Error:', error); 
-                document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`; 
-            } 
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`;
+            }
         }
 
         // --- Other utility functions ---
@@ -298,9 +537,9 @@
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A';
         const timeAgo = (d) => { if (!d) return ""; const s = Math.floor((new Date() - new Date(d)) / 1000); let i = s / 31536000; if (i > 1) return `${Math.floor(i)}y ago`; i = s / 2592000; if (i > 1) return `${Math.floor(i)}m ago`; i = s / 86400; if (i > 1) return `${Math.floor(i)}d ago`; return "Today"; };
         async function getAISummary() { /* ... */ }
-        
+
         init();
     </script>
 </body>
-</html>
 
+</html>
