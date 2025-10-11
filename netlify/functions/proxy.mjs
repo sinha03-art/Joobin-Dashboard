@@ -29,10 +29,14 @@ const REQUIRED_BY_GATE = {
   ],
   "G1 Concept": [
     "G1 — Moodboard",
-    "G1 — Floor Plan"
+    "G1 — 3D Render",
+    "G1 — Concept Sketches",
+    "G1 — Floor Plan",
+    "G1 — Brief & Requirements"
   ],
-  "G2 Schematic": [],
+  "G2 Schematic": [],  // No critical path items marked
   "G3 Design Development": [
+    "G3 — Windows Package Shop Drawings",
     "G3 — Doors and Windows",
     "G3 — Construction Drawings",
     "G3 — MEP Drawings",
@@ -42,9 +46,9 @@ const REQUIRED_BY_GATE = {
   ],
   "G4 Authority Submission": [
     "G4 — Renovation Permit",
-    "G4 — Structural Drawings",
     "G4 — BQ Complete",
-    "G4 — Quotation Package Ready"
+    "G4 — Quotation Package Ready",
+    "G4 — Structural Drawings"
   ],
   "G5 Construction Documentation": [
     "G5 — Contractor Awarded",
