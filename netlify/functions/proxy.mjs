@@ -223,8 +223,8 @@ export const handler = async (event) => {
       const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => ({
         gate: gateName,
         total: requiredDocs.length,
-        approved: allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length,
-        gateApprovalRate: requiredDocs.length > 0 ? allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'Approved').length / requiredDocs.length : 0
+        approved: allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved').length,
+        gateApprovalRate: requiredDocs.length > 0 ? allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved').length / requiredDocs.length : 0
       })).filter(g => g.total > 0).sort((a, b) => a.gate.localeCompare(b.gate));
 
       const paymentPages = paymentsData.results || [];
