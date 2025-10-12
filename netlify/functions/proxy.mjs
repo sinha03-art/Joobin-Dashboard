@@ -297,7 +297,56 @@ export const handler = async (event) => {
       };
       return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     }
+    // NEW: Create deliverable task endpoint
+    if (httpMethod === 'POST' && path.endsWith('/create-task')) {
+      const body = JSON.parse(event.body || '{}');
+      const { taskName, gate, dueDate, priority, comments } = body;
 
+      if (!taskName || !gate) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
+      }
+
+      try {
+        const createUrl = `https://api.notion.com/v1/pages`;
+        const newPage = {
+          parent: { database_id: DELIVERABLES_DB_ID },
+          properties: {
+            'Select Deliverable:': { title: [{ text: { content: taskName } }] },
+            'Gate': { multi_select: [{ name: gate }] },
+            'Status': { select: { name: 'Missing' } },
+            'Category': { multi_select: [{ name: 'Design Document' }] },
+            'Submitted By': { multi_select: [{ name: 'Designer' }] },
+            'Critical Path': { checkbox: priority === 'Critical' },
+            'Comments': { rich_text: [{ text: { content: comments || '' } }] },
+            'Tentative?': { checkbox: false }
+          }
+        };
+
+        // Add due date if provided
+        if (dueDate) {
+          newPage.properties['Target Due'] = {
+            date: { start: dueDate, is_datetime: true }
+          };
+        }
+
+        const res = await fetch(createUrl, {
+          method: 'POST',
+          headers: notionHeaders(),
+          body: JSON.stringify(newPage)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Notion API error: ${res.status}: ${errText}`);
+        }
+
+        const createdPage = await res.json();
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, pageUrl: createdPage.url }) };
+      } catch (error) {
+        console.error('Create task error:', error);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+      }
+    }
     // --- POST Request: Handle Updates ---
     if (httpMethod === 'POST' && path.endsWith('/proxy')) {
       const body = JSON.parse(event.body || '{}');

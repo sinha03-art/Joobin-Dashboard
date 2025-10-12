@@ -287,6 +287,17 @@
                             <div id="upcomingContent" class="tab-content"></div>
                             <div id="recentContent" class="tab-content"></div>
                             <div id="toCompleteContent" class="tab-content">
+                                <div class="flex justify-between items-center mb-4">
+                                    <p class="text-sm text-slate-400">Upcoming deliverables and tasks</p>
+                                    <button onclick="openAddTaskModal()"
+                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 5v14M5 12h14" />
+                                        </svg>
+                                        Add Task
+                                    </button>
+                                </div>
                                 <div id="upcomingTasksList" class="space-y-3"></div>
                             </div>
                         </div>
@@ -310,7 +321,70 @@
                 </div>
             </div>
         </div>
-
+        <!-- Add Task Modal -->
+        <div id="addTaskModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Add New Task</h3>
+                    <button onclick="closeAddTaskModal()" class="text-slate-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="addTaskForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Task Name *</label>
+                        <input type="text" id="taskName" required
+                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Gate *</label>
+                        <select id="taskGate" required
+                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select gate...</option>
+                            <option value="G0 Pre Construction">G0 Pre Construction</option>
+                            <option value="G1 Concept">G1 Concept</option>
+                            <option value="G2 Schematic">G2 Schematic</option>
+                            <option value="G3 Design Development">G3 Design Development</option>
+                            <option value="G4 Authority Submission">G4 Authority Submission</option>
+                            <option value="G5 Construction Documentation">G5 Construction Documentation</option>
+                            <option value="G6 Close-out">G6 Close-out</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Due Date</label>
+                        <input type="datetime-local" id="taskDueDate"
+                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Priority</label>
+                        <select id="taskPriority"
+                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Normal">Normal</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Comments</label>
+                        <textarea id="taskComments" rows="3"
+                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit"
+                            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors">
+                            Create Task
+                        </button>
+                        <button type="button" onclick="closeAddTaskModal()"
+                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md font-medium transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+                <div id="taskFormStatus" class="hidden mt-4 p-3 rounded-md"></div>
+            </div>
+        </div>
         <div id="passwordModal" style="display: none;"
             class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
             <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
@@ -628,7 +702,70 @@
                 document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`;
             }
         }
+        // Add Task Modal Functions
+        function openAddTaskModal() {
+            document.getElementById('addTaskModal').classList.remove('hidden');
+            document.getElementById('taskName').focus();
+        }
 
+        function closeAddTaskModal() {
+            document.getElementById('addTaskModal').classList.add('hidden');
+            document.getElementById('addTaskForm').reset();
+            document.getElementById('taskFormStatus').classList.add('hidden');
+        }
+
+        // Handle form submission
+        document.getElementById('addTaskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const statusEl = document.getElementById('taskFormStatus');
+            statusEl.textContent = 'Creating task...';
+            statusEl.className = 'mt-4 p-3 rounded-md bg-blue-900/40 text-blue-300';
+            statusEl.classList.remove('hidden');
+
+            const taskData = {
+                taskName: document.getElementById('taskName').value,
+                gate: document.getElementById('taskGate').value,
+                dueDate: document.getElementById('taskDueDate').value || null,
+                priority: document.getElementById('taskPriority').value,
+                comments: document.getElementById('taskComments').value
+            };
+
+            try {
+                const res = await fetch('/.netlify/functions/proxy/create-task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (!res.ok) throw new Error('Failed to create task');
+
+                const result = await res.json();
+
+                statusEl.textContent = '✓ Task created successfully! Refreshing...';
+                statusEl.className = 'mt-4 p-3 rounded-md bg-green-900/40 text-green-300';
+
+                // Refresh dashboard data
+                setTimeout(async () => {
+                    const response = await fetch(API_URL);
+                    dashboardData = await response.json();
+                    renderUpcomingTasks(dashboardData.deliverables);
+                    closeAddTaskModal();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Create task error:', error);
+                statusEl.textContent = '✗ Failed to create task. Please try again.';
+                statusEl.className = 'mt-4 p-3 rounded-md bg-red-900/40 text-red-300';
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('addTaskModal').classList.contains('hidden')) {
+                closeAddTaskModal();
+            }
+        });
         // --- Other utility functions ---
         function updateClock() { /*...*/ }
         const formatMYR = (amount) => `RM ${Math.round(amount).toLocaleString()}`;
