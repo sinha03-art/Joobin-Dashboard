@@ -1,6 +1,7 @@
 /**
- * JOOBIN Renovation Hub Proxy v12.0.0
- * - FEATURE: Added "Approve Gate" functionality, allowing all deliverables in a gate to be updated to "Approved".
+ * JOOBIN Renovation Hub Proxy v12.0.2
+ * - Updated REQUIRED_BY_GATE to match the actual deliverable naming convention from the Deliverable multi-select options.
+ * FEATURE: Added "Approve Gate" functionality, allowing all deliverables in a gate to be updated to "Approved".
  * - FIX: Correctly resolved vendor names by querying the Vendor_Registry relation instead of a text field, fixing the "Unknown" vendor issue.
  * - ENHANCEMENT: Deliverable objects now include their Notion page ID to be targetable for updates.
  */
@@ -24,57 +25,53 @@ const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
 const CONSTRUCTION_START_DATE = '2025-12-22';
 const REQUIRED_BY_GATE = {
-  "G0 Pre Construction": [
-    "G0 — Move Out to Temporary Residence"
-  ],
+  "G0 Pre Construction": ["G0 - Move out to temporary residence"],
   "G1 Concept": [
-    "G1 — Moodboard",
-    "G1 — 3D Render",
-    "G1 — Concept Sketches",
-    "G1 — Floor Plan",
-    "G1 — Brief & Requirements"
+    "G1 - Moodboard",
+    "G1 - Proposed renovation floor plan",
+    "G1 - 3D render"
   ],
-  "G2 Schematic": [],  // No critical path items marked
+  "G2 Schematic": [
+    "G2 - 3D render",
+    "G2 - Floor plans 1:100",
+    "G2 - Building elevations",
+    "G2 - Area schedules"
+  ],
   "G3 Design Development": [
-    "G3 — Windows Package Shop Drawings",
-    "G3 — Doors and Windows",
-    "G3 — Construction Drawings",
-    "G3 — MEP Drawings",
-    "G3 — Interior Design Plans",
-    "G3 — Schedules",
-    "G3 — Finishes"
+    "G3 - Doors and windows",
+    "G3 - Construction drawings",
+    "G3 - MEP drawings",
+    "G3 - Interior design plans",
+    "G3 - Schedules",
+    "G3 - Finishes"
   ],
   "G4 Authority Submission": [
-    "G4 — Renovation Permit",
-    "G4 — BQ Complete",
-    "G4 — Quotation Package Ready",
-    "G4 — Structural Drawings"
+    "G4 - Renovation permit",
+    "G4 - Structural drawings",
+    "G4 - BQ complete",
+    "G4 - Quotation package ready",
+    "G4 - Authority submission set",
+    "G4 - MEP single-line diagrams",
+    "G4 - Structural calculations"
   ],
   "G5 Construction Documentation": [
-    "G5 — Contractor Awarded",
-    "G5 — Tender Package Issued",
-    "G5 — Site Mobilization Complete",
-    "G5 — Demolition Complete Certificate",
-    "G5 — Structural Works Complete",
-    "G5 — Carpentry Complete",
-    "G5 — Finishes Complete",
-    "G5 — MEP Rough-in Complete",
-    "G5 — MEP Final Complete",
-    "G5 — Plumbing Complete",
-    "G5 — Electrical Complete",
-    "G5 — HVAC Complete",
-    "G5 — Painting Complete",
-    "G5 — Tiling Complete",
-    "G5 — Joinery Complete",
-    "G5 — Hardware Installation Complete",
-    "G5 — Testing & Commissioning Complete",
-    "G5 — Defects Rectification Complete",
-    "G5 — Site Cleanup Complete",
-    "G5 — Pre-handover Inspection Complete"
+    // Design milestones
+    "G5 - Contractor awarded",
+    "G5 - Tender package issued",
+    "G5 - Site mobilization complete",
+    // Construction certificates
+    "G5 - Demolition complete certificate",
+    "G5 - Structural works complete",
+    "G5 - Carpentry complete",
+    "G5 - Finishes complete",
+    "G5 - IFC construction drawings",
+    "G5 - Method statements",
+    "G5 - Work plans"
   ],
   "G6 Design Close-out": [
-    "G6 — Final Inspection Complete",
-    "G6 — Handover Certificate"
+    "G6 - Final inspection complete",
+    "G6 - Handover certificate",
+    "G6 - As-built drawings"
   ]
 };
 
