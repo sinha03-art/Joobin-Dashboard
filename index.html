@@ -31,6 +31,30 @@
             border: 1px solid hsl(var(--border));
         }
 
+        /* Force Chart.js legend text to white */
+        #forecastChart+.chartjs-legend,
+        .chartjs-legend-item,
+        canvas+div {
+            color: #ffffff !important;
+        }
+
+        /* Gate dependency arrows and lock animations */
+        .gate-circle {
+            animation: draw-circle 1.5s ease-out forwards;
+        }
+
+        @keyframes draw-circle {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* Smooth fade for blocked gates */
+        .opacity-60 {
+            opacity: 0.6;
+            filter: grayscale(30%);
+        }
+
         .tab-button.active {
             color: hsl(var(--ring));
             border-bottom-color: hsl(var(--ring));
@@ -390,11 +414,42 @@
 
         function renderGates(gates) {
             const container = document.getElementById('gates');
-            if (!gates || gates.length === 0) { container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`; return; }
-            container.innerHTML = gates.map(gate => {
+            if (!gates || gates.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`;
+                return;
+            }
+
+            container.innerHTML = gates.map((gate, index) => {
                 const progress = Math.round(gate.gateApprovalRate * 100);
-                let color = progress === 100 ? '#10b981' : (progress < 50 ? '#f59e0b' : 'hsl(var(--ring))');
-                return `<button onclick="promptForUpdate(null, 'mark_gate_approved', '${gate.gate}')" class="flex flex-col items-center text-center p-2 rounded-lg hover:bg-slate-800 transition-colors"><div class="relative w-24 h-24"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="36" cx="50" cy="50"/><circle class="gate-circle" stroke-width="8" stroke-dasharray="226" stroke-dashoffset="${226 - (progress / 100) * 226}" stroke-linecap="round" stroke="${color}" fill="transparent" r="36" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%;"/></svg><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span></div><p class="text-xs font-semibold mt-3">${gate.gate}</p><p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p></button>`;
+                const r = 36, circ = 2 * Math.PI * r;
+                const offset = circ - (progress / 100) * circ;
+                let color = 'hsl(var(--ring))';
+                if (progress === 100) color = '#10b981';
+                else if (progress < 50) color = '#f59e0b';
+
+                // Check if previous gate is complete (blocked logic)
+                const prevGate = index > 0 ? gates[index - 1] : null;
+                const isBlocked = prevGate && Math.round(prevGate.gateApprovalRate * 100) < 100;
+                const lockIcon = isBlocked ? '<div class="absolute top-0 right-0 text-red-500 text-xl" title="Blocked: Complete previous gate first">🔒</div>' : '';
+
+                // Dependency arrow (show if not first gate)
+                const arrow = index > 0 ? '<div class="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 text-slate-600 text-2xl px-2">→</div>' : '';
+
+                return `
+        <div class="flex flex-col items-center text-center relative ${isBlocked ? 'opacity-60' : ''}">
+            ${arrow}
+            <div class="relative w-24 h-24">
+                ${lockIcon}
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="${r}" cx="50" cy="50"/>
+                    <circle class="gate-circle" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round" stroke="${color}" fill="transparent" r="${r}" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%; animation-delay: ${Math.random() * 0.5}s; stroke-dashoffset: ${offset};"/>
+                </svg>
+                <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span>
+            </div>
+            <p class="text-xs font-semibold mt-3">${gate.gate}</p>
+            <p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p>
+            ${isBlocked ? '<p class="text-xs text-red-400 mt-1">Blocked</p>' : ''}
+        </div>`;
             }).join('');
         }
 
@@ -492,26 +547,26 @@
                                             return {
                                                 text: `${label}: ${percentage}%`,
                                                 fillStyle: data.datasets[0].backgroundColor[i],
+                                                fontColor: '#ffffff',  // ✅ ADD THIS
                                                 hidden: false,
                                                 index: i
                                             };
                                         });
                                     }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        const value = context.parsed;
-                                        const dataTotal = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = ((value / dataTotal) * 100).toFixed(1);
-                                        return `${context.label}: ${percentage}% (${formatMYR(value)})`;
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (context) {
+                                            const value = context.parsed;
+                                            const dataTotal = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((value / dataTotal) * 100).toFixed(1);
+                                            return `${context.label}: ${percentage}% (${formatMYR(value)})`;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
             }
         }
         // --- END ADDED SECTION ---
