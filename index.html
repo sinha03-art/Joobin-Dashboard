@@ -535,38 +535,39 @@
                                         family: "'Inter', sans-serif",
                                         weight: '500'
                                     },
-                                    color: '#ffffff',  // ✅ Changed to pure white
-                                    boxWidth: 12,      // ✅ NEW - 30% of default size (was ~40px)
-                                    boxHeight: 12,     // ✅ NEW - keeps it square
+                                    color: '#ffffff',  // ✅ Changed from '#cbd5e1' to white
+                                    boxWidth: 12,      // ✅ NEW - Makes color boxes 30% smaller
+                                    boxHeight: 12,     // ✅ NEW - Keeps boxes square
                                     generateLabels: function (chart) {
                                         const data = chart.data;
-                                        const dataTotal = data.datasets[0].data.reduce((sum, val) => sum + val, 0);
+                                        const dataTotal = data.datasets[0].data.reduce((sum, val) => sum + val, 0);  // ✅ Fixed scope
                                         return data.labels.map((label, i) => {
                                             const value = data.datasets[0].data[i];
-                                            const percentage = ((value / dataTotal) * 100).toFixed(1);
+                                            const percentage = ((value / dataTotal) * 100).toFixed(1);  // ✅ Uses dataTotal
                                             return {
                                                 text: `${label}: ${percentage}%`,
                                                 fillStyle: data.datasets[0].backgroundColor[i],
-                                                fontColor: '#ffffff',  // ✅ ADD THIS
+                                                fontColor: '#ffffff',  // ✅ NEW - Force white text
                                                 hidden: false,
                                                 index: i
                                             };
                                         });
                                     }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function (context) {
-                                            const value = context.parsed;
-                                            const dataTotal = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((value / dataTotal) * 100).toFixed(1);
-                                            return `${context.label}: ${percentage}% (${formatMYR(value)})`;
-                                        }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        const value = context.parsed;
+                                        const dataTotal = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / dataTotal) * 100).toFixed(1);
+                                        return `${context.label}: ${percentage}% (${formatMYR(value)})`;
                                     }
                                 }
                             }
                         }
-                    });
+                    }
+                });
             }
         }
         // --- END ADDED SECTION ---
