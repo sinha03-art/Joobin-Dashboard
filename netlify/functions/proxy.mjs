@@ -167,7 +167,7 @@ export const handler = async (event) => {
         queryNotionDB(MILESTONES_DB_ID), queryNotionDB(DELIVERABLES_DB_ID),
         queryNotionDB(VENDOR_REGISTRY_DB_ID), queryNotionDB(PAYMENTS_DB_ID),
         queryNotionDB(NOTION_WORK_PACKAGES_DB_ID, { sorts: [{ property: 'Start Date', direction: 'ascending' }] }),
-        queryNotionDB(ACTIVITY_LOG_DB_ID, { sorts: [{ property: 'Timestamp', direction: 'descending' }], page_size: 20 }),
+        ///queryNotionDB(ACTIVITY_LOG_DB_ID, { sorts: [{ property: 'Timestamp', direction: 'descending' }], page_size: 20 }),
       ]);
       const now = new Date();
 
@@ -331,14 +331,14 @@ export const handler = async (event) => {
         }, {}); // ← Closes budgetByTrade
 
       // Process recent activity
-      const recentActivity = (activityLogData.results || []).slice(0, 10).map(p => ({
-        eventType: extractText(getProp(p, 'Event Type')),
-        deliverable: extractText(getProp(p, 'Name')),
-        details: extractText(getProp(p, 'Details')),
-        timestamp: extractText(getProp(p, 'Timestamp')),
-        source: extractText(getProp(p, 'Source')),
-        url: p.url
-      }));
+      /// const recentActivity = (activityLogData.results || []).slice(0, 10).map(p => ({
+      ///eventType: extractText(getProp(p, 'Event Type')),
+      ///  deliverable: extractText(getProp(p, 'Name')),
+      ///  details: extractText(getProp(p, 'Details')),
+      ///  timestamp: extractText(getProp(p, 'Timestamp')),
+      ///  source: extractText(getProp(p, 'Source')),
+      ///  url: p.url
+      ///}));
 
       const responseData = {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
