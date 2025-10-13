@@ -1,45 +1,72 @@
 const { Client } = require('@notionhq/client');
+const nodemailer = require('nodemailer');
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
+
+// Email setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
+});
+
+async function sendNotification(deliverable, submittedBy, pageUrl) {
+  const emailBody = `
+<h2>📋 New Deliverable Submitted</h2>
+
+<p><strong>Deliverable:</strong> ${deliverable}</p>
+<p><strong>Submitted by:</strong> ${submittedBy}</p>
+<p><strong>Status:</strong> Submitted</p>
+
+<p><a href="${pageUrl}">View in Notion →</a></p>
+
+<hr>
+<p style="color: #999; font-size: 12px;">JOOBIN RENOVATION COMMAND CENTER</p>
+  `;
+
+  const recipients = [
+    'solomonchong2011@gmail.com',  // Replace with real email
+    'sinha03@gmail.com'  // Replace with real email
+  ];
+
+  await transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to: recipients.join(', '),
+    subject: `📋 New Deliverable: ${deliverable}`,
+    html: emailBody
+  });
+}
 
 exports.handler = async (event) => {
   // Security check
   const authHeader = event.headers['authorization'];
   if (!process.env.WEBHOOK_SECRET || authHeader !== `Bearer ${process.env.WEBHOOK_SECRET}`) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Unauthorized' })
-    };
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
   const { pageId } = JSON.parse(event.body);
   
   try {
-    // 1. Get the new submission
     const newPage = await notion.pages.retrieve({ page_id: pageId });
-    
-    // 2. Extract deliverable name
     const deliverable = newPage.properties['Deliverable']?.multi_select?.[0]?.name;
     
     if (!deliverable) {
       return { statusCode: 400, body: JSON.stringify({ error: 'No deliverable selected' }) };
     }
     
-    // 3. Search for existing page with same name
+    // Search for existing page
     const searchResults = await notion.databases.query({
       database_id: DELIVERABLES_DB_ID,
-      filter: {
-        property: 'Select Deliverable:',
-        title: { equals: deliverable }
-      }
+      filter: { property: 'Select Deliverable:', title: { equals: deliverable } }
     });
     
-    // 4. Find existing page (exclude current submission)
     const existingPage = searchResults.results.find(page => page.id !== pageId);
     
     if (!existingPage) {
-      // No duplicate - just update title and status
+      // New submission - update and notify
       await notion.pages.update({
         page_id: pageId,
         properties: {
@@ -48,16 +75,20 @@ exports.handler = async (event) => {
         }
       });
       
+      // Send email notification
+      const submittedBy = newPage.properties['Submitted By']?.multi_select?.[0]?.name || 'Unknown';
+      const pageUrl = `https://notion.so/${pageId.replace(/-/g, '')}`;
+      await sendNotification(deliverable, submittedBy, pageUrl);
+      
       return {
         statusCode: 200,
-        body: JSON.stringify({ success: true, action: 'created', deliverable })
+        body: JSON.stringify({ success: true, action: 'created', deliverable, notified: true })
       };
     }
     
-    // 5. Duplicate found - merge data
+    // Duplicate found - merge
     const updateProperties = {};
     
-    // Merge files
     const newFiles = newPage.properties['File']?.files || [];
     const existingFiles = existingPage.properties['File']?.files || [];
     if (newFiles.length > 0) {
@@ -70,7 +101,6 @@ exports.handler = async (event) => {
       updateProperties['Attach your document'] = { files: [...existingDocs, ...newDocs] };
     }
     
-    // Append comments with timestamp
     const newComments = newPage.properties['Comments']?.rich_text?.[0]?.plain_text || '';
     const existingComments = existingPage.properties['Comments']?.rich_text?.[0]?.plain_text || '';
     if (newComments) {
@@ -81,17 +111,19 @@ exports.handler = async (event) => {
       updateProperties['Comments'] = { rich_text: [{ text: { content: merged.slice(0, 2000) } }] };
     }
     
-    // Always set to Submitted
     updateProperties['Status'] = { select: { name: 'Submitted' } };
     
-    // 6. Update existing page
     await notion.pages.update({
       page_id: existingPage.id,
       properties: updateProperties
     });
     
-    // 7. Delete duplicate
     await notion.blocks.delete({ block_id: pageId });
+    
+    // Send email notification
+    const submittedBy = newPage.properties['Submitted By']?.multi_select?.[0]?.name || 'Unknown';
+    const pageUrl = `https://notion.so/${existingPage.id.replace(/-/g, '')}`;
+    await sendNotification(deliverable, submittedBy, pageUrl);
     
     return {
       statusCode: 200,
@@ -99,14 +131,12 @@ exports.handler = async (event) => {
         success: true, 
         action: 'merged', 
         deliverable,
-        existingPageId: existingPage.id
+        existingPageId: existingPage.id,
+        notified: true
       })
     };
     
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
