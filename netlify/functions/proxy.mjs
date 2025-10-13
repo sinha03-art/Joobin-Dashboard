@@ -24,57 +24,58 @@ const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
 const REQUIRED_BY_GATE = {
-  "G0 Pre Construction": ["G0 — Move out to temporary residence"],
-  "G1 Concept": [
-    "G1 — Moodboard",
-    "G1 — Proposed renovation floor plan",
-    "G1 — 3D render"
-  ],
-  "G2 Schematic": [
-    "G2 — 3D render",
-    "G2 — Floor plans 1:100",
-    "G2 — Building elevations",
-    "G2 — Area schedules"
-  ],
-  "G3 Design Development": [
-    "G3 — Doors and windows",
-    "G3 — Construction drawings",
-    "G3 — MEP drawings",
-    "G3 — Interior design plans",
-    "G3 — Schedules",
-    "G3 — Finishes"
-  ],
-  "G4 Authority Submission": [
-    "G4 — Renovation permit",
-    "G4 — Structural drawings",
-    "G4 — BQ complete",
-    "G4 — Quotation package ready",
-    "G4 — Authority submission set",
-    "G4 — MEP single-line diagrams",
-    "G4 — Structural calculations"
-  ],
-  "G5 Construction Documentation": [
-    "G5 — Contractor awarded",
-    "G5 — Tender package issued",
-    "G5 — Site mobilization complete",
-    "G5 — Demolition complete certificate",
-    "G5 — Structural works complete",
-    "G5 — Carpentry complete",
-    "G5 — Finishes complete",
-    "G5 — IFC construction drawings",
-    "G5 — Method statements",
-    "G5 — Work plans"
-  ],
-  "G6 Design Close-out": [
-    "G6 — Final inspection complete",
-    "G6 — Handover certificate",
-    "G6 — As-built drawings"
-  ]
-};
+  const REQUIRED_BY_GATE = {
+    "G0 Pre Construction": ["G0 — Move out to temporary residence"],
+    "G1 Concept": [
+      "G1 — Moodboard",
+      "G1 — Proposed renovation floor plan",
+      "G1 — 3D render"
+    ],
+    "G2 Schematic": [
+      "G2 — 3D render",
+      "G2 — Floor plans 1:100",
+      "G2 — Building elevations",
+      "G2 — Area schedules"
+    ],
+    "G3 Design Development": [
+      "G3 — Doors and windows",
+      "G3 — Construction drawings",
+      "G3 — MEP drawings",
+      "G3 — Interior design plans",
+      "G3 — Schedules",
+      "G3 — Finishes"
+    ],
+    "G4 Authority Submission": [
+      "G4 — Renovation permit",
+      "G4 — Structural drawings",
+      "G4 — BQ complete",
+      "G4 — Quotation package ready",
+      "G4 — Authority submission set",
+      "G4 — MEP single-line diagrams",
+      "G4 — Structural calculations"
+    ],
+    "G5 Construction Documentation": [
+      "G5 — Contractor awarded",
+      "G5 — Tender package issued",
+      "G5 — Site mobilization complete",
+      "G5 — Demolition complete certificate",
+      "G5 — Structural works complete",
+      "G5 — Carpentry complete",
+      "G5 — Finishes complete",
+      "G5 — IFC construction drawings",
+      "G5 — Method statements",
+      "G5 — Work plans"
+    ],
+    "G6 Design Close-out": [
+      "G6 — Final inspection complete",
+      "G6 — Handover certificate",
+      "G6 — As-built drawings"
+    ]
+  };
 
-// --- API & Utility Helpers ---
-function notionHeaders() {
-  return ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
+  // --- API & Utility Helpers ---
+  function notionHeaders() {
+    return ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
 }
 const norm = (s) => {
   return String(s || '')
@@ -179,32 +180,15 @@ export const handler = async (event) => {
         const deliverableType = extractText(getProp(p, 'Select Deliverable:'));
         const gate = extractText(getProp(p, 'Gate'));
 
-        const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
-
-        // DEBUG: Log the keys
-        console.log('DEBUG - First 10 existing keys:', Array.from(existingDeliverableKeys).slice(0, 10));
-
-        const allDeliverablesIncludingMissing = [...processedDeliverables];
-
-        Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
-          requiredDocs.forEach(requiredTitle => {
-            const requiredKey = norm(`${gateName}|${requiredTitle}`);
-            const exists = existingDeliverableKeys.has(requiredKey);
-
-            // DEBUG: Log G1 items
-            if (gateName === 'G1 Concept') {
-              console.log('DEBUG - Checking required:', requiredTitle, 'key:', requiredKey, 'exists:', exists);
-            }
-
-            if (!exists) {
-              allDeliverablesIncludingMissing.push({
-                title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
-                status: 'Missing', assignees: [], url: '#'
-              });
-            }
+        // DEBUG: Log raw status property for G1 items
+        if (deliverableType && deliverableType.includes('G1')) {
+          console.log('DEBUG - Raw properties for', deliverableType, ':', {
+            statusProp: p.properties['Status'],
+            reviewStatusProp: p.properties['Review Status'],
+            categoryProp: p.properties['Category']
           });
-        });
-        
+        }
+
         // Check if this deliverable is critical for its gate
         const isCritical = REQUIRED_BY_GATE[gate]?.some(reqType =>
           norm(deliverableType) === norm(reqType)
@@ -231,6 +215,13 @@ export const handler = async (event) => {
           priority: extractText(getProp(p, 'Priority')),
         };
       });
+      // NOW add debug AFTER the map is complete:
+      console.log('DEBUG - Processed deliverables count:', processedDeliverables.length);
+      console.log('DEBUG - Sample G1 with status:', processedDeliverables
+        .filter(d => d.gate === 'G1 Concept')
+        .map(d => ({ title: d.title, status: d.status }))
+      );
+
 
       const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
