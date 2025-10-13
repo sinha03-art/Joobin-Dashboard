@@ -176,19 +176,29 @@ export const handler = async (event) => {
       const processedDeliverables = (deliverablesData.results || []).map(p => {
         const category = extractText(getProp(p, 'Category'));
         const isConstruction = category === 'Construction Certificate';
-        let status = isConstruction ? mapConstructionStatus(extractText(getProp(p, 'Review Status'))) : extractText(getProp(p, 'Status'));
+        const deliverableType = extractText(getProp(p, 'Select Deliverable:'));
+        const gate = extractText(getProp(p, 'Gate'));
+
+        // Check if this deliverable is critical for its gate
+        const isCritical = REQUIRED_BY_GATE[gate]?.some(reqType =>
+          norm(deliverableType) === norm(reqType)
+        ) || false;
+
+        let status;
+        if (isConstruction) {
+          const reviewStatus = extractText(getProp(p, 'Review Status'));
+          status = mapConstructionStatus(reviewStatus);
+        } else {
+          status = extractText(getProp(p, 'Status'));
+        }
+
         return {
-          id: p.id,
-          title: extractText(getProp(p, 'Select Deliverable:')),
-          deliverableType: extractText(getProp(p, 'Select Deliverable:')),
-          gate: (() => {
-            const gateProp = getProp(p, 'Gate');
-            if (gateProp?.type === 'multi_select' && gateProp.multi_select?.length > 0) {
-              return gateProp.multi_select[0].name;  // Get first gate name
-            }
-            return '';
-          })(),
+          title: deliverableType,
+          deliverableType: deliverableType,
+          gate: gate,
           status: status || 'Missing',
+          category: category,
+          isCritical: isCritical,  // NEW FLAG
           assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
           url: p.url,
           dueDate: extractText(getProp(p, 'Target Due')),
@@ -214,12 +224,33 @@ export const handler = async (event) => {
             matches: REQUIRED_BY_GATE['G1 Concept'].some(r => norm(d.deliverableType) === norm(r))
           }))
       );
-      const gates = Object.entries(REQUIRED_BY_GATE).map(([gateName, requiredDocs]) => ({
-        gate: gateName,
-        total: requiredDocs.length,
-        approved: allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved').length,
-        gateApprovalRate: requiredDocs.length > 0 ? allDeliverablesIncludingMissing.filter(d => d.gate === gateName && requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) && norm(d.status) === 'approved').length / requiredDocs.length : 0
-      })).filter(g => g.total > 0).sort((a, b) => a.gate.localeCompare(b.gate));
+      // Calculate gates - count ALL deliverables, mark critical ones
+      const gates = Object.entries(REQUIRED_BY_GATE)
+        .map(([gateName, requiredDocs]) => {
+          // Get ALL deliverables for this gate
+          const allGateDeliverables = allDeliverablesIncludingMissing.filter(d => d.gate === gateName);
+
+          // Count how many are approved
+          const approvedCount = allGateDeliverables.filter(d => norm(d.status) === 'approved').length;
+
+          // Count critical items (required to pass gate)
+          const criticalApproved = allGateDeliverables.filter(d =>
+            requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) &&
+            norm(d.status) === 'approved'
+          ).length;
+
+          return {
+            gate: gateName,
+            total: allGateDeliverables.length,
+            approved: approvedCount,
+            criticalTotal: requiredDocs.length,
+            criticalApproved: criticalApproved,
+            gateApprovalRate: allGateDeliverables.length > 0 ? approvedCount / allGateDeliverables.length : 0,
+            criticalApprovalRate: requiredDocs.length > 0 ? criticalApproved / requiredDocs.length : 0
+          };
+        })
+        .filter(g => g.total > 0)
+        .sort((a, b) => a.gate.localeCompare(b.gate));
 
       const paymentPages = paymentsData.results || [];
       const overduePayments = paymentPages.filter(p => { const d = extractText(getProp(p, 'DueDate')); return (norm(extractText(getProp(p, 'Status'))) === 'outstanding' || norm(extractText(getProp(p, 'Status'))) === 'overdue') && d && new Date(d) < now; }).map(p => ({ id: p.id, paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled', vendor: extractText(getProp(p, 'Vendor')), amount: extractText(getProp(p, 'Amount (RM)')) || 0, dueDate: extractText(getProp(p, 'DueDate')), url: p.url })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
