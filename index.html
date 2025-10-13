@@ -280,46 +280,51 @@
                                     class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
                                     Paid</button><button data-tab="toComplete"
                                     class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
-                                    Complete</button></nav>
+                                    Complete</button><button data-tab="activity"
+                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recent
+                                    Activity</button></nav>
                         </div>
                         <div class="mt-4 min-h-[250px] relative">
                             <div id="overdueContent" class="tab-content active"></div>
                             <div id="upcomingContent" class="tab-content"></div>
                             <div id="recentContent" class="tab-content"></div>
-                            <div id="toCompleteContent" class="tab-content">
-                                <div class="flex justify-between items-center mb-4">
-                                    <p class="text-sm text-slate-400">Upcoming deliverables and tasks</p>
-                                    <button onclick="openAddTaskModal()"
-                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M12 5v14M5 12h14" />
-                                        </svg>
-                                        Add Task
-                                    </button>
-                                </div>
-                                <div id="upcomingTasksList" class="space-y-3"></div>
+                            <div id="toCompleteContent" class="tab-content"></div>
+                            <div id="activityContent" class="tab-content">
+                                <div id="activityFeed" class="space-y-3"></div>
                             </div>
+                            <div class="flex justify-between items-center mb-4">
+                                <p class="text-sm text-slate-400">Upcoming deliverables and tasks</p>
+                                <button onclick="openAddTaskModal()"
+                                    class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    Add Task
+                                </button>
+                            </div>
+                            <div id="upcomingTasksList" class="space-y-3"></div>
                         </div>
-                    </div>
-                    <div class="card p-4 sm:p-6">
-                        <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
-                        <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
                     </div>
                 </div>
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="card p-4 sm:p-6">
-                        <h3 class="text-lg font-semibold mb-4">Budget Distribution</h3>
-                        <div style="height: 400px; position: relative;">
-                            <canvas id="forecastChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="card p-4 sm:p-6">
-                        <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
-                        <div id="topVendors" class="space-y-4"></div>
-                    </div>
+                <div class="card p-4 sm:p-6">
+                    <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+                    <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
                 </div>
             </div>
+            <div class="lg:col-span-1 space-y-6">
+                <div class="card p-4 sm:p-6">
+                    <h3 class="text-lg font-semibold mb-4">Budget Distribution</h3>
+                    <div style="height: 400px; position: relative;">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+                <div class="card p-4 sm:p-6">
+                    <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                    <div id="topVendors" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
         </div>
         <!-- Add Task Modal -->
         <div id="addTaskModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -518,7 +523,49 @@
             document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
             document.getElementById('tabs').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { const tab = e.target.dataset.tab; document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById(`${tab}Content`).classList.add('active'); } });
         }
+        function renderActivity(activities) {
+            const container = document.getElementById('activityFeed');
+            if (!activities || activities.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">No recent activity.</div>';
+                return;
+            }
 
+            const icons = {
+                'Submitted': '📤',
+                'Approved': '✅',
+                'Rejected': '❌',
+                'Updated': '📝',
+                'Commented': '💬',
+                'Status Changed': '🔄',
+                'File Added': '📎',
+                'Email Sent': '📧'
+            };
+
+            const colors = {
+                'Submitted': 'bg-blue-900/40 border-blue-500',
+                'Approved': 'bg-green-900/40 border-green-500',
+                'Rejected': 'bg-red-900/40 border-red-500',
+                'Updated': 'bg-orange-900/40 border-orange-500',
+                'Email Sent': 'bg-gray-900/40 border-gray-500'
+            };
+
+            container.innerHTML = activities.map(a => `
+    <div class="p-3 border-l-3 ${colors[a.eventType] || 'bg-slate-800/50 border-slate-600'} rounded-r-md">
+      <div class="flex items-start gap-3">
+        <div class="text-xl">${icons[a.eventType] || '📋'}</div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-sm text-slate-200">${a.deliverable}</p>
+          <p class="text-xs text-slate-400 mt-1">${a.details || a.eventType}</p>
+          <div class="flex items-center gap-3 mt-2 text-xs text-slate-500">
+            <span>${timeAgo(a.timestamp)}</span>
+            <span>•</span>
+            <span>${a.source || 'System'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+        }
         function renderGates(gates) {
             const container = document.getElementById('gates');
             if (!gates || gates.length === 0) {
@@ -687,6 +734,7 @@
                 renderCriticalPath(dashboardData.alerts);
                 renderKPIs(dashboardData.kpis);
                 renderTabs(dashboardData);
+                renderActivity(dashboardData.recentActivity);
                 renderUpcomingTasks(dashboardData.deliverables);
                 renderGates(dashboardData.gates);
                 renderTopVendors(dashboardData.topVendors);

@@ -18,63 +18,64 @@ const {
   NOTION_WORK_PACKAGES_DB_ID,
   PAYMENTS_DB_ID,
   UPDATE_PASSWORD,
+  ACTIVITY_LOG_DB_ID = 'd754a17902804b77a16dc4fdd3e59695', // Activity Log DB
 } = process.env;
 // --- Constants ---
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
 const REQUIRED_BY_GATE = {
-    "G0 Pre Construction": ["G0 — Move out to temporary residence"],
-    "G1 Concept": [
-      "G1 — Moodboard",
-      "G1 — Proposed renovation floor plan",
-      "G1 — 3D render"
-    ],
-    "G2 Schematic": [
-      "G2 — 3D render",
-      "G2 — Floor plans 1:100",
-      "G2 — Building elevations",
-      "G2 — Area schedules"
-    ],
-    "G3 Design Development": [
-      "G3 — Doors and windows",
-      "G3 — Construction drawings",
-      "G3 — MEP drawings",
-      "G3 — Interior design plans",
-      "G3 — Schedules",
-      "G3 — Finishes"
-    ],
-    "G4 Authority Submission": [
-      "G4 — Renovation permit",
-      "G4 — Structural drawings",
-      "G4 — BQ complete",
-      "G4 — Quotation package ready",
-      "G4 — Authority submission set",
-      "G4 — MEP single-line diagrams",
-      "G4 — Structural calculations"
-    ],
-    "G5 Construction Documentation": [
-      "G5 — Contractor awarded",
-      "G5 — Tender package issued",
-      "G5 — Site mobilization complete",
-      "G5 — Demolition complete certificate",
-      "G5 — Structural works complete",
-      "G5 — Carpentry complete",
-      "G5 — Finishes complete",
-      "G5 — IFC construction drawings",
-      "G5 — Method statements",
-      "G5 — Work plans"
-    ],
-    "G6 Design Close-out": [
-      "G6 — Final inspection complete",
-      "G6 — Handover certificate",
-      "G6 — As-built drawings"
-    ]
-  };
+  "G0 Pre Construction": ["G0 — Move out to temporary residence"],
+  "G1 Concept": [
+    "G1 — Moodboard",
+    "G1 — Proposed renovation floor plan",
+    "G1 — 3D render"
+  ],
+  "G2 Schematic": [
+    "G2 — 3D render",
+    "G2 — Floor plans 1:100",
+    "G2 — Building elevations",
+    "G2 — Area schedules"
+  ],
+  "G3 Design Development": [
+    "G3 — Doors and windows",
+    "G3 — Construction drawings",
+    "G3 — MEP drawings",
+    "G3 — Interior design plans",
+    "G3 — Schedules",
+    "G3 — Finishes"
+  ],
+  "G4 Authority Submission": [
+    "G4 — Renovation permit",
+    "G4 — Structural drawings",
+    "G4 — BQ complete",
+    "G4 — Quotation package ready",
+    "G4 — Authority submission set",
+    "G4 — MEP single-line diagrams",
+    "G4 — Structural calculations"
+  ],
+  "G5 Construction Documentation": [
+    "G5 — Contractor awarded",
+    "G5 — Tender package issued",
+    "G5 — Site mobilization complete",
+    "G5 — Demolition complete certificate",
+    "G5 — Structural works complete",
+    "G5 — Carpentry complete",
+    "G5 — Finishes complete",
+    "G5 — IFC construction drawings",
+    "G5 — Method statements",
+    "G5 — Work plans"
+  ],
+  "G6 Design Close-out": [
+    "G6 — Final inspection complete",
+    "G6 — Handover certificate",
+    "G6 — As-built drawings"
+  ]
+};
 
-  // --- API & Utility Helpers ---
-  function notionHeaders() {
-    return ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
+// --- API & Utility Helpers ---
+function notionHeaders() {
+  return ({ 'Authorization': `Bearer ${NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' });
 }
 const norm = (s) => {
   return String(s || '')
@@ -166,8 +167,8 @@ export const handler = async (event) => {
         queryNotionDB(MILESTONES_DB_ID), queryNotionDB(DELIVERABLES_DB_ID),
         queryNotionDB(VENDOR_REGISTRY_DB_ID), queryNotionDB(PAYMENTS_DB_ID),
         queryNotionDB(NOTION_WORK_PACKAGES_DB_ID, { sorts: [{ property: 'Start Date', direction: 'ascending' }] }),
+        queryNotionDB(ACTIVITY_LOG_DB_ID, { sorts: [{ property: 'Timestamp', direction: 'descending' }], page_size: 20 }),
       ]);
-
       const now = new Date();
 
       // Budget calculation
@@ -327,12 +328,22 @@ export const handler = async (event) => {
           const total = supply + install;
           acc[trade] = (acc[trade] || 0) + total;
           return acc;
-        }, {});
+        },
+// Process recent activity
+      const recentActivity = (activityLogData.results || []).slice(0, 10).map(p => ({
+          eventType: extractText(getProp(p, 'Event Type')),
+          deliverable: extractText(getProp(p, 'Name')),
+          details: extractText(getProp(p, 'Details')),
+          timestamp: extractText(getProp(p, 'Timestamp')),
+          source: extractText(getProp(p, 'Source')),
+          url: p.url
+        }));
       const responseData = {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
         gates,
         topVendors,
         budgetByTrade,
+        recentActivity,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: [] /* Placeholder */ },
         alerts,
