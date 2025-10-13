@@ -20,10 +20,6 @@ const {
   UPDATE_PASSWORD,
 } = process.env;
 
-// --- Constants ---
-const NOTION_VERSION = '2022-06-28';
-const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
-const CONSTRUCTION_START_DATE = '2025-12-22';
 const REQUIRED_BY_GATE = {
   "G0 Pre Construction": ["G0 - Move out to temporary residence"],
   "G1 Concept": [
@@ -55,11 +51,9 @@ const REQUIRED_BY_GATE = {
     "G4 - Structural calculations"
   ],
   "G5 Construction Documentation": [
-    // Design milestones
     "G5 - Contractor awarded",
     "G5 - Tender package issued",
     "G5 - Site mobilization complete",
-    // Construction certificates
     "G5 - Demolition complete certificate",
     "G5 - Structural works complete",
     "G5 - Carpentry complete",
