@@ -736,6 +736,7 @@
                 renderKPIs(dashboardData.kpis);
                 renderTabs(dashboardData);
 
+                // Add activity feed render with fallback
                 if (dashboardData.recentActivity) {
                     renderActivity(dashboardData.recentActivity);
                 } else {
@@ -762,7 +763,6 @@
                 document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`;
             }
         }
-        init();
         // Add Task Modal Functions
         function openAddTaskModal() {
             document.getElementById('addTaskModal').classList.remove('hidden');
