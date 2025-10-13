@@ -179,6 +179,15 @@ export const handler = async (event) => {
         const deliverableType = extractText(getProp(p, 'Select Deliverable:'));
         const gate = extractText(getProp(p, 'Gate'));
 
+        // DEBUG: Log raw status property for G1 items
+        if (deliverableType && deliverableType.includes('G1')) {
+          console.log('DEBUG - Raw properties for', deliverableType, ':', {
+            statusProp: p.properties['Status'],
+            reviewStatusProp: p.properties['Review Status'],
+            categoryProp: p.properties['Category']
+          });
+        }
+
         // Check if this deliverable is critical for its gate
         const isCritical = REQUIRED_BY_GATE[gate]?.some(reqType =>
           norm(deliverableType) === norm(reqType)
