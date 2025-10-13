@@ -731,25 +731,38 @@
                 const response = await fetch(API_URL);
                 if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
                 dashboardData = await response.json();
+
                 renderCriticalPath(dashboardData.alerts);
                 renderKPIs(dashboardData.kpis);
                 renderTabs(dashboardData);
-                renderActivity(dashboardData.recentActivity);
+
+                if (dashboardData.recentActivity) {
+                    renderActivity(dashboardData.recentActivity);
+                } else {
+                    document.getElementById('activityFeed').innerHTML = '<div class="text-center py-10 text-slate-500 text-sm">Activity log coming soon...</div>';
+                }
+
                 renderUpcomingTasks(dashboardData.deliverables);
                 renderGates(dashboardData.gates);
                 renderTopVendors(dashboardData.topVendors);
                 renderCharts(dashboardData);
+
                 document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
-                updateClock(); setInterval(updateClock, 1000);
+                updateClock();
+                setInterval(updateClock, 1000);
+
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('dashboardContent').classList.remove('hidden');
+
                 getAISummary();
                 document.getElementById('aiSummaryBtn').addEventListener('click', getAISummary);
+
             } catch (error) {
                 console.error('❌ Error:', error);
                 document.getElementById('loader').innerHTML = `<div class="card bg-red-900/50 p-6"><h3 class="font-bold mb-2">⚠️ Error Loading Dashboard</h3><p class="text-sm">${error.message}</p></div>`;
             }
         }
+        init();
         // Add Task Modal Functions
         function openAddTaskModal() {
             document.getElementById('addTaskModal').classList.remove('hidden');
