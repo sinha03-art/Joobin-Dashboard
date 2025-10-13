@@ -331,21 +331,13 @@ export const handler = async (event) => {
         }, {}); // ← Closes budgetByTrade
 
       // Process recent activity
-      /// const recentActivity = (activityLogData.results || []).slice(0, 10).map(p => ({
-      ///eventType: extractText(getProp(p, 'Event Type')),
-      ///  deliverable: extractText(getProp(p, 'Name')),
-      ///  details: extractText(getProp(p, 'Details')),
-      ///  timestamp: extractText(getProp(p, 'Timestamp')),
-      ///  source: extractText(getProp(p, 'Source')),
-      ///  url: p.url
-      ///}));
+      const recentActivity = [];
 
       const responseData = {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
         gates,
         topVendors,
-        budgetByTrade,
-        recentActivity,
+        budgetByTrade,,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: [] },
         alerts,
