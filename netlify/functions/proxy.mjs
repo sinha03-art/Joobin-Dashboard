@@ -337,7 +337,7 @@ export const handler = async (event) => {
         kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
         gates,
         topVendors,
-        budgetByTrade,,
+        budgetByTrade,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: [] },
         alerts,
