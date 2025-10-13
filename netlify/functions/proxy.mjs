@@ -19,7 +19,10 @@ const {
   PAYMENTS_DB_ID,
   UPDATE_PASSWORD,
 } = process.env;
-
+// --- Constants ---
+const NOTION_VERSION = '2022-06-28';
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const CONSTRUCTION_START_DATE = '2025-11-22';
 const REQUIRED_BY_GATE = {
   "G0 Pre Construction": ["G0 - Move out to temporary residence"],
   "G1 Concept": [
