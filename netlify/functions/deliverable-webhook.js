@@ -1,45 +1,6 @@
 const { Client } = require('@notionhq/client');
 const nodemailer = require('nodemailer');
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
-const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
-
-// Email setup
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
-  }
-});
-
-async function sendNotification(deliverable, submittedBy, pageUrl) {
-  const emailBody = `
-<h2>📋 New Deliverable Submitted</h2>
-
-<p><strong>Deliverable:</strong> ${deliverable}</p>
-<p><strong>Submitted by:</strong> ${submittedBy}</p>
-<p><strong>Status:</strong> Submitted</p>
-
-<p><a href="${pageUrl}" style="background: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View in Notion →</a></p>
-
-<hr>
-<p style="color: #999; font-size: 12px;">JOOBIN RENOVATION COMMAND CENTER</p>
-  `;
-
-  const recipients = [
-    'solomonchong2011@gmail.com',
-    'sinha03@gmail.com'
-  ];
-
-  await transporter.sendMail({
-    from: process.env.GMAIL_USER,
-    to: recipients.join(', '),
-    subject: `📋 New Deliverable: ${deliverable}`,
-    html: emailBody
-  });
-}
-
 exports.handler = async (event) => {
   // Security check
   const authHeader = event.headers['authorization'];
@@ -50,6 +11,10 @@ exports.handler = async (event) => {
   const { pageId } = JSON.parse(event.body);
   
   try {
+    // Initialize Notion client here
+    const notion = new Client({ auth: process.env.NOTION_API_KEY });
+    const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
+    
     const newPage = await notion.pages.retrieve({ page_id: pageId });
     const deliverable = newPage.properties['Deliverable']?.multi_select?.[0]?.name;
     
@@ -65,6 +30,32 @@ exports.handler = async (event) => {
     
     const existingPage = searchResults.results.find(page => page.id !== pageId);
     
+    // Send email function
+    const sendEmail = async (deliverable, submittedBy, pageUrl) => {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD
+        }
+      });
+
+      await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: 'solomonchong2011@gmail.com, sinha03@gmail.com',
+        subject: `📋 New Deliverable: ${deliverable}`,
+        html: `
+<h2>📋 New Deliverable Submitted</h2>
+<p><strong>Deliverable:</strong> ${deliverable}</p>
+<p><strong>Submitted by:</strong> ${submittedBy}</p>
+<p><strong>Status:</strong> Submitted</p>
+<p><a href="${pageUrl}" style="background: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View in Notion →</a></p>
+<hr>
+<p style="color: #999; font-size: 12px;">JOOBIN RENOVATION COMMAND CENTER</p>
+        `
+      });
+    };
+    
     if (!existingPage) {
       // New submission - update and notify
       await notion.pages.update({
@@ -75,10 +66,9 @@ exports.handler = async (event) => {
         }
       });
       
-      // Send email notification
-      const submittedBy = newPage.properties['Submitted By']?.multi_select?.[0]?.name || 'Unknown';
+      const submittedBy = newPage.properties['Submitted By']?.multi_select?.[0]?.name || 'Designer';
       const pageUrl = `https://notion.so/${pageId.replace(/-/g, '')}`;
-      await sendNotification(deliverable, submittedBy, pageUrl);
+      await sendEmail(deliverable, submittedBy, pageUrl);
       
       return {
         statusCode: 200,
@@ -120,10 +110,9 @@ exports.handler = async (event) => {
     
     await notion.blocks.delete({ block_id: pageId });
     
-    // Send email notification
-    const submittedBy = newPage.properties['Submitted By']?.multi_select?.[0]?.name || 'Unknown';
+    const submittedBy = newPage.properties['Submitted By']?.multi_select?.[0]?.name || 'Designer';
     const pageUrl = `https://notion.so/${existingPage.id.replace(/-/g, '')}`;
-    await sendNotification(deliverable, submittedBy, pageUrl);
+    await sendEmail(deliverable, submittedBy, pageUrl);
     
     return {
       statusCode: 200,
