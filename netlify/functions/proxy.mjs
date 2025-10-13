@@ -179,15 +179,32 @@ export const handler = async (event) => {
         const deliverableType = extractText(getProp(p, 'Select Deliverable:'));
         const gate = extractText(getProp(p, 'Gate'));
 
-        // DEBUG: Log raw status property for G1 items
-        if (deliverableType && deliverableType.includes('G1')) {
-          console.log('DEBUG - Raw properties for', deliverableType, ':', {
-            statusProp: p.properties['Status'],
-            reviewStatusProp: p.properties['Review Status'],
-            categoryProp: p.properties['Category']
-          });
-        }
+        const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
 
+        // DEBUG: Log the keys
+        console.log('DEBUG - First 10 existing keys:', Array.from(existingDeliverableKeys).slice(0, 10));
+
+        const allDeliverablesIncludingMissing = [...processedDeliverables];
+
+        Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
+          requiredDocs.forEach(requiredTitle => {
+            const requiredKey = norm(`${gateName}|${requiredTitle}`);
+            const exists = existingDeliverableKeys.has(requiredKey);
+
+            // DEBUG: Log G1 items
+            if (gateName === 'G1 Concept') {
+              console.log('DEBUG - Checking required:', requiredTitle, 'key:', requiredKey, 'exists:', exists);
+            }
+
+            if (!exists) {
+              allDeliverablesIncludingMissing.push({
+                title: requiredTitle, deliverableType: requiredTitle, gate: gateName,
+                status: 'Missing', assignees: [], url: '#'
+              });
+            }
+          });
+        });
+        
         // Check if this deliverable is critical for its gate
         const isCritical = REQUIRED_BY_GATE[gate]?.some(reqType =>
           norm(deliverableType) === norm(reqType)
