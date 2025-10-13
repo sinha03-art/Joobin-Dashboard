@@ -171,29 +171,30 @@ export const handler = async (event) => {
 
       const now = new Date();
 
-      const budgetSubtotal = (budgetData.results || []).filter(p => extractText(getProp(p, 'inScope', 'In Scope'))).reduce((sum, p) => (sum + (extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0)), 0);
+      // Budget calculation
+      const budgetSubtotal = (budgetData.results || [])
+        .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
+        .reduce((sum, p) => {
+          const supply = extractText(getProp(p, 'supply_myr', 'Supply (MYR)')) || 0;
+          const install = extractText(getProp(p, 'install_myr', 'Install (MYR)')) || 0;
+          return sum + supply + install;
+        }, 0);
       const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
 
+      // Process deliverables from Notion
       const processedDeliverables = (deliverablesData.results || []).map(p => {
         const category = extractText(getProp(p, 'Category'));
         const isConstruction = category === 'Construction Certificate';
         const deliverableType = extractText(getProp(p, 'Select Deliverable:'));
-        const gate = extractText(getProp(p, 'Gate'));
+        const gateArray = getProp(p, 'Gate')?.multi_select || [];
+        const gate = gateArray.length > 0 ? gateArray[0].name : extractText(getProp(p, 'Gate (Auto)'));
 
-        // DEBUG: Log raw status property for G1 items
-        if (deliverableType && deliverableType.includes('G1')) {
-          console.log('DEBUG - Raw properties for', deliverableType, ':', {
-            statusProp: p.properties['Status'],
-            reviewStatusProp: p.properties['Review Status'],
-            categoryProp: p.properties['Category']
-          });
-        }
-
-        // Check if this deliverable is critical for its gate
+        // Determine if critical
         const isCritical = REQUIRED_BY_GATE[gate]?.some(reqType =>
           norm(deliverableType) === norm(reqType)
         ) || false;
 
+        // Extract status
         let status;
         if (isConstruction) {
           const reviewStatus = extractText(getProp(p, 'Review Status'));
@@ -203,44 +204,45 @@ export const handler = async (event) => {
         }
 
         return {
+          id: p.id,
           title: deliverableType,
           deliverableType: deliverableType,
           gate: gate,
           status: status || 'Missing',
           category: category,
-          isCritical: isCritical,  // NEW FLAG
+          isCritical: isCritical,
           assignees: (getProp(p, 'Owner')?.people || []).map(person => person.name || ''),
           url: p.url,
           dueDate: extractText(getProp(p, 'Target Due')),
           priority: extractText(getProp(p, 'Priority')),
         };
       });
-      // NOW add debug AFTER the map is complete:
-      console.log('DEBUG - Processed deliverables count:', processedDeliverables.length);
-      console.log('DEBUG - Sample G1 with status:', processedDeliverables
-        .filter(d => d.gate === 'G1 Concept')
-        .map(d => ({ title: d.title, status: d.status }))
+
+      // Add missing required deliverables as placeholders
+      const existingKeys = new Set(
+        processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`))
       );
 
-
-      const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
       const allDeliverablesIncludingMissing = [...processedDeliverables];
+
       Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
         requiredDocs.forEach(requiredTitle => {
-          if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
-            allDeliverablesIncludingMissing.push({ id: null, title: requiredTitle, deliverableType: requiredTitle, gate: gateName, status: 'Missing', assignees: [], url: '#' });
+          const key = norm(`${gateName}|${requiredTitle}`);
+          if (!existingKeys.has(key)) {
+            allDeliverablesIncludingMissing.push({
+              id: null,
+              title: requiredTitle,
+              deliverableType: requiredTitle,
+              gate: gateName,
+              status: 'Missing',
+              category: 'Design Document',
+              isCritical: true,
+              assignees: [],
+              url: '#'
+            });
           }
         });
       });
-      console.log('DEBUG - Sample G1 items:',
-        allDeliverablesIncludingMissing
-          .filter(d => d.gate === 'G1 Concept')
-          .map(d => ({
-            title: d.deliverableType,
-            status: norm(d.status),
-            matches: REQUIRED_BY_GATE['G1 Concept'].some(r => norm(d.deliverableType) === norm(r))
-          }))
-      );
       // Calculate gates - count ALL deliverables, mark critical ones
       const gates = Object.entries(REQUIRED_BY_GATE)
         .map(([gateName, requiredDocs]) => {
