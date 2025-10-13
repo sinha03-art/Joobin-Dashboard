@@ -328,7 +328,7 @@ export const handler = async (event) => {
           const total = supply + install;
           acc[trade] = (acc[trade] || 0) + total;
           return acc;
-        }, {}); // ← ADD {} HERE
+        }, {}); // ← Closes budgetByTrade
 
       // Process recent activity
       const recentActivity = (activityLogData.results || []).slice(0, 10).map(p => ({
@@ -339,107 +339,116 @@ export const handler = async (event) => {
         source: extractText(getProp(p, 'Source')),
         url: p.url
       }));
-      // NEW: Create deliverable task endpoint
-      if (httpMethod === 'POST' && path.endsWith('/create-task')) {
-        const body = JSON.parse(event.body || '{}');
-        const { taskName, gate, dueDate, priority, comments } = body;
 
-        if (!taskName || !gate) {
-          return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
-        }
+      const responseData = {
+        kpis: { budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR, deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length, totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0, milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length },
+        gates,
+        topVendors,
+        budgetByTrade,
+        recentActivity,
+        deliverables: allDeliverablesIncludingMissing,
+        paymentsSchedule: { upcoming: upcomingPayments, overdue: overduePayments, recentPaid: recentPaidPayments, forecast: [] },
+        alerts,
+        timestamp: new Date().toISOString()
+      };
 
-        try {
-          const createUrl = `https://api.notion.com/v1/pages`;
-          const newPage = {
-            parent: { database_id: DELIVERABLES_DB_ID },
-            properties: {
-              'Select Deliverable:': { title: [{ text: { content: taskName } }] },
-              'Gate': { multi_select: [{ name: gate }] },
-              'Status': { select: { name: 'Missing' } },
-              'Category': { multi_select: [{ name: 'Design Document' }] },
-              'Submitted By': { multi_select: [{ name: 'Designer' }] },
-              'Critical Path': { checkbox: priority === 'Critical' },
-              'Comments': { rich_text: [{ text: { content: comments || '' } }] },
-              'Tentative?': { checkbox: false }
-            }
+      return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+    } // ← This closes the GET /proxy handler
+
+    // NEW: Create deliverable task endpoint
+    if (httpMethod === 'POST' && path.endsWith('/create-task')) {
+      try {
+        const createUrl = `https://api.notion.com/v1/pages`;
+        const newPage = {
+          parent: { database_id: DELIVERABLES_DB_ID },
+          properties: {
+            'Select Deliverable:': { title: [{ text: { content: taskName } }] },
+            'Gate': { multi_select: [{ name: gate }] },
+            'Status': { select: { name: 'Missing' } },
+            'Category': { multi_select: [{ name: 'Design Document' }] },
+            'Submitted By': { multi_select: [{ name: 'Designer' }] },
+            'Critical Path': { checkbox: priority === 'Critical' },
+            'Comments': { rich_text: [{ text: { content: comments || '' } }] },
+            'Tentative?': { checkbox: false }
+          }
+        };
+
+        // Add due date if provided
+        if (dueDate) {
+          newPage.properties['Target Due'] = {
+            date: { start: dueDate, is_datetime: true }
           };
-
-          // Add due date if provided
-          if (dueDate) {
-            newPage.properties['Target Due'] = {
-              date: { start: dueDate, is_datetime: true }
-            };
-          }
-
-          const res = await fetch(createUrl, {
-            method: 'POST',
-            headers: notionHeaders(),
-            body: JSON.stringify(newPage)
-          });
-
-          if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Notion API error: ${res.status}: ${errText}`);
-          }
-
-          const createdPage = await res.json();
-          return { statusCode: 200, headers, body: JSON.stringify({ success: true, pageUrl: createdPage.url }) };
-        } catch (error) {
-          console.error('Create task error:', error);
-          return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
         }
+
+        const res = await fetch(createUrl, {
+          method: 'POST',
+          headers: notionHeaders(),
+          body: JSON.stringify(newPage)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Notion API error: ${res.status}: ${errText}`);
+        }
+
+        const createdPage = await res.json();
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, pageUrl: createdPage.url }) };
+      } catch (error) {
+        console.error('Create task error:', error);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
       }
-      // --- POST Request: Handle Updates ---
-      if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-        const body = JSON.parse(event.body || '{}');
-        if (body.action) {
-          if (!UPDATE_PASSWORD || body.password !== UPDATE_PASSWORD) {
-            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Incorrect password.' }) };
-          }
-          switch (body.action) {
-            case 'mark_payment_paid':
-              await updateNotionPage(body.pageId, { "Status": { "status": { "name": "Paid" } }, "PaidDate": { "date": { "start": new Date().toISOString().split('T')[0] } } });
-              return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Payment marked as paid.' }) };
-
-            case 'mark_gate_approved':
-              const allDeliverables = (await queryNotionDB(DELIVERABLES_DB_ID)).results;
-              // Filter for deliverables that are part of the required list for that gate
-              const requiredDocsForGate = REQUIRED_BY_GATE[body.gateName] || [];
-              const deliverablesToUpdate = allDeliverables.filter(p => {
-                const gate = extractText(getProp(p, 'Gate (Auto)'));
-                const type = extractText(getProp(p, 'Select Deliverable:'));
-                return gate === body.gateName && requiredDocsForGate.some(req => norm(req) === norm(type));
-              });
-
-              const updatePromises = deliverablesToUpdate.map(p => {
-                const category = extractText(getProp(p, 'Category'));
-                const isConstruction = category === 'Construction Certificate';
-                let propertiesToUpdate;
-                if (isConstruction) {
-                  propertiesToUpdate = { "Review Status": { "select": { "name": "Approved" } } };
-                } else {
-                  propertiesToUpdate = { "Status": { "select": { "name": "Approved" } } };
-                }
-                return updateNotionPage(p.id, propertiesToUpdate);
-              });
-              await Promise.all(updatePromises);
-              return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: `All deliverables for ${body.gateName} approved.` }) };
-
-            default:
-              return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action.' }) };
-          }
-        }
-        else {
-          // AI Summary request...
-          const prompt = `Summarize this project data: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and progress.`;
-          const summary = await callGemini(prompt);
-          return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
-        }
-      }
-      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
-    } catch (error) {
-      console.error('Handler error:', error);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
     }
-  };
+    // --- POST Request: Handle Updates ---
+    if (httpMethod === 'POST' && path.endsWith('/proxy')) {
+      const body = JSON.parse(event.body || '{}');
+      if (body.action) {
+        if (!UPDATE_PASSWORD || body.password !== UPDATE_PASSWORD) {
+          return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Incorrect password.' }) };
+        }
+        switch (body.action) {
+          case 'mark_payment_paid':
+            await updateNotionPage(body.pageId, { "Status": { "status": { "name": "Paid" } }, "PaidDate": { "date": { "start": new Date().toISOString().split('T')[0] } } });
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Payment marked as paid.' }) };
+
+          case 'mark_gate_approved':
+            const allDeliverables = (await queryNotionDB(DELIVERABLES_DB_ID)).results;
+            // Filter for deliverables that are part of the required list for that gate
+            const requiredDocsForGate = REQUIRED_BY_GATE[body.gateName] || [];
+            const deliverablesToUpdate = allDeliverables.filter(p => {
+              const gate = extractText(getProp(p, 'Gate (Auto)'));
+              const type = extractText(getProp(p, 'Select Deliverable:'));
+              return gate === body.gateName && requiredDocsForGate.some(req => norm(req) === norm(type));
+            });
+
+            const updatePromises = deliverablesToUpdate.map(p => {
+              const category = extractText(getProp(p, 'Category'));
+              const isConstruction = category === 'Construction Certificate';
+              let propertiesToUpdate;
+              if (isConstruction) {
+                propertiesToUpdate = { "Review Status": { "select": { "name": "Approved" } } };
+              } else {
+                propertiesToUpdate = { "Status": { "select": { "name": "Approved" } } };
+              }
+              return updateNotionPage(p.id, propertiesToUpdate);
+            });
+            await Promise.all(updatePromises);
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: `All deliverables for ${body.gateName} approved.` }) };
+
+          default:
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action.' }) };
+        }
+      }
+      else {
+        // AI Summary request...
+        const prompt = `Summarize this project data: Budget ${body.kpis?.budgetMYR || 0} MYR, Paid ${body.kpis?.paidMYR || 0} MYR. Deliverables ${body.kpis?.deliverablesApproved || 0}/${body.kpis?.deliverablesTotal || 0} approved. Milestones at risk: ${body.kpis?.milestonesAtRisk || 0}. Overdue payments: ${body.kpis?.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and progress.`;
+        const summary = await callGemini(prompt);
+        return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
+      }
+    }
+    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+  } catch (error) {
+    console.error('Handler error:', error);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
+  }
+};
 
