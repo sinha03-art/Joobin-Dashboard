@@ -21,15 +21,15 @@ async function sendNotification(deliverable, submittedBy, pageUrl) {
 <p><strong>Submitted by:</strong> ${submittedBy}</p>
 <p><strong>Status:</strong> Submitted</p>
 
-<p><a href="${pageUrl}">View in Notion →</a></p>
+<p><a href="${pageUrl}" style="background: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View in Notion →</a></p>
 
 <hr>
 <p style="color: #999; font-size: 12px;">JOOBIN RENOVATION COMMAND CENTER</p>
   `;
 
   const recipients = [
-    'solomonchong2011@gmail.com',  // Replace with real email
-    'sinha03@gmail.com'  // Replace with real email
+    'solomonchong2011@gmail.com',
+    'sinha03@gmail.com'
   ];
 
   await transporter.sendMail({
@@ -137,6 +137,7 @@ exports.handler = async (event) => {
     };
     
   } catch (error) {
+    console.error('Webhook error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
