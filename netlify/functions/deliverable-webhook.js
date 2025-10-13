@@ -1,8 +1,10 @@
 const { Client } = require('@notionhq/client');
 const nodemailer = require('nodemailer');
 
+const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
+const ACTIVITY_LOG_DB_ID = 'd754a17902804b77a16dc4fdd3e59695'; // Your new Activity Log DB
+
 exports.handler = async (event) => {
-  // Security check
   const authHeader = event.headers['authorization'];
   if (!process.env.WEBHOOK_SECRET || authHeader !== `Bearer ${process.env.WEBHOOK_SECRET}`) {
     return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
@@ -11,17 +13,29 @@ exports.handler = async (event) => {
   const { pageId } = JSON.parse(event.body);
   
   try {
-    // Initialize Notion inside handler
     const notion = new Client({ auth: process.env.NOTION_API_KEY });
     
     // Get page details
     const page = await notion.pages.retrieve({ page_id: pageId });
     
-    // Extract info
     const deliverable = page.properties['Deliverable']?.multi_select?.[0]?.name || 'Unknown';
     const submittedBy = page.properties['Submitted By']?.multi_select?.[0]?.name || 'Designer';
     const comments = page.properties['Comments']?.rich_text?.[0]?.plain_text || '';
     const pageUrl = `https://notion.so/${pageId.replace(/-/g, '')}`;
+    
+    // Log submission activity
+    await notion.pages.create({
+      parent: { database_id: ACTIVITY_LOG_DB_ID },
+      properties: {
+        'Name': { title: [{ text: { content: `${deliverable} submitted` } }] },
+        'date:Timestamp:start': new Date().toISOString(),
+        'date:Timestamp:is_datetime': 1,
+        'Event Type': { select: { name: 'Submitted' } },
+        'Deliverable': { relation: [{ id: pageId }] },
+        'Details': { rich_text: [{ text: { content: `Deliverable "${deliverable}" submitted by ${submittedBy}. Comments: ${comments || 'None'}` } }] },
+        'Source': { select: { name: 'Webhook' } }
+      }
+    });
     
     // Send email
     const transporter = nodemailer.createTransport({
@@ -47,9 +61,23 @@ exports.handler = async (event) => {
       `
     });
     
+    // Log email sent activity
+    await notion.pages.create({
+      parent: { database_id: ACTIVITY_LOG_DB_ID },
+      properties: {
+        'Name': { title: [{ text: { content: `Email sent for ${deliverable}` } }] },
+        'date:Timestamp:start': new Date().toISOString(),
+        'date:Timestamp:is_datetime': 1,
+        'Event Type': { select: { name: 'Email Sent' } },
+        'Deliverable': { relation: [{ id: pageId }] },
+        'Details': { rich_text: [{ text: { content: `Notification email sent to reviewers (Solomon & Harminder)` } }] },
+        'Source': { select: { name: 'Webhook' } }
+      }
+    });
+    
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, deliverable, notified: true })
+      body: JSON.stringify({ success: true, deliverable, notified: true, logged: true })
     };
     
   } catch (error) {
