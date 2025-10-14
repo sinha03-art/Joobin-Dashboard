@@ -91,20 +91,17 @@
     </div>
 
     <script>
-        // Format currency
         function formatMYR(amount) {
             if (amount === null || amount === undefined) return 'RM 0.00';
             return 'RM ' + Number(amount).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // Format date
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             const date = new Date(dateString);
             return date.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
-        // Time ago helper
         function timeAgo(dateString) {
             if (!dateString) return 'Unknown';
             const date = new Date(dateString);
@@ -124,7 +121,6 @@
             return `${months}mo ago`;
         }
 
-        // Normalize values for safe comparison
         function norm(val) {
             if (val === null || val === undefined) return 0;
             if (typeof val === 'number') return val;
@@ -136,7 +132,6 @@
             return 0;
         }
 
-        // Render KPIs
         function renderKPIs(kpis) {
             const container = document.getElementById('kpi-container');
             if (!kpis) {
@@ -145,13 +140,13 @@
             }
 
             const kpiCards = [
-                { label: 'Total Budget', value: formatMYR(kpis.totalBudget), icon: '💰' },
-                { label: 'Total Paid', value: formatMYR(kpis.totalPaid), icon: '💳' },
-                { label: 'Remaining Budget', value: formatMYR(kpis.remainingBudget), icon: '📊' },
-                { label: 'Approved Gates', value: `${kpis.approvedGates || 0} / ${kpis.totalGates || 6}`, icon: '✅' },
-                { label: 'Completed Deliverables', value: `${kpis.completedDeliverables || 0} / ${kpis.totalDeliverables || 0}`, icon: '📦' },
-                { label: 'Overdue Items', value: kpis.overdueCount || 0, icon: '⚠️' },
-                { label: 'Active Vendors', value: kpis.activeVendors || 0, icon: '🏢' }
+                { label: 'Total Budget', value: formatMYR(kpis.budgetMYR), icon: '💰' },
+                { label: 'Total Paid', value: formatMYR(kpis.paidMYR), icon: '💳' },
+                { label: 'Remaining Budget', value: formatMYR(kpis.remainingMYR), icon: '📊' },
+                { label: 'Approved Gates', value: `${kpis.deliverablesApproved || 0} / ${kpis.deliverablesTotal || 0}`, icon: '✅' },
+                { label: 'Completed Deliverables', value: `${kpis.deliverablesApproved || 0} / ${kpis.deliverablesTotal || 0}`, icon: '📦' },
+                { label: 'Overdue Payments', value: formatMYR(kpis.totalOverdueMYR || 0), icon: '⚠️' },
+                { label: 'Progress', value: `${Math.round((kpis.deliverablesProgress || 0) * 100)}%`, icon: '📈' }
             ];
 
             container.innerHTML = kpiCards.map(kpi => `
@@ -163,13 +158,12 @@
             `).join('');
         }
 
-        // Render tabs
         function renderTabs() {
             const tabs = [
-                { id: 'activity', label: '📋 Recent Activity', icon: '📋' },
-                { id: 'gates', label: '🎯 Gate Progress', icon: '🎯' },
-                { id: 'vendors', label: '🏢 Top Vendors', icon: '🏢' },
-                { id: 'charts', label: '📊 Charts', icon: '📊' }
+                { id: 'activity', label: '📋 Recent Activity' },
+                { id: 'gates', label: '🎯 Gate Progress' },
+                { id: 'vendors', label: '🏢 Top Vendors' },
+                { id: 'charts', label: '📊 Charts' }
             ];
 
             const container = document.getElementById('tabs-container');
@@ -179,7 +173,6 @@
                 </div>
             `).join('');
 
-            // Add click handlers
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.addEventListener('click', () => {
                     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -189,7 +182,6 @@
             });
         }
 
-        // Switch tab content
         function switchTab(tabId) {
             const data = window.dashboardData;
             if (!data) return;
@@ -210,7 +202,6 @@
             }
         }
 
-        // Render activity feed
         function renderActivity(activities) {
             const container = document.getElementById('content-container');
             
@@ -219,47 +210,56 @@
                 return;
             }
 
-            const getIcon = (type) => {
+            const getIcon = (eventType) => {
                 const icons = {
                     'Deliverable Submitted': '📤',
                     'Gate Approved': '✅',
                     'Payment Made': '💳',
+                    'Payment_Created': '💳',
                     'Document Updated': '📝',
                     'Review Completed': '👁️',
                     'Status Changed': '🔄',
                     'Comment Added': '💬',
-                    'File Uploaded': '📎'
+                    'File Uploaded': '📎',
+                    'Approval_Required': '⚠️',
+                    'PDF_Processed': '📄',
+                    'Unit_Converted': '🔄',
+                    'Vendor_Registered': '🏢'
                 };
-                return icons[type] || '📋';
+                return icons[eventType] || '📋';
             };
 
-            const getColor = (type) => {
+            const getColor = (eventType) => {
                 const colors = {
                     'Deliverable Submitted': '#3498db',
                     'Gate Approved': '#27ae60',
                     'Payment Made': '#9b59b6',
+                    'Payment_Created': '#9b59b6',
                     'Document Updated': '#f39c12',
                     'Review Completed': '#1abc9c',
                     'Status Changed': '#e74c3c',
                     'Comment Added': '#34495e',
-                    'File Uploaded': '#16a085'
+                    'File Uploaded': '#16a085',
+                    'Approval_Required': '#e74c3c',
+                    'PDF_Processed': '#3498db',
+                    'Unit_Converted': '#f39c12',
+                    'Vendor_Registered': '#27ae60'
                 };
-                return colors[type] || '#95a5a6';
+                return colors[eventType] || '#95a5a6';
             };
 
             container.innerHTML = activities.map(activity => `
-                <div class="activity-item" style="border-left-color: ${getColor(activity.type)}">
+                <div class="activity-item" style="border-left-color: ${getColor(activity.eventType)}">
                     <div class="activity-header">
-                        <div class="activity-type">${getIcon(activity.type)} ${activity.type}</div>
+                        <div class="activity-type">${getIcon(activity.eventType)} ${activity.eventType}</div>
                         <div class="activity-time">${timeAgo(activity.timestamp)}</div>
                     </div>
-                    <div class="activity-description">${activity.description || 'No description'}</div>
-                    ${activity.company ? `<div class="activity-company">🏢 ${activity.company}</div>` : ''}
+                    <div class="activity-description">${activity.details || activity.deliverable || 'No description'}</div>
+                    ${activity.source ? `<div class="activity-company">🏢 ${activity.source}</div>` : ''}
                 </div>
             `).join('');
         }
 
-        // Render gate progress
         function renderGates(gates) {
             const container = document.getElementById('content-container');
             
@@ -269,25 +269,25 @@
             }
 
             container.innerHTML = gates.map(gate => {
-                const percentage = gate.totalRequired > 0 
-                    ? Math.round((gate.completed / gate.totalRequired) * 100) 
+                const percentage = gate.total > 0 
+                    ? Math.round((gate.approved / gate.total) * 100) 
                     : 0;
                 
                 let statusClass = 'status-pending';
                 let statusText = 'Pending';
                 
-                if (gate.status === 'Approved') {
+                if (percentage === 100) {
                     statusClass = 'status-approved';
                     statusText = '✅ Approved';
-                } else if (gate.isOverdue) {
+                } else if (gate.criticalApproved < gate.criticalTotal) {
                     statusClass = 'status-overdue';
-                    statusText = '⚠️ Overdue';
+                    statusText = '⚠️ Critical Items Pending';
                 }
 
                 return `
                     <div class="gate-progress">
                         <div class="gate-header">
-                            <div class="gate-name">${gate.name}</div>
+                            <div class="gate-name">${gate.gate}</div>
                             <div class="gate-status ${statusClass}">${statusText}</div>
                         </div>
                         <div class="progress-bar">
@@ -296,24 +296,14 @@
                             </div>
                         </div>
                         <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 10px;">
-                            ${gate.completed} of ${gate.totalRequired} deliverables completed
+                            ${gate.approved} of ${gate.total} deliverables completed
+                            ${gate.criticalTotal > 0 ? ` • ${gate.criticalApproved}/${gate.criticalTotal} critical items` : ''}
                         </div>
-                        ${gate.deliverables && gate.deliverables.length > 0 ? `
-                            <div class="deliverable-list">
-                                <strong>Required Deliverables:</strong>
-                                ${gate.deliverables.map(d => `
-                                    <div class="deliverable-item">
-                                        ${d.completed ? '✅' : '⏳'} ${d.name}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
                     </div>
                 `;
             }).join('');
         }
 
-        // Render top vendors
         function renderTopVendors(vendors) {
             const container = document.getElementById('content-container');
             
@@ -327,18 +317,14 @@
                     ${vendors.map(vendor => `
                         <div class="vendor-card">
                             <div class="vendor-name">🏢 ${vendor.name || 'Unknown Vendor'}</div>
-                            <div class="vendor-amount">${formatMYR(vendor.amount)}</div>
-                            <div class="vendor-status">
-                                ${vendor.invoiceCount || 0} invoice${vendor.invoiceCount !== 1 ? 's' : ''}
-                                ${vendor.status ? `• ${vendor.status}` : ''}
-                            </div>
+                            <div class="vendor-amount">${formatMYR(vendor.paid)}</div>
+                            <div class="vendor-status">Total Paid</div>
                         </div>
                     `).join('')}
                 </div>
             `;
         }
 
-        // Render charts
         function renderCharts(data) {
             const container = document.getElementById('content-container');
             
@@ -349,11 +335,10 @@
                 </div>
             `;
 
-            // Create budget chart
             const ctx = document.getElementById('budgetChart').getContext('2d');
             
-            const totalBudget = norm(data.kpis?.totalBudget);
-            const totalPaid = norm(data.kpis?.totalPaid);
+            const totalBudget = norm(data.kpis?.budgetMYR);
+            const totalPaid = norm(data.kpis?.paidMYR);
             const remaining = totalBudget - totalPaid;
 
             new Chart(ctx, {
@@ -376,7 +361,7 @@
                             labels: {
                                 padding: 20,
                                 font: { size: 14 },
-                                color: '#FFFFFF'
+                                color: '#2c3e50'
                             }
                         },
                         tooltip: {
@@ -396,7 +381,6 @@
             });
         }
 
-        // Initialize dashboard
         async function init() {
             try {
                 updateClock();
@@ -412,16 +396,10 @@
                 const data = await response.json();
                 console.log('Dashboard data loaded:', data);
                 
-                // Store data globally
                 window.dashboardData = data;
                 
-                // Render KPIs
                 renderKPIs(data.kpis);
-                
-                // Set up tabs
                 renderTabs();
-                
-                // Render initial content (Activity tab)
                 renderActivity(data.recentActivity || []);
                 
                 hideLoading();
@@ -441,19 +419,16 @@
             }
         }
 
-        // Show loading state
         function showLoading() {
             document.getElementById('loading').style.display = 'flex';
             document.getElementById('app').style.opacity = '0.3';
         }
 
-        // Hide loading state
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('app').style.opacity = '1';
         }
 
-        // Update clock in header
         function updateClock() {
             const now = new Date();
             const options = { 
@@ -471,21 +446,17 @@
             document.getElementById('current-time').textContent = timeString;
         }
 
-        // Prompt for update password
         async function promptForUpdate(action, itemId) {
             const modal = document.getElementById('password-modal');
             const input = document.getElementById('update-password');
             
-            // Store action details
             window.pendingUpdate = { action, itemId };
             
-            // Show modal
             modal.style.display = 'flex';
             input.value = '';
             input.focus();
         }
 
-        // Execute the pending update
         async function executeUpdate() {
             const password = document.getElementById('update-password').value;
             const { action, itemId } = window.pendingUpdate;
@@ -516,13 +487,10 @@
                     throw new Error(result.error || 'Update failed');
                 }
                 
-                // Close modal
                 cancelUpdate();
                 
-                // Show success message
                 alert('✅ ' + result.message);
                 
-                // Reload dashboard
                 location.reload();
                 
             } catch (error) {
@@ -531,21 +499,18 @@
             }
         }
 
-        // Cancel update
         function cancelUpdate() {
             document.getElementById('password-modal').style.display = 'none';
             document.getElementById('update-password').value = '';
             window.pendingUpdate = null;
         }
 
-        // Allow Enter key in password modal
         document.getElementById('update-password').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 executeUpdate();
             }
         });
 
-        // Get AI summary from backend
         async function getAISummary(context) {
             try {
                 const response = await fetch('/.netlify/functions/proxy', {
@@ -572,7 +537,6 @@
             }
         }
 
-        // Start the app
         init();
     </script>
 </body>
