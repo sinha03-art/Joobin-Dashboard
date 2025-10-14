@@ -199,12 +199,8 @@ export const handler = async (event) => {
               direction: 'ascending'
             }]
           }),
-          queryNotionDB(ACTIVITY_LOG_DB_ID, {
-            sorts: [{
-              property: 'Timestamp', direction:
-                'descending'
-            }], page_size: 20
-          }),
+          // ✅ CORRECT
+          queryNotionDB(ACTIVITY_LOG_DB_ID, { sorts: [{ property: 'Event_Timestamp', direction: 'descending' }], page_size: 20 }),
         ]);
       const now = new Date();
       // Budget calculation
