@@ -347,7 +347,7 @@ export const handler = async (event) => {
           const vendorId = extractText(getProp(p, 'Vendor_Registry', 'Vendor'));
           const vendorName = vendorMap[vendorId] || 'Unknown';
           acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
-        return acc;
+          return acc;
         }, {});
       // Convert to sorted array
       const topVendors = Object.entries(paidMYRByVendor).sort((a, b) => b[1] -
@@ -382,13 +382,13 @@ export const handler = async (event) => {
       const alerts = {
         daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) /
           (1000 * 60 * 60 * 24)),
-g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
-       paymentsOverdue: overduePayments,
-          mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
-          contractorAwarded: contractorAwarded && norm(contractorAwarded.status) ===
+        g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
+        paymentsOverdue: overduePayments,
+        mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
+        contractorAwarded: contractorAwarded && norm(contractorAwarded.status) ===
           'Approved',
 
- };
+      };
       // NEW: Budget breakdown by trade for doughnut chart
       const budgetByTrade = (budgetData.results || [])
         .filter(p => extractText(getProp(p, 'inScope', 'In Scope')))
@@ -411,29 +411,32 @@ g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprova
       }));
       const responseData = {
         kpis: {
-          budgetMYR, paidMYR, remainingMYR: budgetMYR - paidMYR,
-          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) ===
-            'approved').length, deliverablesTotal: allDeliverablesIncludingMissing.length,
-          totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum
-            + p.amount, 0), totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount,
-              0), paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0, deliverablesProgress:
-            allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d
-              => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
-          milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m,
-            'Risk_Status')) === 'At Risk').length
+          budgetMYR,
+          paidMYR,
+          remainingMYR: budgetMYR - paidMYR,
+          deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
+          deliverablesTotal: allDeliverablesIncludingMissing.length,
+          totalOutstandingMYR: [...overduePayments, ...upcomingPayments].reduce((sum, p) => sum + p.amount, 0),
+          totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
+          paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
+          deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
+          milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk_Status')) === 'At Risk').length
         },
         gates,
         topVendors,
         budgetByTrade,
         deliverables: allDeliverablesIncludingMissing,
         paymentsSchedule: {
-          upcoming: upcomingPayments, overdue: overduePayments,
-          recentPaid: recentPaidPayments, forecast: []
+          upcoming: upcomingPayments,
+          overdue: overduePayments,
+          recentPaid: recentPaidPayments,
+          forecast: []
         },
         alerts,
+        recentActivity,
         timestamp: new Date().toISOString()
-
       };
+
       return { statusCode: 200, headers, body: JSON.stringify(responseData) };
     } // ← This closes the GET /proxy handler
     // NEW: Create deliverable task endpoint
