@@ -346,9 +346,7 @@ export const handler = async (event) => {
         norm(extractText(getProp(p, 'Status'))) === 'paid').reduce((acc, p) => {
           const vendorId = extractText(getProp(p, 'Vendor_Registry', 'Vendor'));
           const vendorName = vendorMap[vendorId] || 'Unknown';
-          acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid
-            (MYR)')) || 0);
-
+          acc[vendorName] = (acc[vendorName] || 0) + (extractText(getProp(p, 'Paid (MYR)')) || 0);
         return acc;
         }, {});
       // Convert to sorted array
@@ -384,8 +382,7 @@ export const handler = async (event) => {
       const alerts = {
         daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) /
           (1000 * 60 * 60 * 24)),
-        g3NotApproved: (gates.find(g => g.gate === 'G3 Design
-Development')?.gateApprovalRate || 0) < 1,
+g3NotApproved: (gates.find(g => g.gate === 'G3 Design Development')?.gateApprovalRate || 0) < 1,
        paymentsOverdue: overduePayments,
           mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'Approved',
           contractorAwarded: contractorAwarded && norm(contractorAwarded.status) ===
