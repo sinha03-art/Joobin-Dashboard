@@ -1,4 +1,5 @@
-* JOOBIN Renovation Hub Proxy v12.0.2
+/**
+ * JOOBIN Renovation Hub Proxy v12.0.2
 * - Updated REQUIRED_BY_GATE to match the actual deliverable naming convention from
 the Deliverable multi-select options.
 * FEATURE: Added "Approve Gate" functionality, allowing all deliverables in a gate to
@@ -20,7 +21,7 @@ const {
  NOTION_WORK_PACKAGES_DB_ID,
  PAYMENTS_DB_ID,
  UPDATE_PASSWORD,
- ACTIVITY_LOG_DB_ID = 'd754a17902804b77a16dc4fdd3e59695', // Activity Log DB
+ ACTIVITY_LOG_DB_ID,
 } = process.env;
 // --- Constants ---
 const NOTION_VERSION = '2022-06-28';
