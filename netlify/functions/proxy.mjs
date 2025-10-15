@@ -141,7 +141,9 @@ async function callGemini(prompt) {
     throw new Error('Gemini API is unavailable after multiple retries.');
 }
 
-function getProp(page, name, fallback) { return page.properties ? .[name] || page.properties ? .[fallback]; }
+function getProp(page, name, fallback) {
+    return (page.properties && page.properties[name]) || (page.properties && page.properties[fallback]);
+}
 
 function extractText(prop) {
     if (!prop) return '';
