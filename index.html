@@ -502,22 +502,52 @@
             }).join('');
         }
 
-        function renderTabs(data) {
-            const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
-            const renderList = (items, type) => {
-                if (!items || items.length === 0) return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments found.</div>`;
-                return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
-                    const buttons = (type === 'overdue' || type === 'upcoming')
-                        ? `<div class="mt-2 flex gap-2"><button onclick="promptForUpdate('${item.id}', 'mark_payment_paid')" class="update-btn">Mark Paid</button>${type === 'overdue' ? `<button onclick='copyReminder(${JSON.stringify(item)})' class="update-btn copy-btn">Copy Reminder</button>` : ''}</div>`
-                        : '';
-                    return `<li class="py-4"><div class="flex items-center space-x-4"><div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${item.paymentFor}</p><p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p></div><div class="text-right"><p class="text-sm font-semibold">${formatMYR(item.amount)}</p><p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p></div></div>${buttons}</li>`;
-                }).join('')}</ul></div>`;
-            }
-            document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
-            document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
-            document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
-            document.getElementById('tabs').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { const tab = e.target.dataset.tab; document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById(`${tab}Content`).classList.add('active'); } });
+function renderTabs(data) {
+    const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
+    const renderList = (items, type) => {
+        if (!items || items.length === 0) return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments found.</div>`;
+        return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
+            // Determine if payment is pending approval
+            const isPendingApproval = item.status === 'Pending Approval';
+            
+            // Show badge instead of due date if pending approval
+            const dueDateDisplay = isPendingApproval 
+                ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">⏳ Pending Approval</span>`
+                : `<p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p>`;
+            
+            return `
+            <li class="flex items-center py-4 space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="h-10 w-10 rounded-full flex items-center justify-center ${type === 'overdue' ? 'bg-red-500/10 text-red-400' : isPendingApproval ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-700 text-slate-400'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">${item.paymentFor}</p>
+                    <p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-semibold">${formatMYR(item.amount)}</p>
+                    ${dueDateDisplay}
+                </div>
+            </li>`;
+        }).join('')}</ul></div>`;
+    }
+    document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
+    document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
+    document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
+    document.getElementById('tabs').addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            const tab = e.target.dataset.tab;
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`${tab}Content`).classList.add('active');
         }
+    });
+}
 
         function renderGates(gates) {
             const container = document.getElementById('gates');
