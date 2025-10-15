@@ -118,7 +118,12 @@ async function callGemini(prompt) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
-            if (res.ok) return (await res.json()).candidates ? .[0] ? .content ? .parts ? .[0] ? .text || '';
+            if (res.ok) {
+                const json = await res.json();
+                return (json.candidates && json.candidates[0] && json.candidates[0].content &&
+                    json.candidates[0].content.parts && json.candidates[0].content.parts[0] &&
+                    json.candidates[0].content.parts[0].text) || '';
+            }
             if (res.status === 503) {
                 console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
                 await sleep(delay);
