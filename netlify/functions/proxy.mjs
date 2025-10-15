@@ -142,7 +142,8 @@ async function callGemini(prompt) {
 }
 
 function getProp(page, name, fallback) {
-    return (page.properties && page.properties[name]) || (page.properties && page.properties[fallback]);
+    if (!page.properties) return undefined;
+    return page.properties[name] || page.properties[fallback];
 }
 
 function extractText(prop) {
