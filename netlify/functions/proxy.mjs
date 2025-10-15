@@ -113,13 +113,22 @@ async function callGemini(prompt) {
     let delay = 1000;
     for (let i = 0; i < 3; i++) {
         try {
-            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
             if (res.ok) return (await res.json()).candidates ? .[0] ? .content ? .parts ? .[0] ? .text || '';
-            if (res.status === 503) { await sleep(delay);
-                delay *= 2; continue; }
+            if (res.status === 503) {
+                console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
+                await sleep(delay);
+                delay *= 2;
+                continue;
+            }
             throw new Error(`Gemini API error: ${res.status}: ${await res.text()}`);
         } catch (error) {
             if (i === 2) throw error;
+            console.warn(`Network error calling Gemini. Retrying...`, error.message);
             await sleep(delay);
             delay *= 2;
         }
