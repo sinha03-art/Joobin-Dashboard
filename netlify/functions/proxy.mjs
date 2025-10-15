@@ -149,19 +149,18 @@ function getProp(page, name, fallback) {
 function extractText(prop) {
     if (!prop) return '';
     const propType = prop.type;
-    if (propType === 'title') return prop.title ? .[0] ? .plain_text || '';
-    if (propType === 'rich_text') return prop.rich_text ? .[0] ? .plain_text || '';
-    if (propType === 'select') return prop.select ? .name || '';
-    if (propType === 'status') return prop.status ? .name || '';
+    if (propType === 'title') return (prop.title && prop.title[0] && prop.title[0].plain_text) || '';
+    if (propType === 'rich_text') return (prop.rich_text && prop.rich_text[0] && prop.rich_text[0].plain_text) || '';
+    if (propType === 'select') return (prop.select && prop.select.name) || '';
+    if (propType === 'status') return (prop.status && prop.status.name) || '';
     if (propType === 'number') return prop.number;
-    if (propType === 'date') return prop.date ? .start || null;
+    if (propType === 'date') return (prop.date && prop.date.start) || null;
     if (propType === 'formula') {
-        if (prop.formula.type === 'string') return prop.formula.string;
-        if (prop.formula.type === 'number') return prop.formula.number;
+        if (prop.formula && prop.formula.type === 'string') return prop.formula.string;
+        if (prop.formula && prop.formula.type === 'number') return prop.formula.number;
         return '';
     }
     if (propType === 'checkbox') return prop.checkbox;
-    if (propType === 'relation') return prop.relation ? .[0] ? .id || null;
     return '';
 }
 
