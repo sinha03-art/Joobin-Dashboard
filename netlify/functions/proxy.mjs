@@ -372,6 +372,18 @@ export const handler = async(event) => {
                 contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
             };
 
+            // NEW v10.0.7: Get detailed at-risk milestone information
+            const atRiskMilestones = (milestonesData.results || [])
+                .filter(m => extractText(getProp(m, 'Risk')) === 'At Risk')
+                .map(m => ({
+                    title: extractText(getProp(m, 'MilestoneTitle')),
+                    dueDate: extractText(getProp(m, 'EndDate')),
+                    issue: extractText(getProp(m, 'GateIssue')),
+                    progress: extractText(getProp(m, 'Progress')) || 0,
+                    phase: extractText(getProp(m, 'Phase')),
+                    status: extractText(getProp(m, 'Status')),
+                    url: m.url
+                }))
             const responseData = {
                 kpis: {
                     budgetMYR,
@@ -396,6 +408,7 @@ export const handler = async(event) => {
                     forecast: []
                 },
                 alerts,
+                atRiskMilestones, // ← ONLY LINE ADDED
                 timestamp: new Date().toISOString()
             };
 

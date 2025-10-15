@@ -11,90 +11,88 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
+         :root {
             --background: 222 47% 11%;
             --foreground: 210 40% 98%;
             --card: 222 47% 14%;
             --border: 217 33% 17%;
             --ring: 213 94% 68%;
         }
-
+        
         body {
             font-family: 'Inter', sans-serif;
             background-color: hsl(var(--background));
             color: hsl(var(--foreground));
         }
-
+        
         .card {
             background-color: hsl(var(--card));
             border-radius: 0.75rem;
             border: 1px solid hsl(var(--border));
         }
-
         /* Force Chart.js legend text to white */
+        
         #forecastChart+.chartjs-legend,
         .chartjs-legend-item,
         canvas+div {
             color: #ffffff !important;
         }
-
         /* Gate dependency arrows and lock animations */
+        
         .gate-circle {
             animation: draw-circle 1.5s ease-out forwards;
         }
-
+        
         @keyframes draw-circle {
             to {
                 stroke-dashoffset: 0;
             }
         }
-
         /* Deliverable card pulse effect */
+        
         .deliverable-pulse {
             animation: pulse-border 2s ease-in-out infinite;
         }
-
+        
         @keyframes pulse-border {
-
             0%,
             100% {
                 border-color: #10b981;
                 box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
             }
-
             50% {
                 border-color: #34d399;
                 box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
             }
         }
-
         /* Smooth fade for blocked gates */
+        
         .opacity-60 {
             opacity: 0.6;
             filter: grayscale(30%);
         }
-
+        
         .tab-button.active {
             color: hsl(var(--ring));
             border-bottom-color: hsl(var(--ring));
         }
-
+        
         .tab-content {
             display: none;
         }
-
+        
         .tab-content.active {
             display: block;
         }
-
+        
         #passwordModal {
             transition: opacity 0.3s ease;
         }
-
+        
         .modal-content {
             transition: transform 0.3s ease;
         }
-
+        
         .update-btn {
             background-color: hsla(213, 94%, 68%, 0.1);
             color: hsl(var(--ring));
@@ -106,42 +104,39 @@
             transition: background-color 0.2s;
             cursor: pointer;
         }
-
+        
         .update-btn:hover {
             background-color: hsla(213, 94%, 68%, 0.2);
         }
-
+        
         .copy-btn {
             background-color: hsla(250, 50%, 80%, 0.1);
             color: hsl(250, 50%, 80%);
             border: 1px solid hsl(250, 50%, 80%);
         }
-
+        
         .copy-btn:hover {
             background-color: hsla(250, 50%, 80%, 0.2);
         }
-
-
+        
         @keyframes pulse {
-
             0%,
             100% {
                 transform: scale(1);
                 box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
             }
-
             50% {
                 transform: scale(1.05);
                 box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0);
             }
         }
-
+        
         @keyframes draw-circle {
             to {
                 stroke-dashoffset: 0;
             }
         }
-
+        
         .countdown-banner {
             background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%);
             padding: 24px;
@@ -150,47 +145,47 @@
             border: 1px solid #dc2626;
             box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
         }
-
+        
         .countdown-banner.low-risk {
             background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%);
             border-color: #16a34a;
         }
-
+        
         .countdown-banner.medium-risk {
             background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%);
             border-color: #ea580c;
         }
-
+        
         .countdown-icon {
             font-size: 40px;
             animation: pulse 2.5s ease-out infinite;
         }
-
+        
         .countdown-days {
             font-size: 36px;
             font-weight: 800;
         }
-
+        
         .blocker-card {
             border: 1px solid #b91c1c;
             margin-bottom: 24px;
         }
-
+        
         .blocker-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
         /* FIX: Alignment */
+        
         .blocker-title {
             color: #f87171;
         }
-
+        
         .blocker-count {
             background: #dc2626;
         }
-
+        
         .gate-circle {
             animation: draw-circle 1.5s ease-out forwards;
         }
@@ -200,17 +195,12 @@
 <body class="flex h-screen overflow-hidden">
 
     <aside class="w-72 border-r border-slate-800 p-6 flex flex-col space-y-6 overflow-y-auto">
-        <div class="flex items-center space-x-3"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" class="text-blue-500">
+        <div class="flex items-center space-x-3"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             <h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1>
         </div>
-        <div class="aspect-video"><iframe
-                src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479"
-                frameborder="0" allow="autoplay; fullscreen; picture-in-picture" class="w-full h-full rounded-lg"
-                title="Project Demo"></iframe></div>
+        <div class="aspect-video"><iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" class="w-full h-full rounded-lg" title="Project Demo"></iframe></div>
         <div>
             <h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2>
             <p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p>
@@ -218,8 +208,7 @@
         </div>
         <div>
             <h2 class="text-base font-semibold text-slate-400 mb-2 tracking-widest">ABOUT</h2>
-            <p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground
-                up—blending structure, light, landscape, and livability into a fully modernized private residence.</p>
+            <p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground up—blending structure, light, landscape, and livability into a fully modernized private residence.</p>
         </div>
         <div class="!mt-auto pt-6 text-center text-xs text-slate-600">
             <p>Last updated: <span id="lastUpdatedSidebar">--</span></p>
@@ -229,8 +218,7 @@
     <main class="flex-1 overflow-y-auto p-6 lg:p-8">
         <div id="loader" class="flex items-center justify-center h-full">
             <div class="text-center">
-                <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 24 24">
+                <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
@@ -247,8 +235,7 @@
                     <p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p>
                 </div>
                 <div class="flex items-center justify-center text-center sm:text-left flex-grow">
-                    <div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn"
-                        class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg
+                    <div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div><button id="aiSummaryBtn" class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2"><svg
                             xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                             class="lucide lucide-sparkles">
@@ -272,14 +259,9 @@
                     <div class="card p-4 sm:p-6">
                         <h3 class="text-lg font-semibold mb-4">Action Items</h3>
                         <div class="border-b border-slate-700">
-                            <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue"
-                                    class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button
-                                    data-tab="upcoming"
-                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming
-                                    Payments</button><button data-tab="recent"
-                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
-                                    Paid</button><button data-tab="toComplete"
-                                    class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
+                            <nav class="-mb-px flex space-x-8" id="tabs"><button data-tab="overdue" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button><button data-tab="upcoming" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming
+                                    Payments</button><button data-tab="recent" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently
+                                    Paid</button><button data-tab="toComplete" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To
                                     Complete</button></nav>
                         </div>
                         <div class="mt-4 min-h-[250px] relative">
@@ -289,8 +271,7 @@
                             <div id="toCompleteContent" class="tab-content">
                                 <div class="flex justify-between items-center mb-4">
                                     <p class="text-sm text-slate-400">Upcoming deliverables and tasks</p>
-                                    <button onclick="openAddTaskModal()"
-                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
+                                    <button onclick="openAddTaskModal()" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M12 5v14M5 12h14" />
@@ -336,13 +317,11 @@
                 <form id="addTaskForm" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Task Name *</label>
-                        <input type="text" id="taskName" required
-                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="taskName" required class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Gate *</label>
-                        <select id="taskGate" required
-                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select id="taskGate" required class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Select gate...</option>
                             <option value="G0 Pre Construction">G0 Pre Construction</option>
                             <option value="G1 Concept">G1 Concept</option>
@@ -355,29 +334,24 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Due Date</label>
-                        <input type="datetime-local" id="taskDueDate"
-                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="datetime-local" id="taskDueDate" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Priority</label>
-                        <select id="taskPriority"
-                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select id="taskPriority" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="Normal">Normal</option>
                             <option value="Critical">Critical</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Comments</label>
-                        <textarea id="taskComments" rows="3"
-                            class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        <textarea id="taskComments" rows="3" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
                     <div class="flex gap-3 pt-2">
-                        <button type="submit"
-                            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors">
                             Create Task
                         </button>
-                        <button type="button" onclick="closeAddTaskModal()"
-                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md font-medium transition-colors">
+                        <button type="button" onclick="closeAddTaskModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md font-medium transition-colors">
                             Cancel
                         </button>
                     </div>
@@ -385,25 +359,45 @@
                 <div id="taskFormStatus" class="hidden mt-4 p-3 rounded-md"></div>
             </div>
         </div>
-        <div id="passwordModal" style="display: none;"
-            class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div id="passwordModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
             <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
                 <h3 id="modalTitle" class="text-lg font-bold text-white mb-4">Authentication Required</h3>
                 <p id="modalMessage" class="text-sm text-slate-400 mb-4">Please enter the update password to proceed.
                 </p>
-                <input type="password" id="passwordInput"
-                    class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="Password...">
+                <input type="password" id="passwordInput" class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Password...">
                 <div id="passwordError" class="text-red-400 text-xs mt-2 hidden">Incorrect password.</div>
                 <div class="flex justify-end gap-3 mt-6">
-                    <button onclick="cancelUpdate()"
-                        class="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
-                    <button onclick="executeUpdate()" id="executeUpdateBtn"
-                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500">
+                    <button onclick="cancelUpdate()" class="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
+                    <button onclick="executeUpdate()" id="executeUpdateBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500">
                         <span id="updateBtnText">Confirm</span>
                         <span id="updateBtnSpinner" class="hidden">Updating...</span>
                     </button>
                 </div>
+            </div>
+        </div>
+        <!-- At-Risk Milestones Modal -->
+        <div id="atRiskModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div class="bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-700">
+                <div class="flex justify-between items-center p-6 border-b border-slate-700">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500">
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                                <path d="M12 9v4" />
+                                <path d="M12 17h.01" />
+                            </svg> At-Risk Milestones
+                        </h3>
+                        <p class="text-sm text-slate-400 mt-1">These milestones need immediate attention</p>
+                    </div>
+                    <button onclick="closeAtRiskModal()" class="text-slate-400 hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="atRiskModalContent" class="p-6 overflow-y-auto flex-1"></div>
             </div>
         </div>
     </main>
@@ -418,12 +412,20 @@
         const API_URL = '/.netlify/functions/proxy';
         let dashboardData = null;
         let forecastChart = null;
-        let pendingUpdate = { pageId: null, action: null, gateName: null };
+        let pendingUpdate = {
+            pageId: null,
+            action: null,
+            gateName: null
+        };
 
         const norm = (s) => String(s || '').trim().toLowerCase();
 
         function promptForUpdate(pageId, action, gateName = null) {
-            pendingUpdate = { pageId, action, gateName };
+            pendingUpdate = {
+                pageId,
+                action,
+                gateName
+            };
             const modalTitle = document.getElementById('modalTitle');
             const modalMessage = document.getElementById('modalMessage');
             if (action === 'mark_gate_approved') {
@@ -438,11 +440,17 @@
             document.getElementById('passwordModal').style.display = 'flex';
         }
 
-        function cancelUpdate() { document.getElementById('passwordModal').style.display = 'none'; }
+        function cancelUpdate() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
 
         async function executeUpdate() {
             const password = document.getElementById('passwordInput').value;
-            if (!password) { document.getElementById('passwordError').textContent = "Password cannot be empty."; document.getElementById('passwordError').classList.remove('hidden'); return; }
+            if (!password) {
+                document.getElementById('passwordError').textContent = "Password cannot be empty.";
+                document.getElementById('passwordError').classList.remove('hidden');
+                return;
+            }
 
             const updateBtn = document.getElementById('executeUpdateBtn');
             updateBtn.disabled = true;
@@ -451,14 +459,23 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...pendingUpdate, password })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({...pendingUpdate,
+                        password
+                    })
                 });
-                if (!response.ok) { const errData = await response.json(); throw new Error(errData.error || 'Update failed.'); }
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Update failed.');
+                }
                 cancelUpdate();
                 document.getElementById('loader').style.display = 'flex';
                 document.getElementById('dashboardContent').classList.add('hidden');
-                setTimeout(() => { init(); }, 300);
+                setTimeout(() => {
+                    init();
+                }, 300);
             } catch (error) {
                 document.getElementById('passwordError').textContent = error.message;
                 document.getElementById('passwordError').classList.remove('hidden');
@@ -475,47 +492,71 @@
         }
 
         function renderKPIs(kpis) {
-            const kpiData = [
-                { title: 'Budget Used', value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`, subValue: `of ${formatMYRShort(kpis.budgetMYR)}`, icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>' },
-                { title: 'Outstanding', value: formatMYRShort(kpis.totalOutstandingMYR), subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`, icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>' },
-                { title: 'Deliverables', value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`, subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`, icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>', clickable: true },
-                { title: 'At Risk', value: kpis.milestonesAtRisk, subValue: 'Milestones require attention', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' }
-            ];
+            const kpiData = [{
+                title: 'Budget Used',
+                value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`,
+                subValue: `of ${formatMYRShort(kpis.budgetMYR)}`,
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>'
+            }, {
+                title: 'Outstanding',
+                value: formatMYRShort(kpis.totalOutstandingMYR),
+                subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`,
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>'
+            }, {
+                title: 'Deliverables',
+                value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`,
+                subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`,
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+                clickable: true
+            }, {
+                title: 'At Risk',
+                value: kpis.milestonesAtRisk,
+                subValue: 'Milestones require attention',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+                clickAction: 'showAtRiskModal'
+            }];
 
             document.getElementById('kpis').innerHTML = kpiData.map(k => {
-                const cardTag = k.clickable ? 'a' : 'div';
-                const cardProps = k.clickable ? 'href="deliverables.html" title="View Deliverables Board"' : '';
-                const specialClass = k.clickable ? 'border-green-500 border-2 hover:border-green-400 hover:shadow-green-500/50 deliverable-pulse' : '';
-                const clickPrompt = k.clickable ? '<p class="text-xs text-green-400 font-semibold mt-2 animate-pulse">👉 Click to view details</p>' : '';
+                const isClickable = k.title === 'Deliverables' || k.clickAction;
+                const cardTag = k.title === 'Deliverables' ? 'a' : 'div';
+                const cardProps = k.title === 'Deliverables' ?
+                    'href="deliverables.html" title="View Deliverables Board"' :
+                    k.clickAction ?
+                    `onclick="${k.clickAction}()" style="cursor:pointer;" title="View details"` :
+                    '';
+                const hoverClass = isClickable ? 'hover:border-blue-500' : '';
 
-                return `<${cardTag} ${cardProps} class="card p-5 ${specialClass}">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-slate-400">${k.title}</p>
-                    <p class="text-3xl font-bold mt-2">${k.value}</p>
-                    <p class="text-xs text-slate-500 mt-1">${k.subValue}</p>
-                    ${clickPrompt}
-                </div>
-                <div class="kpi-icon text-slate-600">${k.icon}</div>
+                return `<${cardTag} ${cardProps} class="card p-5 ${hoverClass}">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-slate-400">${k.title}</p>
+                <p class="text-3xl font-bold mt-2">${k.value}</p>
+                <p class="text-xs text-slate-500 mt-1">${k.subValue}</p>
             </div>
-        </${cardTag}>`;
+            <div class="kpi-icon text-slate-600">${k.icon}</div>
+        </div>
+    </${cardTag}>`;
             }).join('');
         }
 
-function renderTabs(data) {
-    const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
-    const renderList = (items, type) => {
-        if (!items || items.length === 0) return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments found.</div>`;
-        return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
-            // Determine if payment is pending approval
-            const isPendingApproval = item.status === 'Pending Approval';
-            
-            // Show badge instead of due date if pending approval
-            const dueDateDisplay = isPendingApproval 
-                ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">⏳ Pending Approval</span>`
-                : `<p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p>`;
-            
-            return `
+        function renderTabs(data) {
+            const {
+                overdue,
+                upcoming,
+                recentPaid
+            } = data.paymentsSchedule;
+            const renderList = (items, type) => {
+                    if (!items || items.length === 0) return `<div class="text-center py-10 text-slate-500 text-sm">No ${type} payments found.</div>`;
+                    return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
+                    // Determine if payment is pending approval
+                    const isPendingApproval = item.status === 'Pending Approval';
+
+                    // Show badge instead of due date if pending approval
+                    const dueDateDisplay = isPendingApproval
+                        ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">⏳ Pending Approval</span>`
+                        : `<p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p>`;
+
+                    return `
             <li class="flex items-center py-4 space-x-4">
                 <div class="flex-shrink-0">
                     <div class="h-10 w-10 rounded-full flex items-center justify-center ${type === 'overdue' ? 'bg-red-500/10 text-red-400' : isPendingApproval ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-700 text-slate-400'}">
@@ -533,21 +574,21 @@ function renderTabs(data) {
                     ${dueDateDisplay}
                 </div>
             </li>`;
-        }).join('')}</ul></div>`;
-    }
-    document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
-    document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
-    document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
-    document.getElementById('tabs').addEventListener('click', (e) => {
-        if (e.target.tagName === 'BUTTON') {
-            const tab = e.target.dataset.tab;
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            e.target.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(`${tab}Content`).classList.add('active');
+                }).join('')}</ul></div>`;
+            }
+            document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
+            document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
+            document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
+            document.getElementById('tabs').addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const tab = e.target.dataset.tab;
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(`${tab}Content`).classList.add('active');
+                }
+            });
         }
-    });
-}
 
         function renderGates(gates) {
             const container = document.getElementById('gates');
@@ -708,7 +749,40 @@ function renderTabs(data) {
             }
         }
         // --- END ADDED SECTION ---
+        // At-Risk Milestones Modal
+        function showAtRiskModal() {
+            if (!dashboardData || !dashboardData.atRiskMilestones) return;
+            const modal = document.getElementById('atRiskModal');
+            const content = document.getElementById('atRiskModalContent');
+            const milestones = dashboardData.atRiskMilestones;
 
+            if (milestones.length === 0) {
+                content.innerHTML = '<div class="text-center py-12"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-green-500 mb-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p class="text-lg font-semibold">No milestones at risk!</p><p class="text-sm text-slate-400 mt-2">All project milestones are on track.</p></div>';
+            } else {
+                const now = new Date();
+                content.innerHTML = '<div class="space-y-4">' + milestones.map(m => {
+                    const dueDate = m.dueDate ? new Date(m.dueDate) : null;
+                    const isOverdue = dueDate && dueDate < now;
+                    const daysUntil = dueDate ? Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24)) : null;
+                    return `<a href="${m.url}" target="_blank" class="block card p-5 hover:border-red-500 transition-colors"><div class="flex items-start justify-between gap-4 mb-3"><div class="flex-1"><h4 class="font-semibold text-lg">${m.title}</h4><div class="flex items-center gap-3 mt-2 text-sm"><span class="px-2 py-1 rounded-md ${isOverdue ? 'bg-red-900/40 text-red-300' : 'bg-yellow-900/40 text-yellow-300'}">${isOverdue ? '🔴 OVERDUE' : daysUntil !== null ? `⏰ ${daysUntil} days` : '📅 TBD'}</span><span class="text-slate-400">${m.phase}</span><span class="text-slate-400">•</span><span class="text-slate-400">${m.progress}% complete</span></div></div><div class="text-right flex-shrink-0"><p class="text-sm font-semibold text-slate-300">Due: ${formatDate(m.dueDate)}</p><p class="text-xs text-slate-500 mt-1">${m.status}</p></div></div>${m.issue ? `<div class="mt-3 p-3 bg-slate-900/50 rounded-md border-l-2 border-red-500"><p class="text-xs font-semibold text-red-400 mb-1">⚠️ ISSUE:</p><p class="text-sm text-slate-300">${m.issue}</p></div>` : ''}</a>`;
+                }).join('') + '</div>';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeAtRiskModal() {
+            document.getElementById('atRiskModal').classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('atRiskModal').classList.contains('hidden')) {
+                closeAtRiskModal();
+            }
+        });
+
+        document.getElementById('atRiskModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'atRiskModal') closeAtRiskModal();
+        });
         async function init() {
             try {
                 const response = await fetch(API_URL);
