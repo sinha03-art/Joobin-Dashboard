@@ -27,6 +27,7 @@ const REQUIRED_BY_GATE = {
     "G1 Concept": [
         "G1 - Moodboard",
         "G1 - Proposed renovation floor plan",
+        "G1 - Concept sketches",
         "G1 - 3D render"
     ],
     "G2 Schematic": [
