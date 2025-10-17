@@ -83,10 +83,6 @@ const notionHeaders = () => ({
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-<<<<<<< HEAD
-// Add near the top with other constants
-=======
->>>>>>> 1a4a20fd360bdbd96b1ae9f9bc5488a5c98c88b9
 
 
 async function callGemini(prompt) {
