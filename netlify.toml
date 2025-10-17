@@ -1,5 +1,5 @@
 [functions]
   directory = "netlify/functions"
 
-[functions.scheduled-dedupe]
+[functions.deliverable-webhook]
   schedule = "*/2 * * * *"
