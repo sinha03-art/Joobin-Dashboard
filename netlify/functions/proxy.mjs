@@ -81,8 +81,6 @@ const notionHeaders = () => ({
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-// Add near the top with other constants
-const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
 
 // Polling function - checks every 2 minutes for "New submission"
 async function checkForNewSubmissions() {
