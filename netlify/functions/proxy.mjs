@@ -21,6 +21,8 @@ const {
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
+const { Client } = require('@notionhq/client');
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 const REQUIRED_BY_GATE = {
     "G0 Pre Construction": ["G0 - Move out to temporary residence"],
@@ -82,60 +84,9 @@ const notionHeaders = () => ({
 const norm = (s) => String(s || '').trim().toLowerCase();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Add near the top with other constants
-const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
+//const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
 
-// Polling function - checks every 2 minutes for "New submission"
-async function checkForNewSubmissions() {
-    try {
-        const response = await notion.databases.query({
-            database_id: DELIVERABLES_DB_ID,
-            filter: {
-                property: 'Select Deliverable:',
-                title: { equals: 'New submission' }
-            }
-        });
 
-        if (response.results.length === 0) return;
-
-        console.log(`Found ${response.results.length} new submission(s)`);
-
-        for (const page of response.results) {
-            // Trigger your webhook
-            await fetch('https://joobinreno.netlify.app/.netlify/functions/deliverable-webhook', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.WEBHOOK_SECRET}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ pageId: page.id })
-            });
-        }
-    } catch (error) {
-        console.error('Polling error:', error);
-    }
-}
-
-// Start polling every 2 minutes
-setInterval(checkForNewSubmissions, 120000);
-async function queryNotionDB(dbId, filter = {}) {
-    if (!dbId) {
-        console.warn(`queryNotionDB called with no dbId. Skipping.`);
-        return { results: [] };
-    }
-    const url = `https://api.notion.com/v1/databases/${dbId}/query`;
-    try {
-        const res = await fetch(url, { method: 'POST', headers: notionHeaders(), body: JSON.stringify(filter) });
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error(`Notion API error for DB ${dbId}: ${res.status}`, errText);
-            throw new Error(`Notion API error for DB ${dbId}: ${res.status}: ${errText}`);
-        }
-        return await res.json();
-    } catch (error) {
-        console.error('queryNotionDB error:', error);
-        throw error;
-    }
-}
 
 async function callGemini(prompt) {
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
