@@ -206,7 +206,16 @@ export const handler = async(event) => {
 
                 const gateProp = getProp(p, 'Gate (Auto)');
                 const gateFormula = (gateProp && gateProp.formula && gateProp.formula.string) || '';
-                const gates = gateFormula.split(',').map(g => g.trim()).filter(g => g);
+                let gates = gateFormula.split(',').map(g => g.trim()).filter(g => g);
+
+                // FALLBACK: If Gate (Auto) is empty, use manual Gate property
+                if (gates.length === 0) {
+                    const manualGateProp = getProp(p, 'Gate');
+                    if (manualGateProp && manualGateProp.multi_select) {
+                        gates = manualGateProp.multi_select.map(g => g.name);
+                    }
+                }
+
                 const primaryGate = gates[0] || '';
 
                 const criticalPathProp = getProp(p, 'Critical Path');
