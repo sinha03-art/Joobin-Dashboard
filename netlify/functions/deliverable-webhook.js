@@ -1,15 +1,46 @@
-const { Client } = require('@notionhq/client');
-
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const DELIVERABLES_DB_ID = process.env.DELIVERABLES_DB_ID;
+const NOTION_VERSION = '2022-06-28';
+
+const notionHeaders = () => ({
+    'Authorization': `Bearer ${NOTION_API_KEY}`,
+    'Notion-Version': NOTION_VERSION,
+    'Content-Type': 'application/json',
+});
+
+async function queryNotionDB(dbId, filter = {}) {
+    const url = `https://api.notion.com/v1/databases/${dbId}/query`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: notionHeaders(),
+        body: JSON.stringify(filter)
+    });
+    return await res.json();
+}
+
+async function updatePage(pageId, properties) {
+    const url = `https://api.notion.com/v1/pages/${pageId}`;
+    const res = await fetch(url, {
+        method: 'PATCH',
+        headers: notionHeaders(),
+        body: JSON.stringify({ properties })
+    });
+    return await res.json();
+}
+
+async function archivePage(pageId) {
+    const url = `https://api.notion.com/v1/pages/${pageId}`;
+    const res = await fetch(url, {
+        method: 'PATCH',
+        headers: notionHeaders(),
+        body: JSON.stringify({ archived: true })
+    });
+    return await res.json();
+}
 
 function getTitle(page) {
     try {
-        const titleProp = page.properties['Select Deliverable:'];
-        if (titleProp && titleProp.title && titleProp.title[0]) {
-            return titleProp.title[0].plain_text || '';
-        }
-        return '';
+        return page.properties['Select Deliverable:'].title[0].plain_text || '';
     } catch (e) {
         return '';
     }
@@ -17,11 +48,7 @@ function getTitle(page) {
 
 function getMultiSelect(page, propName) {
     try {
-        const prop = page.properties[propName];
-        if (prop && prop.multi_select) {
-            return prop.multi_select;
-        }
-        return [];
+        return page.properties[propName].multi_select || [];
     } catch (e) {
         return [];
     }
@@ -29,11 +56,7 @@ function getMultiSelect(page, propName) {
 
 function getFiles(page, propName) {
     try {
-        const prop = page.properties[propName];
-        if (prop && prop.files) {
-            return prop.files;
-        }
-        return [];
+        return page.properties[propName].files || [];
     } catch (e) {
         return [];
     }
@@ -41,11 +64,7 @@ function getFiles(page, propName) {
 
 function getRichText(page, propName) {
     try {
-        const prop = page.properties[propName];
-        if (prop && prop.rich_text && prop.rich_text[0]) {
-            return prop.rich_text[0].plain_text || '';
-        }
-        return '';
+        return page.properties[propName].rich_text[0].plain_text || '';
     } catch (e) {
         return '';
     }
@@ -60,10 +79,7 @@ exports.handler = async(event) => {
     try {
         console.log('[START] Querying database:', DELIVERABLES_DB_ID);
 
-        const response = await notion.databases.query({
-            database_id: DELIVERABLES_DB_ID
-        });
-
+        const response = await queryNotionDB(DELIVERABLES_DB_ID);
         console.log('[INFO] Total pages found:', response.results.length);
 
         const newSubmissions = response.results.filter(page => {
@@ -92,8 +108,7 @@ exports.handler = async(event) => {
             const deliverableName = deliverableOptions[0].name;
             console.log('[PROCESS] Deliverable:', deliverableName);
 
-            const targetResponse = await notion.databases.query({
-                database_id: DELIVERABLES_DB_ID,
+            const targetResponse = await queryNotionDB(DELIVERABLES_DB_ID, {
                 filter: {
                     property: 'Select Deliverable:',
                     title: {
@@ -123,23 +138,17 @@ exports.handler = async(event) => {
                 existingComments + '\n\n' + submissionComments :
                 submissionComments;
 
-            await notion.pages.update({
-                page_id: targetPage.id,
-                properties: {
-                    'File': { files: existingFiles.concat(submissionFiles) },
-                    'Status': { select: { name: 'Submitted' } },
-                    'Comments': {
-                        rich_text: [{ text: { content: mergedComments } }]
-                    }
+            await updatePage(targetPage.id, {
+                'File': { files: existingFiles.concat(submissionFiles) },
+                'Status': { select: { name: 'Submitted' } },
+                'Comments': {
+                    rich_text: [{ text: { content: mergedComments } }]
                 }
             });
 
             console.log('[SUCCESS] Updated target:', targetPage.id);
 
-            await notion.pages.update({
-                page_id: submission.id,
-                archived: true
-            });
+            await archivePage(submission.id);
 
             console.log('[SUCCESS] Archived submission:', submission.id);
         }
