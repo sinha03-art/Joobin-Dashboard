@@ -21,6 +21,8 @@ const {
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
+const { Client } = require('@notionhq/client');
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 const REQUIRED_BY_GATE = {
     "G0 Pre Construction": ["G0 - Move out to temporary residence"],
@@ -112,28 +114,6 @@ async function checkForNewSubmissions() {
         }
     } catch (error) {
         console.error('Polling error:', error);
-    }
-}
-
-// Start polling every 2 minutes
-setInterval(checkForNewSubmissions, 120000);
-async function queryNotionDB(dbId, filter = {}) {
-    if (!dbId) {
-        console.warn(`queryNotionDB called with no dbId. Skipping.`);
-        return { results: [] };
-    }
-    const url = `https://api.notion.com/v1/databases/${dbId}/query`;
-    try {
-        const res = await fetch(url, { method: 'POST', headers: notionHeaders(), body: JSON.stringify(filter) });
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error(`Notion API error for DB ${dbId}: ${res.status}`, errText);
-            throw new Error(`Notion API error for DB ${dbId}: ${res.status}: ${errText}`);
-        }
-        return await res.json();
-    } catch (error) {
-        console.error('queryNotionDB error:', error);
-        throw error;
     }
 }
 
