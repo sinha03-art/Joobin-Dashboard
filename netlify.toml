@@ -2,3 +2,6 @@
   NODE_VERSION = "18"
 [functions]
   directory = "netlify/functions"
+
+[[functions."scheduled-dedupe".schedule]]
+  cron = "*/2 * * * *"  # Every 2 minutes
