@@ -1,11 +1,13 @@
 const { Client } = require('@notionhq/client');
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
-const DELIVERABLES_DB_ID = process.env.DELIVERABLES_DB_ID;
 
 exports.handler = async(event) => {
     console.log('[Scheduled] Checking for duplicate submissions...');
 
     try {
+        // Initialize notion client inside handler
+        const notion = new Client({ auth: process.env.NOTION_API_KEY });
+        const DELIVERABLES_DB_ID = process.env.DELIVERABLES_DB_ID;
+
         // Find "New submission" entries
         const response = await notion.databases.query({
             database_id: DELIVERABLES_DB_ID,
