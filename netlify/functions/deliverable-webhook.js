@@ -1,46 +1,123 @@
+const { Client } = require('@notionhq/client');
+
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const DELIVERABLES_DB_ID = process.env.DELIVERABLES_DB_ID;
+
 exports.handler = async(event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
     };
 
-    // If called manually with pageId
-    if (event.body) {
-        const payload = JSON.parse(event.body);
-        // Process deduplication logic here
-        return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
-    }
-
-    // If called as scheduled function (no body)
     try {
-        console.log('[Scheduled] Checking for duplicates via proxy...');
+        console.log('[START] Querying database:', DELIVERABLES_DB_ID);
 
-        // Call your existing proxy endpoint to get all deliverables
-        const response = await fetch(`${process.env.URL}/.netlify/functions/proxy`);
-        const data = await response.json();
+        // Query all deliverables
+        const response = await notion.databases.query({
+            database_id: DELIVERABLES_DB_ID
+        });
+
+        console.log('[INFO] Total pages found:', response.results.length);
 
         // Find "New submission" entries
-        const newSubmissions = data.deliverables.filter(d =>
-            d.title === 'New submission'
-        );
+        const newSubmissions = response.results.filter(page => {
+            const title = page.properties['Select Deliverable:'] ? .title ? .[0] ? .plain_text || '';
+            return title === 'New submission';
+        });
+
+        console.log('[INFO] New submissions found:', newSubmissions.length);
 
         if (newSubmissions.length === 0) {
-            console.log('[Scheduled] No new submissions');
-            return { statusCode: 200, headers, body: 'No duplicates found' };
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ message: 'No new submissions' })
+            };
         }
 
-        console.log(`[Scheduled] Found ${newSubmissions.length} new submissions`);
+        // Process each submission
+        for (const submission of newSubmissions) {
+            const deliverableOptions = submission.properties['Deliverable'] ? .multi_select || [];
 
-        // TODO: Process duplicates here
+            if (deliverableOptions.length === 0) {
+                console.log('[SKIP] No deliverable selected:', submission.id);
+                continue;
+            }
+
+            const deliverableName = deliverableOptions[0].name;
+            console.log('[PROCESS] Deliverable:', deliverableName);
+
+            // Find target page
+            const targetResponse = await notion.databases.query({
+                database_id: DELIVERABLES_DB_ID,
+                filter: {
+                    property: 'Select Deliverable:',
+                    title: {
+                        equals: deliverableName
+                    }
+                }
+            });
+
+            const targetPages = targetResponse.results.filter(p => p.id !== submission.id);
+            console.log('[INFO] Target pages found:', targetPages.length);
+
+            if (targetPages.length === 0) {
+                console.log('[SKIP] No target for:', deliverableName);
+                continue;
+            }
+
+            const targetPage = targetPages[0];
+
+            // Get files and comments
+            const submissionFiles = submission.properties['Attach your document'] ? .files || [];
+            const existingFiles = targetPage.properties['File'] ? .files || [];
+            const submissionComments = submission.properties['Comments'] ? .rich_text ? .[0] ? .plain_text || '';
+            const existingComments = targetPage.properties['Comments'] ? .rich_text ? .[0] ? .plain_text || '';
+
+            console.log('[INFO] Files to merge:', submissionFiles.length);
+
+            // Update target
+            await notion.pages.update({
+                page_id: targetPage.id,
+                properties: {
+                    'File': { files: [...existingFiles, ...submissionFiles] },
+                    'Status': { select: { name: 'Submitted' } },
+                    'Comments': {
+                        rich_text: [{
+                            text: {
+                                content: existingComments ?
+                                    `${existingComments}\n\n${submissionComments}` :
+                                    submissionComments
+                            }
+                        }]
+                    }
+                }
+            });
+
+            console.log('[SUCCESS] Updated target:', targetPage.id);
+
+            // Archive submission
+            await notion.pages.update({
+                page_id: submission.id,
+                archived: true
+            });
+
+            console.log('[SUCCESS] Archived submission:', submission.id);
+        }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ found: newSubmissions.length })
+            body: JSON.stringify({ processed: newSubmissions.length })
         };
 
     } catch (error) {
-        console.error('[Scheduled] Error:', error);
-        return { statusCode: 500, headers, body: error.message };
+        console.error('[ERROR]', error.message);
+        console.error('[STACK]', error.stack);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: error.message })
+        };
     }
 };
