@@ -2,166 +2,201 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gate Deliverables — Board</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root {
-      --bg: #111827;
-      --panel: #1f2937;
-      --border: #374151;
-      --ink: #f9fafb;
-      --muted: #9ca3af;
-      --brand: #2563eb;
-    }
-
-    html,
-    body {
-      height: 100%
-    }
-
-    body {
-      font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: var(--bg);
-      color: var(--ink);
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: .75rem;
-    }
-
-    .col {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: .75rem;
-      min-height: 180px;
-    }
-
-    .badge {
-      font-size: .7rem;
-      padding: .15rem .45rem;
-      border-radius: 999px;
-      font-weight: 600
-    }
-
-    .badge-Approved {
-      background: #059669;
-      color: #d1fae5
-    }
-
-    .badge-Submitted {
-      background: #d97706;
-      color: #fef3c7
-    }
-
-    .badge-Missing {
-      background: #4b5563;
-      color: #e5e7eb
-    }
-
-    .badge-Rejected {
-      background: #dc2626;
-      color: #fee2e2
-    }
-
-    .card-item {
-      border: 1px solid var(--border);
-      border-radius: .5rem;
-      padding: .6rem .7rem;
-      background: #374151;
-      transition: box-shadow .15s ease, border-color .15s ease;
-    }
-
-    .card-item:hover {
-      border-color: var(--brand);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, .1)
-    }
-
-    .sticky-header {
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 10;
-      padding: 1rem 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    #ownerChips button.active {
-      background: var(--brand);
-      color: #fff;
-      border-color: var(--brand)
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gate Deliverables — Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+         :root {
+            --bg: #111827;
+            --panel: #1f2937;
+            --border: #374151;
+            --ink: #f9fafb;
+            --muted: #9ca3af;
+            --brand: #2563eb;
+        }
+        
+        html,
+        body {
+            height: 100%
+        }
+        
+        body {
+            font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            background: var(--bg);
+            color: var(--ink);
+        }
+        
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: .75rem;
+        }
+        
+        .col {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: .75rem;
+            min-height: 180px;
+        }
+        
+        .badge {
+            font-size: .7rem;
+            padding: .15rem .45rem;
+            border-radius: 999px;
+            font-weight: 600
+        }
+        
+        .badge-Approved {
+            background: #059669;
+            color: #d1fae5
+        }
+        
+        .badge-Submitted {
+            background: #d97706;
+            color: #fef3c7
+        }
+        
+        .badge-Missing {
+            background: #4b5563;
+            color: #e5e7eb
+        }
+        
+        .badge-Rejected {
+            background: #dc2626;
+            color: #fee2e2
+        }
+        
+        .card-item {
+            border: 1px solid var(--border);
+            border-radius: .5rem;
+            padding: .6rem .7rem;
+            background: #374151;
+            transition: box-shadow .15s ease, border-color .15s ease;
+        }
+        
+        .card-item:hover {
+            border-color: var(--brand);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, .1)
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 10;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        #ownerChips button.active {
+            background: var(--brand);
+            color: #fff;
+            border-color: var(--brand)
+        }
+    </style>
 </head>
 
 <body class="px-4 md:px-6">
-  <header class="sticky-header">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 max-w-7xl mx-auto">
-      <div class="flex items-center gap-4">
-        <a href="index.html" title="Back to Command Center" class="p-2 rounded-md hover:bg-slate-800 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            class="lucide lucide-arrow-left">
-            <path d="m12 19-7-7 7-7" />
-            <path d="M19 12H5" />
-          </svg>
-        </a>
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight">Gate Deliverables</h1>
-          <p class="text-sm text-slate-400">Track and manage all project deliverables by gate.</p>
+    <header class="sticky-header">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <a href="index.html" title="Back to Command Center" class="p-2 rounded-md hover:bg-slate-800 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left">
+                        <path d="m12 19-7-7 7-7" />
+                        <path d="M19 12H5" />
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Gate Deliverables</h1>
+                    <p class="text-sm text-slate-400">Track and manage all project deliverables by gate.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <input id="q" class="px-3 py-2 rounded-md border text-sm w-40 bg-transparent border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search...">
+                <select id="gateFilter" class="px-3 py-2 rounded-md border text-sm bg-transparent border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All gates</option>
+                </select>
+                <div class="flex gap-2" id="ownerChips">
+                    <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800" data-owner="solomon">Solomon</button>
+                    <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800" data-owner="harminder">Harminder</button>
+                    <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800 active" data-owner="">All</button>
+                </div>
+                <a href="https://opaque-alto-89e.notion.site/2865a80cd06780dda291d7d78c74ec3a?pvs=105" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">Upload
+                    Deliverable</a>
+            </div>
         </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <input id="q"
-          class="px-3 py-2 rounded-md border text-sm w-40 bg-transparent border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Search...">
-        <select id="gateFilter"
-          class="px-3 py-2 rounded-md border text-sm bg-transparent border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          <option value="">All gates</option>
-        </select>
-        <div class="flex gap-2" id="ownerChips">
-          <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-            data-owner="solomon">Solomon</button>
-          <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800"
-            data-owner="harminder">Harminder</button>
-          <button class="px-3 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800 active"
-            data-owner="">All</button>
-        </div>
-        <a href="https://opaque-alto-89e.notion.site/2865a80cd06780dda291d7d78c74ec3a?pvs=105" target="_blank"
-          rel="noopener noreferrer"
-          class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">Upload
-          Deliverable</a>
-      </div>
-    </div>
-  </header>
-  <main id="root" class="mt-6 space-y-8 max-w-7xl mx-auto"></main>
-  <div id="loader" class="text-center p-8 text-slate-400">Loading deliverables...</div>
+    </header>
+    <main id="root" class="mt-6 space-y-8 max-w-7xl mx-auto"></main>
+    <div id="loader" class="text-center p-8 text-slate-400">Loading deliverables...</div>
 
-  <script>
-    const STATUS_ORDER = ['Missing', 'Submitted', 'Rejected', 'Approved'];
-    const STATUS_TITLES = { Missing: 'Missing', Submitted: 'Submitted', Rejected: 'Rejected', Approved: 'Approved' };
-    let dataCache;
-    let ownerFilter = '';
+    <script>
+        const STATUS_ORDER = ['Missing', 'Submitted', 'Rejected', 'Approved'];
+        const STATUS_TITLES = {
+            Missing: 'Missing',
+            Submitted: 'Submitted',
+            Rejected: 'Rejected',
+            Approved: 'Approved'
+        };
+        let dataCache;
+        let ownerFilter = '';
 
-    function norm(s) { return String(s || '').trim().toLowerCase(); }
+        function norm(s) {
+            return String(s || '').trim().toLowerCase();
+        }
 
-    // Logic to synthesize missing deliverables now happens on backend (proxy.mjs)
-    function byGate(list) { const m = {}; list.forEach(d => { const g = d.gate || 'Uncategorized'; (m[g] ||= []).push(d); }); return m; }
-    function byStatus(list) { const m = { Missing: [], Submitted: [], Rejected: [], Approved: [] }; list.forEach(d => { const s = STATUS_ORDER.includes(d.status) ? d.status : 'Missing'; m[s].push(d); }); return m; }
-    function counts(list) { const c = { total: list.length, Approved: 0, Submitted: 0, Missing: 0, Rejected: 0 }; list.forEach(d => c[d.status] = (c[d.status] || 0) + 1); return c; }
-    function matchQuery(d, q) { if (!q) return true; const t = (d.title || '').toLowerCase(); const owners = (d.assignees || []).join(' ').toLowerCase(); return t.includes(q) || owners.includes(q); }
+        // Logic to synthesize missing deliverables now happens on backend (proxy.mjs)
+        function byGate(list) {
+            const m = {};
+            list.forEach(d => {
+                const g = d.gate || 'Uncategorized';
+                if (!m[g]) m[g] = [];
+                m[g].push(d);
+            });
+            return m;
+        }
 
-    function gateHeader(g, gateData) {
-      const progress = gateData.total > 0 ? Math.round((gateData.approved / gateData.total) * 100) : 0;
-      const criticalProgress = gateData.criticalTotal > 0 ? Math.round((gateData.criticalApproved / gateData.criticalTotal) * 100) : 0;
+        function byStatus(list) {
+            const m = {
+                Missing: [],
+                Submitted: [],
+                Rejected: [],
+                Approved: []
+            };
+            list.forEach(d => {
+                const s = STATUS_ORDER.includes(d.status) ? d.status : 'Missing';
+                m[s].push(d);
+            });
+            return m;
+        }
 
-      return `
+        function counts(list) {
+            const c = {
+                total: list.length,
+                Approved: 0,
+                Submitted: 0,
+                Missing: 0,
+                Rejected: 0
+            };
+            list.forEach(d => c[d.status] = (c[d.status] || 0) + 1);
+            return c;
+        }
+
+        function matchQuery(d, q) {
+            if (!q) return true;
+            const t = (d.title || '').toLowerCase();
+            const owners = (d.assignees || []).join(' ').toLowerCase();
+            return t.includes(q) || owners.includes(q);
+        }
+
+        function gateHeader(g, gateData) {
+            const progress = gateData.total > 0 ? Math.round((gateData.approved / gateData.total) * 100) : 0;
+            const criticalProgress = gateData.criticalTotal > 0 ? Math.round((gateData.criticalApproved / gateData.criticalTotal) * 100) : 0;
+
+            return `
     <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-3">
       <div>
         <h2 class="text-xl font-bold">${g}</h2>
@@ -180,17 +215,17 @@
       </div>
     </div>
   `;
-    }
+        }
 
-    function itemCard(d) {
-      const owners = (d.assignees && d.assignees.length) ? d.assignees.join(', ') : '—';
-      const badgeClass = 'badge badge-' + (STATUS_ORDER.includes(d.status) ? d.status : 'Missing');
+        function itemCard(d) {
+            const owners = (d.assignees && d.assignees.length) ? d.assignees.join(', ') : '—';
+            const badgeClass = 'badge badge-' + (STATUS_ORDER.includes(d.status) ? d.status : 'Missing');
 
-      // Add critical indicator
-      const criticalBadge = d.isCritical ? '<span class="badge" style="background: #dc2626; color: #fff; margin-left: 4px;">CRITICAL</span>' : '';
-      const cardStyle = d.isCritical ? 'border-left: 3px solid #dc2626;' : '';
+            // Add critical indicator
+            const criticalBadge = d.isCritical ? '<span class="badge" style="background: #dc2626; color: #fff; margin-left: 4px;">CRITICAL</span>' : '';
+            const cardStyle = d.isCritical ? 'border-left: 3px solid #dc2626;' : '';
 
-      return `
+            return `
     <a href="${d.url}" target="_blank" class="card-item block" style="${cardStyle}">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
@@ -204,10 +239,10 @@
       </div>
     </a>
   `;
-    }
+        }
 
-    function column(title, items) {
-      return `
+        function column(title, items) {
+            return `
       <div class="col p-3">
         <div class="flex items-center justify-between mb-2">
           <p class="text-xs font-bold text-slate-400">${title}</p>
@@ -218,45 +253,45 @@
         </div>
       </div>
     `;
-    }
+        }
 
-    function setOwnerFilter(v) {
-      ownerFilter = (v || '').toLowerCase();
-      document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
-        btn.classList.toggle('active', (btn.dataset.owner || '').toLowerCase() === ownerFilter);
-      });
-      render();
-    }
+        function setOwnerFilter(v) {
+            ownerFilter = (v || '').toLowerCase();
+            document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
+                btn.classList.toggle('active', (btn.dataset.owner || '').toLowerCase() === ownerFilter);
+            });
+            render();
+        }
 
-    function render() {
-      if (!dataCache) return;
-      const q = document.getElementById('q').value.trim().toLowerCase();
-      const gateSel = document.getElementById('gateFilter').value;
-      let list = (dataCache.deliverables || []).slice(); // This now includes 'Missing' items from backend
+        function render() {
+            if (!dataCache) return;
+            const q = document.getElementById('q').value.trim().toLowerCase();
+            const gateSel = document.getElementById('gateFilter').value;
+            let list = (dataCache.deliverables || []).slice(); // This now includes 'Missing' items from backend
 
-      // Filtering logic
-      if (q) list = list.filter(d => matchQuery(d, q));
-      if (gateSel) list = list.filter(d => (d.gate || 'Uncategorized') === gateSel);
-      if (ownerFilter) {
-        const key = ownerFilter.toLowerCase();
-        list = list.filter(d => (d.assignees || []).some(a => (a || '').toLowerCase().includes(key)));
-      }
+            // Filtering logic
+            if (q) list = list.filter(d => matchQuery(d, q));
+            if (gateSel) list = list.filter(d => (d.gate || 'Uncategorized') === gateSel);
+            if (ownerFilter) {
+                const key = ownerFilter.toLowerCase();
+                list = list.filter(d => (d.assignees || []).some(a => (a || '').toLowerCase().includes(key)));
+            }
 
-      const grouped = byGate(list);
-      const root = document.getElementById('root');
-      root.innerHTML = '';
+            const grouped = byGate(list);
+            const root = document.getElementById('root');
+            root.innerHTML = '';
 
-      const gatesToRender = dataCache.gates.filter(g => gateSel ? g.gate === gateSel : true);
+            const gatesToRender = dataCache.gates.filter(g => gateSel ? g.gate === gateSel : true);
 
-      if (gatesToRender.length === 0) {
-        root.innerHTML = `<div class="text-slate-500 text-sm text-center py-8">No deliverables match your filter.</div>`;
-        return;
-      }
+            if (gatesToRender.length === 0) {
+                root.innerHTML = `<div class="text-slate-500 text-sm text-center py-8">No deliverables match your filter.</div>`;
+                return;
+            }
 
-      gatesToRender.forEach(gateInfo => {
-        const itemsForThisGate = grouped[gateInfo.gate] || [];
-        const statusGroups = byStatus(itemsForThisGate);
-        const board = `
+            gatesToRender.forEach(gateInfo => {
+                const itemsForThisGate = grouped[gateInfo.gate] || [];
+                const statusGroups = byStatus(itemsForThisGate);
+                const board = `
         <section>
           ${gateHeader(gateInfo.gate, gateInfo)}
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -264,48 +299,50 @@
           </div>
         </section>
       `;
-        root.insertAdjacentHTML('beforeend', board);
-      });
-    }
+                root.insertAdjacentHTML('beforeend', board);
+            });
+        }
 
-    async function load() {
-      try {
-        const res = await fetch('/.netlify/functions/proxy');
-        if (!res.ok) throw new Error(`Failed to load data: ${res.statusText}`);
-        dataCache = await res.json();
+        async function load() {
+            try {
+                const res = await fetch('/.netlify/functions/proxy');
+                if (!res.ok) throw new Error(`Failed to load data: ${res.statusText}`);
+                dataCache = await res.json();
 
-        document.getElementById('loader').style.display = 'none';
+                document.getElementById('loader').style.display = 'none';
 
-        const gatesFromData = (dataCache.gates || []).map(g => g.gate).sort();
-        const sel = document.getElementById('gateFilter');
-        sel.innerHTML = `<option value="">All gates</option>`;
-        gatesFromData.forEach(g => sel.insertAdjacentHTML('beforeend', `<option>${g}</option>`));
+                const gatesFromData = (dataCache.gates || []).map(g => g.gate).sort();
+                const sel = document.getElementById('gateFilter');
+                sel.innerHTML = `<option value="">All gates</option>`;
+                gatesFromData.forEach(g => sel.insertAdjacentHTML('beforeend', `<option>${g}</option>`));
 
-        // *** FIX: Correctly add event listeners ***
-        document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
-          btn.addEventListener('click', () => setOwnerFilter(btn.dataset.owner));
-        });
+                // *** FIX: Correctly add event listeners ***
+                document.querySelectorAll('#ownerChips [data-owner]').forEach(btn => {
+                    btn.addEventListener('click', () => setOwnerFilter(btn.dataset.owner));
+                });
 
-        const urlGate = new URLSearchParams(location.search).get('gate');
-        if (urlGate && gatesFromData.includes(urlGate)) { sel.value = urlGate; }
+                const urlGate = new URLSearchParams(location.search).get('gate');
+                if (urlGate && gatesFromData.includes(urlGate)) {
+                    sel.value = urlGate;
+                }
 
-        const urlOwner = new URLSearchParams(location.search).get('owner');
-        if (urlOwner) setOwnerFilter(urlOwner);
+                const urlOwner = new URLSearchParams(location.search).get('owner');
+                if (urlOwner) setOwnerFilter(urlOwner);
 
-        render();
-      } catch (err) {
-        console.error("Load error:", err);
-        const root = document.getElementById('root');
-        root.innerHTML = `<div class="text-rose-400 text-sm text-center py-8">Error: ${err.message}. Check console for details.</div>`;
-        document.getElementById('loader').style.display = 'none';
-      }
-    }
+                render();
+            } catch (err) {
+                console.error("Load error:", err);
+                const root = document.getElementById('root');
+                root.innerHTML = `<div class="text-rose-400 text-sm text-center py-8">Error: ${err.message}. Check console for details.</div>`;
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
 
-    document.getElementById('q').addEventListener('input', render);
-    document.getElementById('gateFilter').addEventListener('change', render);
+        document.getElementById('q').addEventListener('input', render);
+        document.getElementById('gateFilter').addEventListener('change', render);
 
-    load();
-  </script>
+        load();
+    </script>
 </body>
 
 </html>
