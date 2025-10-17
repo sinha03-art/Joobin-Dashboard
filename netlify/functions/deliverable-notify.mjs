@@ -86,36 +86,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Add near the top with other constants
 //const DELIVERABLES_DB_ID = '680a1e81192a462587860e795035089c';
 
-// Polling function - checks every 2 minutes for "New submission"
-async function checkForNewSubmissions() {
-    try {
-        const response = await notion.databases.query({
-            database_id: DELIVERABLES_DB_ID,
-            filter: {
-                property: 'Select Deliverable:',
-                title: { equals: 'New submission' }
-            }
-        });
 
-        if (response.results.length === 0) return;
-
-        console.log(`Found ${response.results.length} new submission(s)`);
-
-        for (const page of response.results) {
-            // Trigger your webhook
-            await fetch('https://joobinreno.netlify.app/.netlify/functions/deliverable-webhook', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.WEBHOOK_SECRET}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ pageId: page.id })
-            });
-        }
-    } catch (error) {
-        console.error('Polling error:', error);
-    }
-}
 
 async function callGemini(prompt) {
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
@@ -449,7 +420,36 @@ export const handler = async(event) => {
         }
 
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+        // Polling function - checks every 2 minutes for "New submission"
+        async function checkForNewSubmissions() {
+            try {
+                const response = await notion.databases.query({
+                    database_id: DELIVERABLES_DB_ID,
+                    filter: {
+                        property: 'Select Deliverable:',
+                        title: { equals: 'New submission' }
+                    }
+                });
 
+                if (response.results.length === 0) return;
+
+                console.log(`Found ${response.results.length} new submission(s)`);
+
+                for (const page of response.results) {
+                    // Trigger your webhook
+                    await fetch('https://joobinreno.netlify.app/.netlify/functions/deliverable-webhook', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${process.env.WEBHOOK_SECRET}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ pageId: page.id })
+                    });
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }
     } catch (error) {
         console.error('Handler error:', error);
         return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
