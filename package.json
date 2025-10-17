@@ -1,7 +1,22 @@
 {
-  "dependencies": {
-    "@notionhq/client": "^5.1.0",
-    "nodemailer": "^7.0.9",
-    "postcss": "^8.5.6"
-  }
+    "name": "joobin-dashboard",
+    "version": "1.0.0",
+    "description": "JOOBIN Renovation Command Center - Dashboard and automation functions",
+    "main": "index.js",
+    "scripts": {
+        "dev": "netlify dev",
+        "build": "echo 'No build step required'",
+        "deploy": "netlify deploy --prod"
+    },
+    "dependencies": {
+        "@notionhq/client": "^5.1.0",
+        "node-fetch": "^3.3.2",
+        "nodemailer": "^7.0.9",
+        "postcss": "^8.5.6"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "author": "HAM",
+    "license": "ISC"
 }
