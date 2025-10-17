@@ -137,6 +137,29 @@ function extractText(prop) {
     if (propType === 'checkbox') return prop.checkbox;
     return '';
 }
+async function queryNotionDB(dbId, filter = {}) {
+    if (!dbId) {
+        console.warn(`queryNotionDB called with no dbId. Skipping.`);
+        return { results: [] };
+    }
+    const url = `https://api.notion.com/v1/databases/${dbId}/query`;
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: notionHeaders(),
+            body: JSON.stringify(filter)
+        });
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error(`Notion API error for DB ${dbId}: ${res.status}`, errText);
+            throw new Error(`Notion API error for DB ${dbId}: ${res.status}: ${errText}`);
+        }
+        return await res.json();
+    } catch (error) {
+        console.error('queryNotionDB error:', error);
+        throw error;
+    }
+}
 
 function mapConstructionStatus(reviewStatus) {
     const normalized = norm(reviewStatus);
