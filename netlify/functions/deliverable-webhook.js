@@ -40,7 +40,8 @@ async function archivePage(pageId) {
 
 function getTitle(page) {
     try {
-        return page.properties['Select Deliverable:'].title[0].plain_text || '';
+        const title = page.properties['Select Deliverable:'].title[0].plain_text || '';
+        return title.trim(); // ADD .trim() HERE
     } catch (e) {
         return '';
     }
