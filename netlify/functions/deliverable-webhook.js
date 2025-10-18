@@ -46,14 +46,6 @@ function getTitle(page) {
     }
 }
 
-function getMultiSelect(page, propName) {
-    try {
-        return page.properties[propName].multi_select || [];
-    } catch (e) {
-        return [];
-    }
-}
-
 function getFiles(page, propName) {
     try {
         return page.properties[propName].files || [];
@@ -70,6 +62,10 @@ function getRichText(page, propName) {
     }
 }
 
+function getCreatedTime(page) {
+    return page.created_time || '';
+}
+
 exports.handler = async(event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -82,81 +78,91 @@ exports.handler = async(event) => {
         const response = await queryNotionDB(DELIVERABLES_DB_ID);
         console.log('[INFO] Total pages found:', response.results.length);
 
-        const newSubmissions = response.results.filter(page => {
+        // Group pages by deliverable name
+        const grouped = {};
+        response.results.forEach(page => {
             const title = getTitle(page);
-            return title === 'New submission';
+            if (!title) return;
+
+            if (!grouped[title]) {
+                grouped[title] = [];
+            }
+            grouped[title].push(page);
         });
 
-        console.log('[INFO] New submissions found:', newSubmissions.length);
+        // Find duplicates
+        const duplicates = Object.entries(grouped).filter(([name, pages]) => pages.length > 1);
 
-        if (newSubmissions.length === 0) {
+        console.log('[INFO] Duplicate deliverables found:', duplicates.length);
+
+        if (duplicates.length === 0) {
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ message: 'No new submissions' })
+                body: JSON.stringify({ message: 'No duplicates found' })
             };
         }
 
-        for (const submission of newSubmissions) {
-            const deliverableOptions = getMultiSelect(submission, 'Deliverable');
+        let processedCount = 0;
 
-            if (deliverableOptions.length === 0) {
-                console.log('[SKIP] No deliverable selected:', submission.id);
-                continue;
-            }
+        for (const [deliverableName, pages] of duplicates) {
+            console.log('[PROCESS] Merging duplicates for:', deliverableName, '(' + pages.length + ' entries)');
 
-            const deliverableName = deliverableOptions[0].name;
-            console.log('[PROCESS] Deliverable:', deliverableName);
+            // Sort by created time - oldest first
+            pages.sort((a, b) => getCreatedTime(a).localeCompare(getCreatedTime(b)));
 
-            const targetResponse = await queryNotionDB(DELIVERABLES_DB_ID, {
-                filter: {
-                    property: 'Select Deliverable:',
-                    title: {
-                        equals: deliverableName
-                    }
+            const originalPage = pages[0];
+            const duplicatePages = pages.slice(1);
+
+            console.log('[INFO] Keeping original:', originalPage.id);
+            console.log('[INFO] Merging', duplicatePages.length, 'duplicate(s)');
+
+            // Collect all files and comments from duplicates
+            const originalFiles = getFiles(originalPage, 'File');
+            const originalComments = getRichText(originalPage, 'Comments');
+
+            let allFiles = originalFiles.slice();
+            let allComments = originalComments;
+
+            for (const dup of duplicatePages) {
+                const dupFiles = getFiles(dup, 'Attach your document').concat(getFiles(dup, 'File'));
+                const dupComments = getRichText(dup, 'Comments');
+
+                allFiles = allFiles.concat(dupFiles);
+
+                if (dupComments) {
+                    allComments = allComments ?
+                        allComments + '\n\n' + dupComments :
+                        dupComments;
                 }
-            });
-
-            const targetPages = targetResponse.results.filter(p => p.id !== submission.id);
-            console.log('[INFO] Target pages found:', targetPages.length);
-
-            if (targetPages.length === 0) {
-                console.log('[SKIP] No target for:', deliverableName);
-                continue;
             }
 
-            const targetPage = targetPages[0];
-
-            const submissionFiles = getFiles(submission, 'Attach your document');
-            const existingFiles = getFiles(targetPage, 'File');
-            const submissionComments = getRichText(submission, 'Comments');
-            const existingComments = getRichText(targetPage, 'Comments');
-
-            console.log('[INFO] Files to merge:', submissionFiles.length);
-
-            const mergedComments = existingComments ?
-                existingComments + '\n\n' + submissionComments :
-                submissionComments;
-
-            await updatePage(targetPage.id, {
-                'File': { files: existingFiles.concat(submissionFiles) },
-                'Status': { select: { name: 'Submitted' } },
+            // Update the original with merged data
+            await updatePage(originalPage.id, {
+                'File': { files: allFiles },
                 'Comments': {
-                    rich_text: [{ text: { content: mergedComments } }]
+                    rich_text: [{ text: { content: allComments } }]
                 }
             });
 
-            console.log('[SUCCESS] Updated target:', targetPage.id);
+            console.log('[SUCCESS] Updated original with merged files/comments');
 
-            await archivePage(submission.id);
+            // Archive the duplicates
+            for (const dup of duplicatePages) {
+                await archivePage(dup.id);
+                console.log('[SUCCESS] Archived duplicate:', dup.id);
+            }
 
-            console.log('[SUCCESS] Archived submission:', submission.id);
+            processedCount++;
         }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ processed: newSubmissions.length })
+            body: JSON.stringify({
+                duplicatesProcessed: processedCount,
+                totalMerged: duplicates.reduce((sum, [name, pages]) => sum + pages.length - 1, 0)
+            })
         };
 
     } catch (error) {
