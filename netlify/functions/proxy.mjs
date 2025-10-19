@@ -172,334 +172,342 @@ function mapConstructionStatus(reviewStatus) {
 
 // --- Main Handler ---
 export const handler = async(event) => {
-    const { httpMethod, path } = event;
-    const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Content-Type': 'application/json' };
-    if (httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
+        const { httpMethod, path } = event;
+        const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Content-Type': 'application/json' };
+        if (httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
 
-    try {
-        if (httpMethod === 'GET' && path.endsWith('/proxy')) {
-            const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData] = await Promise.all([
-                queryNotionDB(NOTION_BUDGET_DB_ID),
-                queryNotionDB(NOTION_ACTUALS_DB_ID),
-                queryNotionDB(MILESTONES_DB_ID),
-                queryNotionDB(DELIVERABLES_DB_ID),
-                queryNotionDB(VENDOR_REGISTRY_DB_ID),
-                queryNotionDB(PAYMENTS_DB_ID),
-            ]);
+        try {
+            if (httpMethod === 'GET' && path.endsWith('/proxy')) {
+                const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData] = await Promise.all([
+                    queryNotionDB(NOTION_BUDGET_DB_ID),
+                    queryNotionDB(NOTION_ACTUALS_DB_ID),
+                    queryNotionDB(MILESTONES_DB_ID),
+                    queryNotionDB(DELIVERABLES_DB_ID),
+                    queryNotionDB(VENDOR_REGISTRY_DB_ID),
+                    queryNotionDB(PAYMENTS_DB_ID),
+                ]);
 
-            const now = new Date();
+                const now = new Date();
 
-            const budgetSubtotal = (budgetData.results || [])
-                .filter(p => extractText(getProp(p, 'In Scope')))
-                .reduce((sum, p) => (sum + (extractText(getProp(p, 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'Install (MYR)')) || 0)), 0);
-            const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
-            const paidMYR = (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
+                const budgetSubtotal = (budgetData.results || [])
+                    .filter(p => extractText(getProp(p, 'In Scope')))
+                    .reduce((sum, p) => (sum + (extractText(getProp(p, 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'Install (MYR)')) || 0)), 0);
+                const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
+                const paidMYR = (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
 
-            // Unified Deliverables Processing
-            const processedDeliverables = (deliverablesData.results || []).map(p => {
-                const categoryProp = getProp(p, 'Category');
-                const categoryArray = (categoryProp && categoryProp.multi_select) || [];
-                const category = (categoryArray[0] && categoryArray[0].name) || '';
-                const isConstruction = category === 'Construction Certificate';
+                // Unified Deliverables Processing
+                const processedDeliverables = (deliverablesData.results || []).map(p => {
+                    const categoryProp = getProp(p, 'Category');
+                    const categoryArray = (categoryProp && categoryProp.multi_select) || [];
+                    const category = (categoryArray[0] && categoryArray[0].name) || '';
+                    const isConstruction = category === 'Construction Certificate';
 
-                let status;
-                if (isConstruction) {
-                    const reviewStatus = extractText(getProp(p, 'Review Status'));
-                    status = mapConstructionStatus(reviewStatus);
-                } else {
-                    status = extractText(getProp(p, 'Status'));
-                }
-
-                const gateProp = getProp(p, 'Gate (Auto)');
-                const gateFormula = (gateProp && gateProp.formula && gateProp.formula.string) || '';
-                let gates = gateFormula.split(',').map(g => g.trim()).filter(g => g);
-
-                // FALLBACK: If Gate (Auto) is empty, use manual Gate property
-                if (gates.length === 0) {
-                    const manualGateProp = getProp(p, 'Gate');
-                    if (manualGateProp && manualGateProp.multi_select) {
-                        gates = manualGateProp.multi_select.map(g => g.name);
+                    let status;
+                    if (isConstruction) {
+                        const reviewStatus = extractText(getProp(p, 'Review Status'));
+                        status = mapConstructionStatus(reviewStatus);
+                    } else {
+                        status = extractText(getProp(p, 'Status'));
                     }
-                }
 
-                const primaryGate = gates[0] || '';
+                    const gateProp = getProp(p, 'Gate (Auto)');
+                    const gateFormula = (gateProp && gateProp.formula && gateProp.formula.string) || '';
+                    let gates = gateFormula.split(',').map(g => g.trim()).filter(g => g);
 
-                const criticalPathProp = getProp(p, 'Critical Path');
-                const isCritical = criticalPathProp && criticalPathProp.checkbox;
-
-                const ownerProp = getProp(p, 'Owner');
-                const assignees = (ownerProp && ownerProp.people) ? ownerProp.people.map(person => person.name || '') : [];
-
-                return {
-                    id: p.id,
-                    title: extractText(getProp(p, 'Select Deliverable:')),
-                    deliverableType: extractText(getProp(p, 'Select Deliverable:')),
-                    gate: primaryGate,
-                    status: status || 'Missing',
-                    category: category,
-                    isCritical: isCritical,
-                    assignees: assignees,
-                    url: p.url,
-                    dueDate: extractText(getProp(p, 'Target Due')),
-                    priority: extractText(getProp(p, 'Priority')),
-                };
-            });
-
-            const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
-            const allDeliverablesIncludingMissing = [...processedDeliverables];
-
-            Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
-                requiredDocs.forEach(requiredTitle => {
-                    if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
-                        allDeliverablesIncludingMissing.push({
-                            id: null,
-                            title: requiredTitle,
-                            deliverableType: requiredTitle,
-                            gate: gateName,
-                            status: 'Missing',
-                            category: 'Design Document',
-                            isCritical: true,
-                            assignees: [],
-                            url: '#'
-                        });
+                    // FALLBACK: If Gate (Auto) is empty, use manual Gate property
+                    if (gates.length === 0) {
+                        const manualGateProp = getProp(p, 'Gate');
+                        if (manualGateProp && manualGateProp.multi_select) {
+                            gates = manualGateProp.multi_select.map(g => g.name);
+                        }
                     }
-                });
-            });
 
-            const gates = Object.entries(REQUIRED_BY_GATE)
-                .map(([gateName, requiredDocs]) => {
-                    const criticalDocs = allDeliverablesIncludingMissing.filter(d =>
-                        d.gate === gateName &&
-                        requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) &&
-                        d.isCritical
-                    );
-                    const criticalApproved = criticalDocs.filter(d => norm(d.status) === 'approved').length;
-                    const criticalTotal = criticalDocs.length;
+                    const primaryGate = gates[0] || '';
 
-                    const approvedCount = allDeliverablesIncludingMissing.filter(d =>
-                        d.gate === gateName &&
-                        requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) &&
-                        norm(d.status) === 'approved'
-                    ).length;
-                    const totalInGate = requiredDocs.length;
+                    const criticalPathProp = getProp(p, 'Critical Path');
+                    const isCritical = criticalPathProp && criticalPathProp.checkbox;
+
+                    const ownerProp = getProp(p, 'Owner');
+                    const assignees = (ownerProp && ownerProp.people) ? ownerProp.people.map(person => person.name || '') : [];
 
                     return {
-                        gate: gateName,
-                        total: totalInGate,
-                        approved: approvedCount,
-                        criticalTotal: criticalTotal,
-                        criticalApproved: criticalApproved,
-                        gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0,
-                        criticalApprovalRate: criticalTotal > 0 ? criticalApproved / criticalTotal : 0
+                        id: p.id,
+                        title: extractText(getProp(p, 'Select Deliverable:')),
+                        deliverableType: extractText(getProp(p, 'Select Deliverable:')),
+                        gate: primaryGate,
+                        status: status || 'Missing',
+                        category: category,
+                        isCritical: isCritical,
+                        assignees: assignees,
+                        url: p.url,
+                        dueDate: extractText(getProp(p, 'Target Due')),
+                        priority: extractText(getProp(p, 'Priority')),
                     };
-                })
-                .filter(g => g.total > 0)
-                .sort((a, b) => a.gate.localeCompare(b.gate));
-
-            const paymentPages = paymentsData.results || [];
-            const overduePayments = paymentPages.filter(p => {
-                const status = extractText(getProp(p, 'Status'));
-                const dueDate = extractText(getProp(p, 'DueDate'));
-                return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
-            }).map(p => ({
-                id: p.id,
-                paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled',
-                vendor: extractText(getProp(p, 'Vendor')),
-                amount: extractText(getProp(p, 'Amount (RM)')) || 0,
-                dueDate: extractText(getProp(p, 'DueDate')),
-                url: p.url
-            })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
-
-            const upcomingPayments = paymentPages.filter(p => {
-                const status = extractText(getProp(p, 'Status'));
-                const dueDate = extractText(getProp(p, 'DueDate'));
-                return status === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
-            }).map(p => ({
-                id: p.id,
-                paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled',
-                vendor: extractText(getProp(p, 'Vendor')),
-                amount: extractText(getProp(p, 'Amount (RM)')) || 0,
-                dueDate: extractText(getProp(p, 'DueDate')),
-                status: extractText(getProp(p, 'Status')),
-                url: p.url
-            })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
-
-            const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
-                id: p.id,
-                paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled',
-                vendor: extractText(getProp(p, 'Vendor')),
-                amount: extractText(getProp(p, 'Amount (RM)')) || 0,
-                paidDate: extractText(getProp(p, 'PaidDate')),
-                url: p.url
-            })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
-
-            const outstandingAndOverdue = paymentPages.filter(p => {
-                const status = extractText(getProp(p, 'Status'));
-                return status === 'Outstanding' || status === 'Overdue';
-            });
-
-            const totalOutstandingMYR = outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
-
-            // Build vendor lookup
-            const vendorLookup = {};
-            (vendorData.results || []).forEach(v => {
-                vendorLookup[v.id] = extractText(getProp(v, 'Company_Name')) || 'Unknown';
-            });
-
-            // Top vendors
-            const vendorSpend = {};
-            (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').forEach(p => {
-                const vendorRelProp = getProp(p, 'Vendor_Registry');
-                const vendorRels = (vendorRelProp && vendorRelProp.relation) || [];
-                const vendorId = vendorRels[0] && vendorRels[0].id;
-                const vendorName = vendorId && vendorLookup[vendorId] ? vendorLookup[vendorId] : 'Unknown';
-                const amount = extractText(getProp(p, 'Paid (MYR)')) || 0;
-                vendorSpend[vendorName] = (vendorSpend[vendorName] || 0) + amount;
-            });
-
-            const topVendors = Object.entries(vendorSpend)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
-                .map(([name, paid]) => ({ name, paid, trade: '—' }));
-
-            // Budget by trade
-            const budgetByTrade = (budgetData.results || [])
-                .filter(p => extractText(getProp(p, 'In Scope')))
-                .reduce((acc, p) => {
-                    const trade = extractText(getProp(p, 'Trade')) || 'Other';
-                    const supply = extractText(getProp(p, 'Supply (MYR)')) || 0;
-                    const install = extractText(getProp(p, 'Install (MYR)')) || 0;
-                    const total = supply + install;
-                    acc[trade] = (acc[trade] || 0) + total;
-                    return acc;
-                }, {});
-
-            const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType).includes('renovation permit'));
-            const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType).includes('contractor awarded'));
-
-            const g3Gate = gates.find(g => g.gate === 'G3 Design Development');
-            const g3ApprovalRate = g3Gate ? g3Gate.gateApprovalRate : 0;
-
-            const alerts = {
-                daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
-                g3NotApproved: g3ApprovalRate < 1,
-                paymentsOverdue: overduePayments,
-                mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
-                contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
-            };
-
-            // NEW v10.0.7: Get detailed at-risk milestone information
-            const atRiskMilestones = (milestonesData.results || [])
-                .filter(m => extractText(getProp(m, 'Risk')) === 'At Risk')
-                .map(m => ({
-                    title: extractText(getProp(m, 'MilestoneTitle')),
-                    dueDate: extractText(getProp(m, 'EndDate')),
-                    issue: extractText(getProp(m, 'GateIssue')),
-                    progress: extractText(getProp(m, 'Progress')) || 0,
-                    phase: extractText(getProp(m, 'Phase')),
-                    status: extractText(getProp(m, 'Status')),
-                    url: m.url
-                }))
-            const responseData = {
-                kpis: {
-                    budgetMYR,
-                    paidMYR,
-                    remainingMYR: budgetMYR - paidMYR,
-                    deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
-                    deliverablesTotal: allDeliverablesIncludingMissing.length,
-                    totalOutstandingMYR: totalOutstandingMYR,
-                    totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
-                    paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
-                    deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
-                    milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk')) === 'At Risk').length,
-                },
-                gates,
-                topVendors,
-                budgetByTrade,
-                deliverables: allDeliverablesIncludingMissing,
-                paymentsSchedule: {
-                    upcoming: upcomingPayments,
-                    overdue: overduePayments,
-                    recentPaid: recentPaidPayments,
-                    forecast: []
-                },
-                alerts,
-                atRiskMilestones, // ← ONLY LINE ADDED
-                timestamp: new Date().toISOString()
-            };
-
-            return { statusCode: 200, headers, body: JSON.stringify(responseData) };
-        }
-
-        // Create task endpoint
-        if (httpMethod === 'POST' && path.endsWith('/create-task')) {
-            const body = JSON.parse(event.body || '{}');
-            const { taskName, gate, dueDate, comments } = body;
-
-            if (!taskName || !taskName.trim() || !gate) {
-                return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
-            }
-
-            try {
-                const properties = {
-                    'Select Deliverable:': {
-                        title: [{ text: { content: taskName } }]
-                    },
-                    'Gate': {
-                        multi_select: [{ name: gate }]
-                    },
-                    'Status': {
-                        select: { name: 'Missing' }
-                    },
-                    'Submitted By': {
-                        multi_select: [{ name: 'Designer' }]
-                    }
-                };
-
-                if (dueDate) {
-                    // Check if dueDate includes time (datetime-local format: "2025-10-19T14:30")
-                    const hasTime = dueDate.includes('T');
-                    properties['Target Due'] = {
-                        date: {
-                            start: hasTime ? new Date(dueDate).toISOString() : dueDate,
-                            time_zone: hasTime ? 'Asia/Kuala_Lumpur' : null
-                        }
-                    };
-                }
-
-                if (comments) {
-                    properties['Comments'] = {
-                        rich_text: [{ text: { content: comments } }]
-                    };
-                }
-
-                const createRes = await fetch('https://api.notion.com/v1/pages', {
-                    method: 'POST',
-                    headers: notionHeaders(),
-                    body: JSON.stringify({
-                        parent: { database_id: DELIVERABLES_DB_ID },
-                        properties
-                    })
                 });
 
-                if (!createRes.ok) {
-                    const errText = await createRes.text();
-                    console.error('Notion API error:', errText);
-                    throw new Error(`Notion API error: ${createRes.status}`);
+                const existingDeliverableKeys = new Set(processedDeliverables.map(d => norm(`${d.gate}|${d.deliverableType}`)));
+                const allDeliverablesIncludingMissing = [...processedDeliverables];
+
+                Object.entries(REQUIRED_BY_GATE).forEach(([gateName, requiredDocs]) => {
+                    requiredDocs.forEach(requiredTitle => {
+                        if (!existingDeliverableKeys.has(norm(`${gateName}|${requiredTitle}`))) {
+                            allDeliverablesIncludingMissing.push({
+                                id: null,
+                                title: requiredTitle,
+                                deliverableType: requiredTitle,
+                                gate: gateName,
+                                status: 'Missing',
+                                category: 'Design Document',
+                                isCritical: true,
+                                assignees: [],
+                                url: '#'
+                            });
+                        }
+                    });
+                });
+
+                const gates = Object.entries(REQUIRED_BY_GATE)
+                    .map(([gateName, requiredDocs]) => {
+                        const criticalDocs = allDeliverablesIncludingMissing.filter(d =>
+                            d.gate === gateName &&
+                            requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) &&
+                            d.isCritical
+                        );
+                        const criticalApproved = criticalDocs.filter(d => norm(d.status) === 'approved').length;
+                        const criticalTotal = criticalDocs.length;
+
+                        const approvedCount = allDeliverablesIncludingMissing.filter(d =>
+                            d.gate === gateName &&
+                            requiredDocs.some(reqType => norm(d.deliverableType) === norm(reqType)) &&
+                            norm(d.status) === 'approved'
+                        ).length;
+                        const totalInGate = requiredDocs.length;
+
+                        return {
+                            gate: gateName,
+                            total: totalInGate,
+                            approved: approvedCount,
+                            criticalTotal: criticalTotal,
+                            criticalApproved: criticalApproved,
+                            gateApprovalRate: totalInGate > 0 ? approvedCount / totalInGate : 0,
+                            criticalApprovalRate: criticalTotal > 0 ? criticalApproved / criticalTotal : 0
+                        };
+                    })
+                    .filter(g => g.total > 0)
+                    .sort((a, b) => a.gate.localeCompare(b.gate));
+
+                const paymentPages = paymentsData.results || [];
+                const overduePayments = paymentPages.filter(p => {
+                    const status = extractText(getProp(p, 'Status'));
+                    const dueDate = extractText(getProp(p, 'DueDate'));
+                    return (status === 'Outstanding' || status === 'Overdue') && dueDate && new Date(dueDate) < now;
+                }).map(p => ({
+                    id: p.id,
+                    paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled',
+                    vendor: extractText(getProp(p, 'Vendor')),
+                    amount: extractText(getProp(p, 'Amount (RM)')) || 0,
+                    dueDate: extractText(getProp(p, 'DueDate')),
+                    url: p.url
+                })).sort((a, b) => (a.dueDate || '0') > (b.dueDate || '0') ? 1 : -1);
+
+                const upcomingPayments = paymentPages.filter(p => {
+                    const status = extractText(getProp(p, 'Status'));
+                    const dueDate = extractText(getProp(p, 'DueDate'));
+                    return status === 'Outstanding' && (!dueDate || new Date(dueDate) >= now);
+                }).map(p => ({
+                    id: p.id,
+                    paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled',
+                    vendor: extractText(getProp(p, 'Vendor')),
+                    amount: extractText(getProp(p, 'Amount (RM)')) || 0,
+                    dueDate: extractText(getProp(p, 'DueDate')),
+                    status: extractText(getProp(p, 'Status')),
+                    url: p.url
+                })).sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1).slice(0, 10);
+
+                const recentPaidPayments = paymentPages.filter(p => extractText(getProp(p, 'Status')) === 'Paid').map(p => ({
+                    id: p.id,
+                    paymentFor: extractText(getProp(p, 'Payment For')) || 'Untitled',
+                    vendor: extractText(getProp(p, 'Vendor')),
+                    amount: extractText(getProp(p, 'Amount (RM)')) || 0,
+                    paidDate: extractText(getProp(p, 'PaidDate')),
+                    url: p.url
+                })).sort((a, b) => (b.paidDate || '0') > (a.paidDate || '0') ? 1 : -1).slice(0, 10);
+
+                const outstandingAndOverdue = paymentPages.filter(p => {
+                    const status = extractText(getProp(p, 'Status'));
+                    return status === 'Outstanding' || status === 'Overdue';
+                });
+
+                const totalOutstandingMYR = outstandingAndOverdue.reduce((sum, p) => sum + (extractText(getProp(p, 'Amount (RM)')) || 0), 0);
+
+                // Build vendor lookup
+                const vendorLookup = {};
+                (vendorData.results || []).forEach(v => {
+                    vendorLookup[v.id] = extractText(getProp(v, 'Company_Name')) || 'Unknown';
+                });
+
+                // Top vendors
+                const vendorSpend = {};
+                (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').forEach(p => {
+                    const vendorRelProp = getProp(p, 'Vendor_Registry');
+                    const vendorRels = (vendorRelProp && vendorRelProp.relation) || [];
+                    const vendorId = vendorRels[0] && vendorRels[0].id;
+                    const vendorName = vendorId && vendorLookup[vendorId] ? vendorLookup[vendorId] : 'Unknown';
+                    const amount = extractText(getProp(p, 'Paid (MYR)')) || 0;
+                    vendorSpend[vendorName] = (vendorSpend[vendorName] || 0) + amount;
+                });
+
+                const topVendors = Object.entries(vendorSpend)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5)
+                    .map(([name, paid]) => ({ name, paid, trade: '—' }));
+
+                // Budget by trade
+                const budgetByTrade = (budgetData.results || [])
+                    .filter(p => extractText(getProp(p, 'In Scope')))
+                    .reduce((acc, p) => {
+                        const trade = extractText(getProp(p, 'Trade')) || 'Other';
+                        const supply = extractText(getProp(p, 'Supply (MYR)')) || 0;
+                        const install = extractText(getProp(p, 'Install (MYR)')) || 0;
+                        const total = supply + install;
+                        acc[trade] = (acc[trade] || 0) + total;
+                        return acc;
+                    }, {});
+
+                const mbsaPermit = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType).includes('renovation permit'));
+                const contractorAwarded = allDeliverablesIncludingMissing.find(d => norm(d.deliverableType).includes('contractor awarded'));
+
+                const g3Gate = gates.find(g => g.gate === 'G3 Design Development');
+                const g3ApprovalRate = g3Gate ? g3Gate.gateApprovalRate : 0;
+
+                const alerts = {
+                    daysToConstructionStart: Math.ceil((new Date(CONSTRUCTION_START_DATE) - now) / (1000 * 60 * 60 * 24)),
+                    g3NotApproved: g3ApprovalRate < 1,
+                    paymentsOverdue: overduePayments,
+                    mbsaPermitApproved: mbsaPermit && norm(mbsaPermit.status) === 'approved',
+                    contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
+                };
+
+                // NEW v10.0.7: Get detailed at-risk milestone information
+                const atRiskMilestones = (milestonesData.results || [])
+                    .filter(m => extractText(getProp(m, 'Risk')) === 'At Risk')
+                    .map(m => ({
+                        title: extractText(getProp(m, 'MilestoneTitle')),
+                        dueDate: extractText(getProp(m, 'EndDate')),
+                        issue: extractText(getProp(m, 'GateIssue')),
+                        progress: extractText(getProp(m, 'Progress')) || 0,
+                        phase: extractText(getProp(m, 'Phase')),
+                        status: extractText(getProp(m, 'Status')),
+                        url: m.url
+                    }))
+                const responseData = {
+                    kpis: {
+                        budgetMYR,
+                        paidMYR,
+                        remainingMYR: budgetMYR - paidMYR,
+                        deliverablesApproved: allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length,
+                        deliverablesTotal: allDeliverablesIncludingMissing.length,
+                        totalOutstandingMYR: totalOutstandingMYR,
+                        totalOverdueMYR: overduePayments.reduce((sum, p) => sum + p.amount, 0),
+                        paidVsBudget: budgetMYR > 0 ? paidMYR / budgetMYR : 0,
+                        deliverablesProgress: allDeliverablesIncludingMissing.length > 0 ? allDeliverablesIncludingMissing.filter(d => norm(d.status) === 'approved').length / allDeliverablesIncludingMissing.length : 0,
+                        milestonesAtRisk: (milestonesData.results || []).filter(m => extractText(getProp(m, 'Risk')) === 'At Risk').length,
+                    },
+                    gates,
+                    topVendors,
+                    budgetByTrade,
+                    deliverables: allDeliverablesIncludingMissing,
+                    paymentsSchedule: {
+                        upcoming: upcomingPayments,
+                        overdue: overduePayments,
+                        recentPaid: recentPaidPayments,
+                        forecast: []
+                    },
+                    alerts,
+                    atRiskMilestones, // ← ONLY LINE ADDED
+                    timestamp: new Date().toISOString()
+                };
+
+                return { statusCode: 200, headers, body: JSON.stringify(responseData) };
+            }
+
+            // Create task endpoint
+            if (httpMethod === 'POST' && path.endsWith('/create-task')) {
+                const body = JSON.parse(event.body || '{}');
+                const { taskName, gate, dueDate, comments } = body;
+
+                if (!taskName || !taskName.trim() || !gate) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
                 }
 
-                const newPage = await createRes.json();
-                return { statusCode: 200, headers, body: JSON.stringify({ success: true, pageId: newPage.id }) };
+                try {
+                    // Map gate to a generic deliverable option
+                    const gateDeliverableMap = {
+                        'G0 Pre Construction': 'G0 - Move out to temporary residence',
+                        'G1 Concept': 'G1 - Concept sketches',
+                        'G2 Schematic': 'G2 - Floor plans 1:100',
+                        'G3 Design Development': 'G3 - Construction drawings',
+                        'G4 Authority Submission': 'G4 - Authority submission set',
+                        'G5 Construction Documentation': 'G5 - IFC construction drawings',
+                        'G6 Close-out': 'G6 - As-built drawings'
+                    };
+
+                    const properties = {
+                        'Select Deliverable:': {
+                            title: [{ text: { content: taskName } }]
+                        },
+                        'Gate': {
+                            multi_select: [{ name: gate }]
+                        },
+                        'Deliverable': {
+                            multi_select: [{ name: gateDeliverableMap[gate] || 'G1 - Concept sketches' }]
+                        },
+
+                        if (dueDate) {
+                            // Check if dueDate includes time (datetime-local format: "2025-10-19T14:30")
+                            const hasTime = dueDate.includes('T');
+                            properties['Target Due'] = {
+                                date: {
+                                    start: hasTime ? new Date(dueDate).toISOString() : dueDate,
+                                    time_zone: hasTime ? 'Asia/Kuala_Lumpur' : null
+                                }
+                            };
+                        }
+
+                        if (comments) {
+                            properties['Comments'] = {
+                                rich_text: [{ text: { content: comments } }]
+                            };
+                        }
+
+                        const createRes = await fetch('https://api.notion.com/v1/pages', {
+                            method: 'POST',
+                            headers: notionHeaders(),
+                            body: JSON.stringify({
+                                parent: { database_id: DELIVERABLES_DB_ID },
+                                properties
+                            })
+                        });
+
+                        if (!createRes.ok) {
+                            const errText = await createRes.text();
+                            console.error('Notion API error:', errText);
+                            throw new Error(`Notion API error: ${createRes.status}`);
+                        }
+
+                        const newPage = await createRes.json();
+                        return { statusCode: 200, headers, body: JSON.stringify({ success: true, pageId: newPage.id }) };
+
+                    }
+                    catch (error) {
+                        console.error('Create task error:', error);
+                        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+                    }
+                }
+
 
             } catch (error) {
-                console.error('Create task error:', error);
-                return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+                console.error('Handler error:', error);
+                return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
             }
-        }
-
-
-    } catch (error) {
-        console.error('Handler error:', error);
-        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
-    }
-};
+        };
