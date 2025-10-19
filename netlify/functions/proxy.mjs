@@ -456,10 +456,14 @@ export const handler = async(event) => {
                     }
                 };
 
-                // Use expanded date format
                 if (dueDate) {
+                    // Check if dueDate includes time (datetime-local format: "2025-10-19T14:30")
+                    const hasTime = dueDate.includes('T');
                     properties['Target Due'] = {
-                        date: { start: dueDate }
+                        date: {
+                            start: hasTime ? new Date(dueDate).toISOString() : dueDate,
+                            time_zone: hasTime ? 'Asia/Kuala_Lumpur' : null
+                        }
                     };
                 }
 
