@@ -436,7 +436,7 @@ export const handler = async(event) => {
             const body = JSON.parse(event.body || '{}');
             const { taskName, gate, dueDate, comments } = body;
 
-            if (!taskName || !gate) {
+            if (!taskName || !taskName.trim() || !gate) {
                 return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
             }
 
