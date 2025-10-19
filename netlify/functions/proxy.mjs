@@ -438,8 +438,75 @@ export const handler = async(event) => {
             const summary = await callGemini(prompt);
             return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
         }
+        // NEW: Create task endpoint
+        if (httpMethod === 'POST' && path.endsWith('/create-task')) {
+            const body = JSON.parse(event.body || '{}');
+            const { taskName, gate, dueDate, priority, comments } = body;
+
+            if (!taskName || !gate) {
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
+            }
+
+            try {
+                const createUrl = `https://api.notion.com/v1/pages`;
+                const properties = {
+                    'Select Deliverable:': {
+                        title: [{ text: { content: taskName } }]
+                    },
+                    'Gate': {
+                        multi_select: [{ name: gate }]
+                    },
+                    'Status': {
+                        select: { name: 'Missing' }
+                    },
+                    'Submitted By': {
+                        multi_select: [{ name: 'Designer' }]
+                    }
+                };
+
+                if (dueDate) {
+                    properties['Target Due'] = {
+                        date: { start: dueDate }
+                    };
+                }
+
+                if (priority) {
+                    properties['Priority'] = {
+                        select: { name: priority }
+                    };
+                }
+
+                if (comments) {
+                    properties['Comments'] = {
+                        rich_text: [{ text: { content: comments } }]
+                    };
+                }
+
+                const createRes = await fetch(createUrl, {
+                    method: 'POST',
+                    headers: notionHeaders(),
+                    body: JSON.stringify({
+                        parent: { database_id: DELIVERABLES_DB_ID },
+                        properties
+                    })
+                });
+
+                if (!createRes.ok) {
+                    const errText = await createRes.text();
+                    throw new Error(`Failed to create task: ${createRes.status}: ${errText}`);
+                }
+
+                const newPage = await createRes.json();
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, pageId: newPage.id }) };
+
+            } catch (error) {
+                console.error('Create task error:', error);
+                return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+            }
+        }
 
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+
 
     } catch (error) {
         console.error('Handler error:', error);
