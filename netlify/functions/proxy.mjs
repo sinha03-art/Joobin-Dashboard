@@ -431,14 +431,7 @@ export const handler = async(event) => {
             return { statusCode: 200, headers, body: JSON.stringify(responseData) };
         }
 
-        if (httpMethod === 'POST' && path.endsWith('/proxy')) {
-            const body = JSON.parse(event.body || '{}');
-            const kpis = body.kpis || {};
-            const prompt = `Summarize this project data in 2-3 concise sentences: Budget ${kpis.budgetMYR || 0} MYR, Paid ${kpis.paidMYR || 0} MYR. Deliverables ${kpis.deliverablesApproved || 0}/${kpis.deliverablesTotal || 0} approved. Milestones at risk: ${kpis.milestonesAtRisk || 0}. Overdue payments: ${kpis.totalOverdueMYR > 0 ? 'Yes' : 'No'}. Focus on key risks and overall progress.`;
-            const summary = await callGemini(prompt);
-            return { statusCode: 200, headers, body: JSON.stringify({ summary }) };
-        }
-        // NEW: Create task endpoint
+        // Create task endpoint
         if (httpMethod === 'POST' && path.endsWith('/create-task')) {
             const body = JSON.parse(event.body || '{}');
             const { taskName, gate, dueDate, priority, comments } = body;
@@ -448,7 +441,6 @@ export const handler = async(event) => {
             }
 
             try {
-                const createUrl = `https://api.notion.com/v1/pages`;
                 const properties = {
                     'Select Deliverable:': {
                         title: [{ text: { content: taskName } }]
@@ -482,7 +474,7 @@ export const handler = async(event) => {
                     };
                 }
 
-                const createRes = await fetch(createUrl, {
+                const createRes = await fetch('https://api.notion.com/v1/pages', {
                     method: 'POST',
                     headers: notionHeaders(),
                     body: JSON.stringify({
@@ -493,7 +485,8 @@ export const handler = async(event) => {
 
                 if (!createRes.ok) {
                     const errText = await createRes.text();
-                    throw new Error(`Failed to create task: ${createRes.status}: ${errText}`);
+                    console.error('Notion API error:', errText);
+                    throw new Error(`Notion API error: ${createRes.status}`);
                 }
 
                 const newPage = await createRes.json();
@@ -504,8 +497,6 @@ export const handler = async(event) => {
                 return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
             }
         }
-
-        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
 
 
     } catch (error) {
