@@ -434,7 +434,7 @@ export const handler = async(event) => {
         // Create task endpoint
         if (httpMethod === 'POST' && path.endsWith('/create-task')) {
             const body = JSON.parse(event.body || '{}');
-            const { taskName, gate, dueDate, comments } = body; // Remove priority
+            const { taskName, gate, dueDate, comments } = body;
 
             if (!taskName || !gate) {
                 return { statusCode: 400, headers, body: JSON.stringify({ error: 'Task name and gate are required' }) };
@@ -456,8 +456,11 @@ export const handler = async(event) => {
                     }
                 };
 
+                // Use expanded date format
                 if (dueDate) {
-                    properties['date:Target Due:start'] = dueDate;
+                    properties['Target Due'] = {
+                        date: { start: dueDate }
+                    };
                 }
 
                 if (comments) {
