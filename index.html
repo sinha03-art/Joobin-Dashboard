@@ -334,30 +334,47 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Due Date</label>
-                        <input type="datetime-local" id="taskDueDate" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Priority</label>
-                        <select id="taskPriority" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="Normal">Normal</option>
-                            <option value="Critical">Critical</option>
-                        </select>
+                        <input type="date" id="taskDueDate" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Comments</label>
                         <textarea id="taskComments" rows="3" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
+                    <div id="taskFormStatus" class="hidden"></div>
                     <div class="flex gap-3 pt-2">
-                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors">
-                            Create Task
-                        </button>
-                        <button type="button" onclick="closeAddTaskModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md font-medium transition-colors">
-                            Cancel
-                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors">Create
+                            Task</button>
+                        <button type="button" onclick="closeAddTaskModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-md transition-colors">Cancel</button>
                     </div>
                 </form>
-                <div id="taskFormStatus" class="hidden mt-4 p-3 rounded-md"></div>
             </div>
+        </div>>
+        <div>
+            <label class="block text-sm font-medium mb-1">Due Date</label>
+            <input type="datetime-local" id="taskDueDate" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Priority</label>
+            <select id="taskPriority" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="Normal">Normal</option>
+                <option value="Critical">Critical</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Comments</label>
+            <textarea id="taskComments" rows="3" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors">
+                Create Task
+            </button>
+            <button type="button" onclick="closeAddTaskModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md font-medium transition-colors">
+                Cancel
+            </button>
+        </div>
+        </form>
+        <div id="taskFormStatus" class="hidden mt-4 p-3 rounded-md"></div>
+        </div>
         </div>
         <div id="passwordModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
             <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
@@ -462,7 +479,8 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({...pendingUpdate,
+                    body: JSON.stringify({
+                        ...pendingUpdate,
                         password
                     })
                 });
