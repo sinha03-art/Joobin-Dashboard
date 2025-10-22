@@ -79,16 +79,27 @@ exports.handler = async(event) => {
         const response = await queryNotionDB(DELIVERABLES_DB_ID);
         console.log('[INFO] Total pages found:', response.results.length);
 
-        // Group pages by deliverable name
+        // Helper function to get deliverable tags
+        function getDeliverableTag(page) {
+            try {
+                const deliverables = page.properties['Deliverable'].multi_select || [];
+                // Join all deliverable tags as a string for grouping
+                // Sort to ensure consistent grouping for multiple tags
+                return deliverables.map(d => d.name).sort().join(',');
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // Group pages by deliverable tag (not title)
         const grouped = {};
         response.results.forEach(page => {
-            const title = getTitle(page);
-            if (!title) return;
-
-            if (!grouped[title]) {
-                grouped[title] = [];
+            const deliverableTag = getDeliverableTag(page);
+            if (!deliverableTag) return; // Skip entries with no deliverable tag
+            if (!grouped[deliverableTag]) {
+                grouped[deliverableTag] = [];
             }
-            grouped[title].push(page);
+            grouped[deliverableTag].push(page);
         });
 
         // Find duplicates
