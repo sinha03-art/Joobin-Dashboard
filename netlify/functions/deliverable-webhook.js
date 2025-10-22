@@ -83,23 +83,28 @@ exports.handler = async(event) => {
         function getDeliverableTag(page) {
             try {
                 const deliverables = page.properties['Deliverable'].multi_select || [];
-                // Join all deliverable tags as a string for grouping
-                // Sort to ensure consistent grouping for multiple tags
                 return deliverables.map(d => d.name).sort().join(',');
             } catch (e) {
                 return '';
             }
         }
 
-        // Group pages by deliverable tag (not title)
+        // Group pages by BOTH deliverable tag AND title (composite key)
         const grouped = {};
         response.results.forEach(page => {
+            const title = getTitle(page);
             const deliverableTag = getDeliverableTag(page);
-            if (!deliverableTag) return; // Skip entries with no deliverable tag
-            if (!grouped[deliverableTag]) {
-                grouped[deliverableTag] = [];
+
+            // Create composite key: "deliverableTag::title"
+            // Only group entries that have BOTH the same tag AND same title
+            const compositeKey = `${deliverableTag}::${title}`;
+
+            if (!deliverableTag || !title) return; // Skip entries missing either field
+
+            if (!grouped[compositeKey]) {
+                grouped[compositeKey] = [];
             }
-            grouped[deliverableTag].push(page);
+            grouped[compositeKey].push(page);
         });
 
         // Find duplicates
