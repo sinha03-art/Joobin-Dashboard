@@ -400,6 +400,7 @@ export const handler = async(event) => {
                     status: extractText(getProp(m, 'Status')),
                     url: m.url
                 }))
+                .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
             const responseData = {
                 kpis: {
                     budgetMYR,
@@ -462,6 +463,12 @@ export const handler = async(event) => {
                     'Deliverable': {
                         multi_select: [{ name: gateDeliverableMap[gate] || 'G1 - Concept sketches' }]
                     },
+                    'Status': {
+                        select: { name: 'Missing' }
+                    },
+                    'Submitted By': {
+                        multi_select: [{ name: 'Designer' }]
+                    }
                 }
 
                 if (dueDate) {
@@ -473,7 +480,7 @@ export const handler = async(event) => {
                             time_zone: hasTime ? 'Asia/Kuala_Lumpur' : null
                         }
                     };
-                }
+                };
 
                 if (comments) {
                     properties['Comments'] = {
