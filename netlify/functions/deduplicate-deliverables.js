@@ -126,7 +126,24 @@ exports.handler = async(event) => {
             console.log('[PROCESS] Merging duplicates for:', deliverableName, '(' + pages.length + ' entries)');
 
             // Sort by created time - oldest first
-            pages.sort((a, b) => getCreatedTime(a).localeCompare(getCreatedTime(b)));
+            // Sort by priority: Approved > Submitted > Missing, then by newest first
+            pages.sort((a, b) => {
+                const statusA = a.properties ? .Status ? .select ? .name || 'Missing';
+                const statusB = b.properties ? .Status ? .select ? .name || 'Missing';
+
+                // Priority order: Approved=3, Submitted=2, Missing=1
+                const priorityMap = { 'Approved': 3, 'Submitted': 2, 'Missing': 1 };
+                const priorityA = priorityMap[statusA] || 0;
+                const priorityB = priorityMap[statusB] || 0;
+
+                // First sort by status priority (higher priority first)
+                if (priorityA !== priorityB) {
+                    return priorityB - priorityA;
+                }
+
+                // If same status, keep newest
+                return getCreatedTime(b).localeCompare(getCreatedTime(a));
+            });
 
             const originalPage = pages[0];
             const duplicatePages = pages.slice(1);
