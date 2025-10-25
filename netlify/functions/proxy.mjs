@@ -142,23 +142,40 @@ async function queryNotionDB(dbId, filter = {}) {
         console.warn(`queryNotionDB called with no dbId. Skipping.`);
         return { results: [] };
     }
-    const url = `https://api.notion.com/v1/databases/${dbId}/query`;
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: notionHeaders(),
-            body: JSON.stringify(filter)
-        });
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error(`Notion API error for DB ${dbId}: ${res.status}`, errText);
-            throw new Error(`Notion API error for DB ${dbId}: ${res.status}: ${errText}`);
+
+    let allResults = [];
+    let hasMore = true;
+    let startCursor = undefined;
+
+    while (hasMore) {
+        const body = {...filter };
+        if (startCursor) body.start_cursor = startCursor;
+
+        const url = `https://api.notion.com/v1/databases/${dbId}/query`;
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: notionHeaders(),
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                console.error(`Notion API error for DB ${dbId}: ${res.status}`, errText);
+                throw new Error(`Notion API error: ${res.status}`);
+            }
+
+            const data = await res.json();
+            allResults = allResults.concat(data.results || []);
+            hasMore = data.has_more || false;
+            startCursor = data.next_cursor;
+        } catch (error) {
+            console.error('queryNotionDB error:', error);
+            throw error;
         }
-        return await res.json();
-    } catch (error) {
-        console.error('queryNotionDB error:', error);
-        throw error;
     }
+
+    return { results: allResults };
 }
 
 function mapConstructionStatus(reviewStatus) {
@@ -517,4 +534,4 @@ export const handler = async(event) => {
         console.error('Handler error:', error);
         return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
     }
-};// Cache bust Sat Oct 25 09:43:32 +08 2025
+}; // Cache bust Sat Oct 25 09:43:32 +08 2025
