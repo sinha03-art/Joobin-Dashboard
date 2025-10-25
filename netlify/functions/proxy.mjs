@@ -517,4 +517,4 @@ export const handler = async(event) => {
         console.error('Handler error:', error);
         return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
     }
-};
+};// Cache bust Sat Oct 25 09:43:32 +08 2025
