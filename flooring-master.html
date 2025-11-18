@@ -374,6 +374,58 @@
             `;
         }
 
+        function renderOptimumChoice(vendor, section) {
+            if (!vendor) return '';
+            
+            const reasons = [];
+            if (vendor.isCheapest) reasons.push('Lowest total cost');
+            if (vendor.completenessScore >= 0.9) reasons.push('Highly complete quotation (>90%)');
+            else if (vendor.completenessScore >= 0.7) reasons.push('Complete quotation (>70%)');
+            if (vendor.rank === 1) reasons.push('Top ranked');
+            if (vendor.leadTimeDays && vendor.leadTimeDays <= 30) reasons.push('Fast delivery');
+            if (!vendor.exclusions) reasons.push('No exclusions');
+            if (!vendor.termsRisk) reasons.push('No EXW risks');
+
+            return `
+                <div class="card border-2 border-green-500 bg-gradient-to-r from-green-900/20 to-green-800/10">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0">
+                            <svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-xl font-bold text-green-400">⭐ OPTIMUM CHOICE</h3>
+                                <span class="badge badge-cheapest">Rank #${vendor.rank}</span>
+                            </div>
+                            <p class="text-2xl font-bold mb-3">${vendor.vendor}</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                                <div>
+                                    <p class="text-sm text-slate-400">Total Cost</p>
+                                    <p class="text-xl font-bold text-green-400">${formatCurrency(vendor.total, vendor.currency)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-400">Completeness</p>
+                                    <p class="text-xl font-bold">${Math.round(vendor.completenessScore * 100)}%</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-400">Lead Time</p>
+                                    <p class="text-xl font-bold">${vendor.leadTimeDays ? vendor.leadTimeDays + ' days' : 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <p class="text-sm font-semibold text-slate-300 mb-2">✓ Why This is Optimal:</p>
+                                <ul class="text-sm text-slate-400 space-y-1">
+                                    ${reasons.map(r => `<li>• ${r}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderSection(section, vendors) {
             if (!vendors || vendors.length === 0) {
                 return `
@@ -384,11 +436,16 @@
                 `;
             }
 
+            // Find optimum choice: rank #1 with ≥70% completeness
+            const optimumVendor = vendors.find(v => v.rank === 1 && v.completenessScore >= 0.7);
             const vendorCards = vendors.slice(0, 4).map(v => renderVendorCard(v, section)).join('');
 
             return `
                 <div class="space-y-4">
                     <h2 class="text-2xl font-bold">${section}</h2>
+                    
+                    <!-- Optimum Choice Recommendation -->
+                    ${optimumVendor ? renderOptimumChoice(optimumVendor, section) : ''}
                     
                     <!-- Vendor Cards -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
