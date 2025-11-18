@@ -32,64 +32,69 @@
             border-radius: 0.75rem;
             border: 1px solid hsl(var(--border));
         }
-
         /* NEW: Skeleton Loader Styles */
+        
         .skeleton {
             background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
             background-size: 200% 100%;
             animation: skeleton-loading 1.5s ease-in-out infinite;
             border-radius: 0.5rem;
         }
-
+        
         @keyframes skeleton-loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
         }
-
+        
         .skeleton-text {
             height: 1rem;
             margin-bottom: 0.5rem;
         }
-
+        
         .skeleton-title {
             height: 2rem;
             width: 60%;
             margin-bottom: 1rem;
         }
-
+        
         .skeleton-circle {
             width: 96px;
             height: 96px;
             border-radius: 50%;
         }
-
         /* NEW: Better Status Colors */
+        
         .status-approved {
             background: #059669;
             color: #d1fae5;
         }
-
+        
         .status-submitted {
-            background: #2563eb; /* Changed from orange to blue */
+            background: #2563eb;
+            /* Changed from orange to blue */
             color: #dbeafe;
         }
-
+        
         .status-pending {
             background: #f59e0b;
             color: #fef3c7;
         }
-
+        
         .status-missing {
             background: #6b7280;
             color: #e5e7eb;
         }
-
+        
         .status-rejected {
             background: #dc2626;
             color: #fee2e2;
         }
-
         /* NEW: Auto-refresh indicator */
+        
         .refresh-indicator {
             position: fixed;
             top: 20px;
@@ -104,51 +109,54 @@
             display: none;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-
+        
         .refresh-indicator.show {
             display: flex;
         }
-
+        
         .refresh-spinner {
             width: 14px;
             height: 14px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-
+        
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-
         /* Force Chart.js legend text to white */
+        
         #forecastChart+.chartjs-legend,
         .chartjs-legend-item,
         canvas+div {
             color: #ffffff !important;
         }
-
         /* Gate dependency arrows and lock animations */
+        
         .gate-circle {
             animation: draw-circle 1.5s ease-out forwards;
         }
-
+        
         @keyframes draw-circle {
             to {
                 stroke-dashoffset: 0;
             }
         }
-
         /* Deliverable card pulse effect */
+        
         .deliverable-pulse {
             animation: pulse-border 2s ease-in-out infinite;
         }
-
+        
         @keyframes pulse-border {
-            0%, 100% {
+            0%,
+            100% {
                 border-color: #10b981;
                 box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
             }
@@ -157,34 +165,34 @@
                 box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
             }
         }
-
         /* Smooth fade for blocked gates */
+        
         .opacity-60 {
             opacity: 0.6;
             filter: grayscale(30%);
         }
-
+        
         .tab-button.active {
             color: hsl(var(--ring));
             border-bottom-color: hsl(var(--ring));
         }
-
+        
         .tab-content {
             display: none;
         }
-
+        
         .tab-content.active {
             display: block;
         }
-
+        
         #passwordModal {
             transition: opacity 0.3s ease;
         }
-
+        
         .modal-content {
             transition: transform 0.3s ease;
         }
-
+        
         .update-btn {
             background-color: hsla(213, 94%, 68%, 0.1);
             color: hsl(var(--ring));
@@ -196,23 +204,24 @@
             transition: background-color 0.2s;
             cursor: pointer;
         }
-
+        
         .update-btn:hover {
             background-color: hsla(213, 94%, 68%, 0.2);
         }
-
+        
         .copy-btn {
             background-color: hsla(250, 50%, 80%, 0.1);
             color: hsl(250, 50%, 80%);
             border: 1px solid hsl(250, 50%, 80%);
         }
-
+        
         .copy-btn:hover {
             background-color: hsla(250, 50%, 80%, 0.2);
         }
-
+        
         @keyframes pulse {
-            0%, 100% {
+            0%,
+            100% {
                 transform: scale(1);
                 box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
             }
@@ -221,7 +230,7 @@
                 box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0);
             }
         }
-
+        
         .countdown-banner {
             background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%);
             padding: 24px;
@@ -230,83 +239,77 @@
             border: 1px solid #dc2626;
             box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
         }
-
+        
         .countdown-banner.low-risk {
             background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%);
             border-color: #16a34a;
         }
-
+        
         .countdown-banner.medium-risk {
             background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%);
             border-color: #ea580c;
         }
-
+        
         .countdown-icon {
             font-size: 40px;
             animation: pulse 2.5s ease-out infinite;
         }
-
+        
         .countdown-days {
             font-size: 36px;
             font-weight: 800;
         }
-
+        
         .blocker-card {
             border: 1px solid #b91c1c;
             margin-bottom: 24px;
         }
-
+        
         .blocker-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
+        
         .blocker-title {
             color: #f87171;
         }
-
+        
         .blocker-count {
             background: #dc2626;
         }
-
         /* NEW: Mobile Responsiveness */
+        
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
             }
-
             aside {
                 width: 100% !important;
                 border-right: none;
                 border-bottom: 1px solid #1e293b;
                 max-height: 300px;
             }
-
             .countdown-banner {
                 padding: 16px;
             }
-
             .countdown-days {
                 font-size: 24px;
             }
-
             #gates {
                 grid-template-columns: repeat(2, 1fr) !important;
                 gap: 1rem !important;
             }
-
             .gate-circle {
                 width: 64px !important;
                 height: 64px !important;
             }
-
             #kpis {
                 grid-template-columns: 1fr !important;
             }
         }
-
         /* NEW: Keyboard shortcut hint */
+        
         .kbd {
             background: #374151;
             border: 1px solid #4b5563;
@@ -315,8 +318,8 @@
             font-size: 11px;
             font-family: monospace;
         }
-
         /* NEW: Export button styles */
+        
         .export-btn {
             display: inline-flex;
             align-items: center;
@@ -330,7 +333,7 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-
+        
         .export-btn:hover {
             background: #047857;
         }
@@ -353,7 +356,7 @@
             <h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1>
         </div>
         <div class="aspect-video">
-            <iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" class="w-full h-full rounded-lg" title="Project Demo"></iframe>
+            <iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture"></iframe>
         </div>
         <div>
             <h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2>
@@ -379,7 +382,7 @@
                     <div class="skeleton skeleton-text" style="width: 200px;"></div>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div class="card p-5">
                     <div class="skeleton skeleton-text" style="width: 80px;"></div>
@@ -469,10 +472,10 @@
                     </div>
                 </div>
             </header>
-            
+
             <div id="critical-path-section"></div>
             <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
-            
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="lg:col-span-2 space-y-6">
                     <div class="card p-4 sm:p-6">
@@ -503,13 +506,13 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="card p-4 sm:p-6">
                         <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
                         <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
                     </div>
                 </div>
-                
+
                 <div class="lg:col-span-1 space-y-6">
                     <div class="card p-4 sm:p-6">
                         <h3 class="text-lg font-semibold mb-4">Budget Distribution</h3>
@@ -517,7 +520,7 @@
                             <canvas id="forecastChart"></canvas>
                         </div>
                     </div>
-                    
+
                     <div class="card p-4 sm:p-6">
                         <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
                         <div id="topVendors" class="space-y-4"></div>
@@ -638,18 +641,22 @@
         let dashboardData = null;
         let forecastChart = null;
         let autoRefreshInterval = null;
-        let pendingUpdate = { pageId: null, action: null, gateName: null };
+        let pendingUpdate = {
+            pageId: null,
+            action: null,
+            gateName: null
+        };
 
         const norm = (s) => String(s || '').trim().toLowerCase();
 
         // NEW: Auto-refresh functionality
         function startAutoRefresh() {
             if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            
-            autoRefreshInterval = setInterval(async () => {
+
+            autoRefreshInterval = setInterval(async() => {
                 const indicator = document.getElementById('refreshIndicator');
                 indicator.classList.add('show');
-                
+
                 try {
                     await init(true); // Silent refresh
                     setTimeout(() => {
@@ -664,23 +671,25 @@
 
         // NEW: Export to PDF
         async function exportToPDF() {
-            const { jsPDF } = window.jspdf;
+            const {
+                jsPDF
+            } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
-            
+
             // Simple text-based PDF
             doc.setFontSize(20);
             doc.text('JOOBIN Dashboard Export', 20, 20);
-            
+
             doc.setFontSize(12);
             doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
-            
+
             let y = 45;
-            
+
             if (dashboardData && dashboardData.kpis) {
                 doc.setFontSize(16);
                 doc.text('Key Metrics', 20, y);
                 y += 10;
-                
+
                 doc.setFontSize(11);
                 doc.text(`Budget Used: ${(dashboardData.kpis.paidVsBudget * 100).toFixed(1)}%`, 20, y);
                 y += 7;
@@ -690,12 +699,12 @@
                 y += 7;
                 doc.text(`At Risk Milestones: ${dashboardData.kpis.milestonesAtRisk}`, 20, y);
                 y += 15;
-                
+
                 // Gates
                 doc.setFontSize(16);
                 doc.text('Gate Progress', 20, y);
                 y += 10;
-                
+
                 doc.setFontSize(11);
                 dashboardData.gates.forEach(gate => {
                     const progress = Math.round(gate.gateApprovalRate * 100);
@@ -703,27 +712,29 @@
                     y += 7;
                 });
             }
-            
+
             doc.save(`joobin-dashboard-${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
         // NEW: Export to CSV
         function exportToCSV() {
             if (!dashboardData) return;
-            
+
             let csv = 'Gate,Total,Approved,Progress\n';
             dashboardData.gates.forEach(gate => {
                 const progress = Math.round(gate.gateApprovalRate * 100);
                 csv += `${gate.gate},${gate.total},${gate.approved},${progress}%\n`;
             });
-            
+
             csv += '\n\nDeliverables\n';
             csv += 'Title,Gate,Status,Category,Priority\n';
             dashboardData.deliverables.forEach(d => {
                 csv += `"${d.title}",${d.gate},${d.status},${d.category},${d.priority || 'N/A'}\n`;
             });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
+
+            const blob = new Blob([csv], {
+                type: 'text/csv'
+            });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -739,7 +750,7 @@
                 e.preventDefault();
                 window.location.href = 'deliverables.html';
             }
-            
+
             // Escape to close modals
             if (e.key === 'Escape') {
                 if (!document.getElementById('atRiskModal').classList.contains('hidden')) {
@@ -752,10 +763,14 @@
         });
 
         function promptForUpdate(pageId, action, gateName = null) {
-            pendingUpdate = { pageId, action, gateName };
+            pendingUpdate = {
+                pageId,
+                action,
+                gateName
+            };
             const modalTitle = document.getElementById('modalTitle');
             const modalMessage = document.getElementById('modalMessage');
-            
+
             if (action === 'mark_gate_approved') {
                 modalTitle.textContent = `Approve Gate: ${gateName}`;
                 modalMessage.textContent = `This will mark all required deliverables for ${gateName} as "Approved". Are you sure?`;
@@ -763,7 +778,7 @@
                 modalTitle.textContent = 'Authentication Required';
                 modalMessage.textContent = 'Please enter the update password to proceed.';
             }
-            
+
             document.getElementById('passwordInput').value = '';
             document.getElementById('passwordError').classList.add('hidden');
             document.getElementById('passwordModal').style.display = 'flex';
@@ -788,15 +803,19 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...pendingUpdate, password })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({...pendingUpdate,
+                        password
+                    })
                 });
-                
+
                 if (!response.ok) {
                     const errData = await response.json();
                     throw new Error(errData.error || 'Update failed.');
                 }
-                
+
                 cancelUpdate();
                 document.getElementById('loader').style.display = 'flex';
                 document.getElementById('dashboardContent').classList.add('hidden');
@@ -810,34 +829,29 @@
         }
 
         function renderKPIs(kpis) {
-            const kpiData = [
-                {
-                    title: 'Budget Used',
-                    value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`,
-                    subValue: `of ${formatMYRShort(kpis.budgetMYR)}`,
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>'
-                },
-                {
-                    title: 'Outstanding',
-                    value: formatMYRShort(kpis.totalOutstandingMYR),
-                    subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`,
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>'
-                },
-                {
-                    title: 'Deliverables',
-                    value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`,
-                    subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`,
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
-                    clickable: true
-                },
-                {
-                    title: 'At Risk',
-                    value: kpis.milestonesAtRisk,
-                    subValue: 'Milestones require attention',
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
-                    clickAction: 'showAtRiskModal'
-                }
-            ];
+            const kpiData = [{
+                title: 'Budget Used',
+                value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`,
+                subValue: `of ${formatMYRShort(kpis.budgetMYR)}`,
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>'
+            }, {
+                title: 'Outstanding',
+                value: formatMYRShort(kpis.totalOutstandingMYR),
+                subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`,
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>'
+            }, {
+                title: 'Deliverables',
+                value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`,
+                subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`,
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+                clickable: true
+            }, {
+                title: 'At Risk',
+                value: kpis.milestonesAtRisk,
+                subValue: 'Milestones require attention',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+                clickAction: 'showAtRiskModal'
+            }];
 
             document.getElementById('kpis').innerHTML = kpiData.map(k => {
                 const isClickable = k.title === 'Deliverables' || k.clickAction;
@@ -863,42 +877,51 @@
         }
 
         function renderTabs(data) {
-            const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
-            
+            const {
+                overdue,
+                upcoming,
+                recentPaid
+            } = data.paymentsSchedule;
+
             const renderList = (items, type) => {
-                if (!items || items.length === 0) {
-                    // NEW: Better empty states
-                    const emptyMessages = {
-                        'overdue': {
-                            icon: '✅',
-                            title: 'No overdue payments',
-                            message: 'Great! All payments are up to date.',
-                            color: 'text-green-400'
-                        },
-                        'upcoming': {
-                            icon: '📋',
-                            title: 'No upcoming payments',
-                            message: 'All scheduled payments are complete.',
-                            color: 'text-blue-400'
-                        },
-                        'recent': {
-                            icon: '💰',
-                            title: 'No recent payments',
-                            message: 'No payments have been made recently.',
+                    if (!items || items.length === 0) {
+                        // NEW: Better empty states
+                        const emptyMessages = {
+                            'overdue': {
+                                icon: '✅',
+                                title: 'No overdue payments',
+                                message: 'Great! All payments are up to date.',
+                                color: 'text-green-400'
+                            },
+                            'upcoming': {
+                                icon: '📋',
+                                title: 'No upcoming payments',
+                                message: 'All scheduled payments are complete.',
+                                color: 'text-blue-400'
+                            },
+                            'recent': {
+                                icon: '💰',
+                                title: 'No recent payments',
+                                message: 'No payments have been made recently.',
+                                color: 'text-slate-400'
+                            }
+                        };
+
+                        const empty = emptyMessages[type] || {
+                            icon: '📭',
+                            title: 'No items',
+                            message: 'Nothing to display here.',
                             color: 'text-slate-400'
-                        }
-                    };
-                    
-                    const empty = emptyMessages[type] || { icon: '📭', title: 'No items', message: 'Nothing to display here.', color: 'text-slate-400' };
-                    
-                    return `<div class="text-center py-16">
+                        };
+
+                        return `<div class="text-center py-16">
                         <div class="text-5xl mb-4">${empty.icon}</div>
                         <h4 class="text-lg font-semibold ${empty.color} mb-2">${empty.title}</h4>
                         <p class="text-sm text-slate-500">${empty.message}</p>
                     </div>`;
-                }
-                
-                return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
+                    }
+
+                    return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
                     const isPendingApproval = item.status === 'Pending Approval';
                     const dueDateDisplay = isPendingApproval
                         ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">⏳ Pending Approval</span>`
