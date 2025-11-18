@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kitchen Quotation Comparison</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #111827;
+            --panel: #1f2937;
+            --border: #374151;
+            --ink: #f9fafb;
+            --muted: #9ca3af;
+            --brand: #2563eb;
+            --success: #059669;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 10;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            border: 2px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body class="px-4 md:px-6">
+    <header class="sticky-header">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <a href="index.html" title="Back to Command Center" class="p-2 rounded-md hover:bg-slate-800 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m12 19-7-7 7-7" />
+                        <path d="M19 12H5" />
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Kitchen Quotations</h1>
+                    <p class="text-sm text-slate-400">Cabinetry & Backsplash vendor summary</p>
+                </div>
+            </div>
+            <a href="https://www.notion.so/CSV-Kitchen-Cabinetry-Backsplash-8e10833a92fd48a4a6406e17e385970b" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-md border border-slate-700 text-sm font-semibold hover:bg-slate-800 transition-colors">
+                View Full Details in Notion
+            </a>
+        </div>
+    </header>
+
+    <main class="mt-6 space-y-6 max-w-7xl mx-auto pb-12">
+        <div class="summary-card">
+            <h2 class="text-2xl font-bold mb-6">Kitchen Quotation Summary</h2>
+            <p class="text-slate-300 mb-8">
+                Kitchen quotations are currently managed in Notion. The complete itemized breakdown, 
+                vendor comparisons, and material thumbnails are available in the full Notion page.
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="stat-card">
+                    <div class="text-sm text-slate-400 mb-1">Scope</div>
+                    <div class="text-xl font-bold">Cabinetry + Backsplash</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="text-sm text-slate-400 mb-1">Currency</div>
+                    <div class="text-xl font-bold">USD</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="text-sm text-slate-400 mb-1">Status</div>
+                    <div class="text-xl font-bold text-green-400">Static Table Ready</div>
+                </div>
+            </div>
+
+            <div class="mt-8 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <h3 class="text-lg font-semibold mb-2">📊 Dynamic Vendor Ranking</h3>
+                <p class="text-sm text-slate-300">
+                    To enable dynamic vendor ranking for Kitchen quotations (similar to Flooring and Bathroom), 
+                    please add the kitchen quotations to a Notion database with the standard columns: 
+                    <code class="text-blue-300">Vendor, Item Type, Currency, Qty, Unit Price, Line Total</code>.
+                </p>
+                <p class="text-sm text-slate-400 mt-2">
+                    Once the database is created, add the database ID to the proxy configuration and 
+                    the system will automatically include kitchen vendor rankings.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+            <div class="space-y-3">
+                <a href="https://www.notion.so/CSV-Kitchen-Cabinetry-Backsplash-8e10833a92fd48a4a6406e17e385970b" target="_blank" rel="noopener noreferrer" class="block p-4 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold">View Complete Kitchen Details</div>
+                            <div class="text-sm text-slate-400">See full itemized quotations with thumbnails</div>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                    </div>
+                </a>
+
+                <a href="flooring-master.html" class="block p-4 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold">Flooring Comparisons</div>
+                            <div class="text-sm text-slate-400">View flooring vendor rankings by section</div>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </div>
+                </a>
+
+                <a href="bathroom-master.html" class="block p-4 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold">Bathroom Comparisons</div>
+                            <div class="text-sm text-slate-400">View bathroom vendor rankings by code</div>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4">📖 User Guide</h3>
+            <div class="space-y-2 text-sm text-slate-300">
+                <p><strong>Current Setup:</strong> Kitchen quotations are maintained as a static table in Notion with complete itemization.</p>
+                <p><strong>Material Images:</strong> Thumbnails and catalog images are available in the Material Images database.</p>
+                <p><strong>Future Enhancement:</strong> To enable automatic vendor ranking, migrate the kitchen data to a structured database format.</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

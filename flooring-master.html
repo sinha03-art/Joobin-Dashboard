@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flooring MASTER — Vendor Comparison</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #111827;
+            --panel: #1f2937;
+            --border: #374151;
+            --ink: #f9fafb;
+            --muted: #9ca3af;
+            --brand: #2563eb;
+            --success: #059669;
+            --warning: #f59e0b;
+            --danger: #dc2626;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .badge-cheapest {
+            background: var(--success);
+            color: #d1fae5;
+            box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
+        }
+
+        .badge-highest {
+            background: var(--danger);
+            color: #fee2e2;
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: #fef3c7;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s ease-in-out infinite;
+            border-radius: 0.5rem;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 10;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+            color: var(--muted);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            color: var(--muted);
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--brand);
+            border-bottom-color: var(--brand);
+        }
+
+        .gap-flag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: var(--warning);
+        }
+    </style>
+</head>
+<body class="px-4 md:px-6">
+    <header class="sticky-header">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <a href="index.html" title="Back to Command Center" class="p-2 rounded-md hover:bg-slate-800 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m12 19-7-7 7-7" />
+                        <path d="M19 12H5" />
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Flooring MASTER</h1>
+                    <p class="text-sm text-slate-400">Vendor comparison by section with rankings</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="refreshData()" class="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+                    Refresh Data
+                </button>
+                <a href="https://www.notion.so/CSV-MASTER-Complete-Flooring-Package-Consolidated-c722a6c0f83647bdbb4bbb6d7e18a803" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-md border border-slate-700 text-sm font-semibold hover:bg-slate-800 transition-colors">
+                    View in Notion
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div id="loader" class="mt-6 space-y-8 max-w-7xl mx-auto">
+        <div class="skeleton h-64 w-full"></div>
+    </div>
+
+    <main id="root" class="mt-6 space-y-8 max-w-7xl mx-auto hidden"></main>
+
+    <script>
+        const PROXY_URL = '/.netlify/functions/proxy/quotations';
+        let dataCache = null;
+
+        const SECTIONS = ['GF Interior', '1F Interior', 'Staircase', 'Outdoor & Balconies'];
+
+        function formatCurrency(amount, currency) {
+            const formatted = new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount || 0);
+            return `${currency === 'USD' ? '$' : 'RM'}${formatted}`;
+        }
+
+        function renderProgressRing(percentage, size = 96) {
+            const radius = 40;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            let color = '#6b7280'; // gray
+            if (percentage >= 90) color = '#059669'; // green
+            else if (percentage >= 70) color = '#2563eb'; // blue
+            else if (percentage >= 50) color = '#f59e0b'; // yellow
+            
+            return `
+                <div class="relative inline-flex items-center justify-center" style="width: ${size}px; height: ${size}px;">
+                    <svg class="progress-ring" width="${size}" height="${size}">
+                        <circle cx="${size/2}" cy="${size/2}" r="${radius}" stroke="#374151" stroke-width="8" fill="none"/>
+                        <circle class="progress-ring-circle" cx="${size/2}" cy="${size/2}" r="${radius}" 
+                                stroke="${color}" stroke-width="8" fill="none"
+                                stroke-dasharray="${circumference}" 
+                                stroke-dashoffset="${offset}"
+                                stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute text-center">
+                        <div class="text-2xl font-bold">${percentage}%</div>
+                        <div class="text-xs text-slate-400">Complete</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVendorCard(vendor, section) {
+            const badgeHtml = vendor.isCheapest ? '<span class="badge badge-cheapest">🏆 Cheapest</span>' :
+                              vendor.isHighest ? '<span class="badge badge-highest">💰 Highest</span>' : '';
+            
+            const gapFlags = [];
+            if (vendor.missingPrices) gapFlags.push('⚠️ Missing prices');
+            if (vendor.shortValidity) gapFlags.push(`⏰ Expires in ${vendor.daysToExpiry} days`);
+            if (vendor.exclusionsPresent) gapFlags.push('📋 Has exclusions');
+            if (vendor.termsRisk) gapFlags.push('🚢 EXW terms');
+            
+            const gapFlagsHtml = gapFlags.length > 0 ? 
+                `<div class="flex flex-wrap gap-2 mt-2">${gapFlags.map(f => `<span class="gap-flag">${f}</span>`).join('')}</div>` : '';
+
+            return `
+                <div class="card">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="text-lg font-bold">${vendor.vendor}</h3>
+                                ${badgeHtml}
+                            </div>
+                            <p class="text-sm text-slate-400">Rank #${vendor.rank}</p>
+                        </div>
+                        ${renderProgressRing(Math.round(vendor.completenessScore * 100), 80)}
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-sm text-slate-400">Total</span>
+                            <span class="text-2xl font-bold text-${vendor.isCheapest ? 'green' : vendor.isHighest ? 'red' : 'white'}-400">
+                                ${formatCurrency(vendor.total, vendor.currency)}
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Currency</span>
+                            <span>${vendor.currency}</span>
+                        </div>
+                        ${vendor.leadTimeDays ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Lead Time</span>
+                            <span>${vendor.leadTimeDays} days</span>
+                        </div>` : ''}
+                        ${vendor.terms ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Terms</span>
+                            <span class="text-right">${vendor.terms}</span>
+                        </div>` : ''}
+                        ${vendor.exclusions ? `
+                        <div class="mt-2 p-2 bg-yellow-900/20 border border-yellow-700 rounded text-xs">
+                            <strong>Exclusions:</strong> ${vendor.exclusions}
+                        </div>` : ''}
+                        ${gapFlagsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSectionTable(section, vendors) {
+            if (!vendors || vendors.length === 0) {
+                return '<p class="text-slate-400 text-sm">No vendor data available</p>';
+            }
+
+            const rows = vendors.map(v => `
+                <tr>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold">#${v.rank}</span>
+                            <span>${v.vendor}</span>
+                        </div>
+                    </td>
+                    <td class="font-bold">${formatCurrency(v.total, v.currency)}</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500" style="width: ${v.completenessScore * 100}%"></div>
+                            </div>
+                            <span class="text-sm">${Math.round(v.completenessScore * 100)}%</span>
+                        </div>
+                    </td>
+                    <td class="text-sm">${v.leadTimeDays ? v.leadTimeDays + ' days' : 'N/A'}</td>
+                    <td class="text-sm">${v.terms || 'N/A'}</td>
+                    <td>
+                        ${v.isCheapest ? '<span class="badge badge-cheapest">Cheapest</span>' : ''}
+                        ${v.isHighest ? '<span class="badge badge-highest">Highest</span>' : ''}
+                        ${v.missingPrices ? '<span class="badge badge-warning">Gaps</span>' : ''}
+                    </td>
+                </tr>
+            `).join('');
+
+            return `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Total (${vendors[0].currency})</th>
+                            <th>Completeness</th>
+                            <th>Lead Time</th>
+                            <th>Terms</th>
+                            <th>Badges</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function renderChartSection(section, vendors) {
+            if (!vendors || vendors.length === 0) return '';
+
+            const canvasId = `chart-${section.replace(/\s+/g, '-')}`;
+            
+            setTimeout(() => {
+                const ctx = document.getElementById(canvasId);
+                if (!ctx) return;
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: vendors.map(v => v.vendor),
+                        datasets: [{
+                            label: 'Total Cost',
+                            data: vendors.map(v => v.total),
+                            backgroundColor: vendors.map(v => 
+                                v.isCheapest ? '#059669' : 
+                                v.isHighest ? '#dc2626' : '#2563eb'
+                            ),
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: `${section} - Vendor Comparison`,
+                                color: '#f9fafb',
+                                font: { size: 16, weight: '600' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#9ca3af',
+                                    callback: (value) => formatCurrency(value, vendors[0].currency)
+                                },
+                                grid: { color: '#374151' }
+                            },
+                            x: {
+                                ticks: { color: '#9ca3af' },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }, 100);
+
+            return `
+                <div class="card">
+                    <canvas id="${canvasId}" height="100"></canvas>
+                </div>
+            `;
+        }
+
+        function renderSection(section, vendors) {
+            if (!vendors || vendors.length === 0) {
+                return `
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">${section}</h2>
+                        <p class="text-slate-400">No vendor quotations available for this section.</p>
+                    </div>
+                `;
+            }
+
+            const vendorCards = vendors.slice(0, 4).map(v => renderVendorCard(v, section)).join('');
+
+            return `
+                <div class="space-y-4">
+                    <h2 class="text-2xl font-bold">${section}</h2>
+                    
+                    <!-- Vendor Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        ${vendorCards}
+                    </div>
+
+                    <!-- Detailed Table -->
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">Detailed Ranking</h3>
+                        ${renderSectionTable(section, vendors)}
+                    </div>
+
+                    <!-- Chart -->
+                    ${renderChartSection(section, vendors)}
+                </div>
+            `;
+        }
+
+        async function loadData() {
+            const loader = document.getElementById('loader');
+            const root = document.getElementById('root');
+
+            try {
+                const res = await fetch(PROXY_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                
+                const json = await res.json();
+                dataCache = json.data;
+
+                const { flooring } = dataCache;
+                const rankings = flooring.rankings;
+
+                const html = SECTIONS.map(section => 
+                    renderSection(section, rankings[section])
+                ).join('');
+
+                root.innerHTML = html;
+                loader.classList.add('hidden');
+                root.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Failed to load data:', error);
+                root.innerHTML = `
+                    <div class="card text-center">
+                        <p class="text-red-400 text-lg font-semibold">⚠️ Failed to load quotation data</p>
+                        <p class="text-slate-400 mt-2">${error.message}</p>
+                        <button onclick="loadData()" class="mt-4 px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700">Retry</button>
+                    </div>
+                `;
+                loader.classList.add('hidden');
+                root.classList.remove('hidden');
+            }
+        }
+
+        function refreshData() {
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('root').classList.add('hidden');
+            loadData();
+        }
+
+        // Initial load
+        loadData();
+    </script>
+</body>
+</html>
