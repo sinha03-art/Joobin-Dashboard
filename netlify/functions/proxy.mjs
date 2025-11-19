@@ -1,6 +1,6 @@
 /**
- * JOOBIN Renovation Hub Proxy v10.0.8 - Netlify Compatible
- * IMPROVEMENTS: Added validation, 404 handling, extracted constants, security hardening
+ * JOOBIN Renovation Hub Proxy v10.0.7 - Netlify Compatible
+ * FIXED: Removed optional chaining, PRESERVED em-dashes
  */
 
 // --- Environment Variables ---
@@ -21,14 +21,6 @@ const {
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
-
-// Budget calculation constants
-const BUDGET_CONSTANTS = {
-    BASE_FEE: 27900,
-    DISCOUNT_RATE: 0.05,
-    TAX_RATE: 0.10,
-};
-
 const { Client } = require('@notionhq/client');
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
@@ -82,28 +74,6 @@ const REQUIRED_BY_GATE = {
     ]
 };
 
-// --- Validation Helper ---
-/**
- * Validates required environment variables
- * @throws {Error} If any required variable is missing
- */
-function validateEnvironment() {
-    const required = [
-        'NOTION_API_KEY',
-        'NOTION_BUDGET_DB_ID',
-        'NOTION_ACTUALS_DB_ID',
-        'MILESTONES_DB_ID',
-        'DELIVERABLES_DB_ID',
-        'VENDOR_REGISTRY_DB_ID',
-        'PAYMENTS_DB_ID'
-    ];
-    
-    const missing = required.filter(key => !process.env[key]);
-    if (missing.length > 0) {
-        throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-    }
-}
-
 // --- API & Utility Helpers ---
 const notionHeaders = () => ({
     'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -114,13 +84,7 @@ const notionHeaders = () => ({
 const norm = (s) => String(s || '').trim().toLowerCase();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Call Gemini AI API with retry logic
- * @param {string} prompt - The prompt to send to Gemini
- * @returns {Promise<string>} - The AI response text
- * NOTE: Currently unused but kept for future AI features
- */
-/*
+
 async function callGemini(prompt) {
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -150,25 +114,12 @@ async function callGemini(prompt) {
     }
     throw new Error('Gemini API is unavailable after multiple retries.');
 }
-*/
 
-/**
- * Get property from Notion page with fallback
- * @param {Object} page - Notion page object
- * @param {string} name - Primary property name
- * @param {string} fallback - Fallback property name
- * @returns {Object|undefined} - Property object or undefined
- */
 function getProp(page, name, fallback) {
     if (!page.properties) return undefined;
     return page.properties[name] || page.properties[fallback];
 }
 
-/**
- * Extract text/value from Notion property based on type
- * @param {Object} prop - Notion property object
- * @returns {string|number|boolean|null} - Extracted value
- */
 function extractText(prop) {
     if (!prop) return '';
     const propType = prop.type;
@@ -186,13 +137,6 @@ function extractText(prop) {
     if (propType === 'checkbox') return prop.checkbox;
     return '';
 }
-
-/**
- * Query Notion database with pagination support
- * @param {string} dbId - Database ID
- * @param {Object} filter - Query filter object
- * @returns {Promise<Object>} - Results object with all pages
- */
 async function queryNotionDB(dbId, filter = {}) {
     if (!dbId) {
         console.warn(`queryNotionDB called with no dbId. Skipping.`);
@@ -204,7 +148,7 @@ async function queryNotionDB(dbId, filter = {}) {
     let startCursor = undefined;
 
     while (hasMore) {
-        const body = { ...filter };
+        const body = {...filter };
         if (startCursor) body.start_cursor = startCursor;
 
         const url = `https://api.notion.com/v1/databases/${dbId}/query`;
@@ -234,11 +178,6 @@ async function queryNotionDB(dbId, filter = {}) {
     return { results: allResults };
 }
 
-/**
- * Map review status to construction status
- * @param {string} reviewStatus - Review status from Notion
- * @returns {string} - Mapped construction status
- */
 function mapConstructionStatus(reviewStatus) {
     const normalized = norm(reviewStatus);
     if (normalized === 'approved') return 'Approved';
@@ -251,20 +190,10 @@ function mapConstructionStatus(reviewStatus) {
 // --- Main Handler ---
 export const handler = async(event) => {
     const { httpMethod, path } = event;
-    const headers = { 
-        'Access-Control-Allow-Origin': '*', 
-        'Access-Control-Allow-Headers': 'Content-Type', 
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 
-        'Content-Type': 'application/json' 
-    };
-    
+    const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Content-Type': 'application/json' };
     if (httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
 
     try {
-        // Validate environment on first request
-        validateEnvironment();
-
-        // GET /proxy - Main data endpoint
         if (httpMethod === 'GET' && path.endsWith('/proxy')) {
             const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData] = await Promise.all([
                 queryNotionDB(NOTION_BUDGET_DB_ID),
@@ -277,18 +206,11 @@ export const handler = async(event) => {
 
             const now = new Date();
 
-            // Calculate budget with named constants
             const budgetSubtotal = (budgetData.results || [])
                 .filter(p => extractText(getProp(p, 'In Scope')))
                 .reduce((sum, p) => (sum + (extractText(getProp(p, 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'Install (MYR)')) || 0)), 0);
-            
-            const budgetMYR = (budgetSubtotal + BUDGET_CONSTANTS.BASE_FEE) * 
-                             (1 - BUDGET_CONSTANTS.DISCOUNT_RATE) * 
-                             (1 + BUDGET_CONSTANTS.TAX_RATE);
-            
-            const paidMYR = (actualsData.results || [])
-                .filter(p => extractText(getProp(p, 'Status')) === 'Paid')
-                .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
+            const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
+            const paidMYR = (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
 
             // Unified Deliverables Processing
             const processedDeliverables = (deliverablesData.results || []).map(p => {
@@ -483,7 +405,7 @@ export const handler = async(event) => {
                 contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
             };
 
-            // Get detailed at-risk milestone information
+            // NEW v10.0.7: Get detailed at-risk milestone information
             const atRiskMilestones = (milestonesData.results || [])
                 .filter(m => extractText(getProp(m, 'Risk')) === 'At Risk')
                 .map(m => ({
@@ -496,7 +418,6 @@ export const handler = async(event) => {
                     url: m.url
                 }))
                 .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
-            
             const responseData = {
                 kpis: {
                     budgetMYR,
@@ -521,14 +442,14 @@ export const handler = async(event) => {
                     forecast: []
                 },
                 alerts,
-                atRiskMilestones,
+                atRiskMilestones, // ← ONLY LINE ADDED
                 timestamp: new Date().toISOString()
             };
 
             return { statusCode: 200, headers, body: JSON.stringify(responseData) };
         }
 
-        // POST /create-task - Create new task endpoint
+        // Create task endpoint
         if (httpMethod === 'POST' && path.endsWith('/create-task')) {
             const body = JSON.parse(event.body || '{}');
             const { taskName, gate, dueDate, comments } = body;
@@ -565,7 +486,7 @@ export const handler = async(event) => {
                     'Submitted By': {
                         multi_select: [{ name: 'Designer' }]
                     }
-                };
+                }
 
                 if (dueDate) {
                     // Check if dueDate includes time (datetime-local format: "2025-10-19T14:30")
@@ -576,7 +497,7 @@ export const handler = async(event) => {
                             time_zone: hasTime ? 'Asia/Kuala_Lumpur' : null
                         }
                     };
-                }
+                };
 
                 if (comments) {
                     properties['Comments'] = {
@@ -608,29 +529,9 @@ export const handler = async(event) => {
             }
         }
 
-        // 404 - Route not found
-        return { 
-            statusCode: 404, 
-            headers, 
-            body: JSON.stringify({ 
-                error: 'Not Found',
-                message: `Route ${httpMethod} ${path} not found`,
-                availableRoutes: [
-                    'GET /proxy',
-                    'POST /create-task'
-                ]
-            }) 
-        };
 
     } catch (error) {
         console.error('Handler error:', error);
-        return { 
-            statusCode: 500, 
-            headers, 
-            body: JSON.stringify({ 
-                error: error.message, 
-                timestamp: new Date().toISOString() 
-            }) 
-        };
+        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
     }
-}; // v10.0.8 - Nov 18 2025
+}; // Cache bust Sat Oct 25 09:43:32 +08 2025
