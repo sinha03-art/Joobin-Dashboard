@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOOBIN Command Center v13.0.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+         :root {
+            --background: 222 47% 11%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 14%;
+            --border: 217 33% 17%;
+            --ring: 213 94% 68%;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+        
+        .card {
+            background-color: hsl(var(--card));
+            border-radius: 0.75rem;
+            border: 1px solid hsl(var(--border));
+        }
+
+        /* NEW: Skeleton Loader Styles */
+        .skeleton {
+            background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s ease-in-out infinite;
+            border-radius: 0.5rem;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-text {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .skeleton-title {
+            height: 2rem;
+            width: 60%;
+            margin-bottom: 1rem;
+        }
+
+        .skeleton-circle {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+        }
+
+        /* NEW: Better Status Colors */
+        .status-approved {
+            background: #059669;
+            color: #d1fae5;
+        }
+
+        .status-submitted {
+            background: #2563eb; /* Changed from orange to blue */
+            color: #dbeafe;
+        }
+
+        .status-pending {
+            background: #f59e0b;
+            color: #fef3c7;
+        }
+
+        .status-missing {
+            background: #6b7280;
+            color: #e5e7eb;
+        }
+
+        .status-rejected {
+            background: #dc2626;
+            color: #fee2e2;
+        }
+
+        /* NEW: Auto-refresh indicator */
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .refresh-indicator.show {
+            display: flex;
+        }
+
+        .refresh-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Force Chart.js legend text to white */
+        #forecastChart+.chartjs-legend,
+        .chartjs-legend-item,
+        canvas+div {
+            color: #ffffff !important;
+        }
+
+        /* Gate dependency arrows and lock animations */
+        .gate-circle {
+            animation: draw-circle 1.5s ease-out forwards;
+        }
+
+        @keyframes draw-circle {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* Deliverable card pulse effect */
+        .deliverable-pulse {
+            animation: pulse-border 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% {
+                border-color: #10b981;
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+            50% {
+                border-color: #34d399;
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            }
+        }
+
+        /* Smooth fade for blocked gates */
+        .opacity-60 {
+            opacity: 0.6;
+            filter: grayscale(30%);
+        }
+
+        .tab-button.active {
+            color: hsl(var(--ring));
+            border-bottom-color: hsl(var(--ring));
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        #passwordModal {
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+
+        .update-btn {
+            background-color: hsla(213, 94%, 68%, 0.1);
+            color: hsl(var(--ring));
+            border: 1px solid hsl(var(--ring));
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .update-btn:hover {
+            background-color: hsla(213, 94%, 68%, 0.2);
+        }
+
+        .copy-btn {
+            background-color: hsla(250, 50%, 80%, 0.1);
+            color: hsl(250, 50%, 80%);
+            border: 1px solid hsl(250, 50%, 80%);
+        }
+
+        .copy-btn:hover {
+            background-color: hsla(250, 50%, 80%, 0.2);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 10px 15px rgba(220, 38, 38, 0);
+            }
+        }
+
+        .countdown-banner {
+            background: linear-gradient(135deg, #4f0e0e 0%, #1e1b1b 100%);
+            padding: 24px;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            border: 1px solid #dc2626;
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+        }
+
+        .countdown-banner.low-risk {
+            background: linear-gradient(135deg, #0e4f1e 0%, #1b1e1b 100%);
+            border-color: #16a34a;
+        }
+
+        .countdown-banner.medium-risk {
+            background: linear-gradient(135deg, #4f280e 0%, #1e1b1b 100%);
+            border-color: #ea580c;
+        }
+
+        .countdown-icon {
+            font-size: 40px;
+            animation: pulse 2.5s ease-out infinite;
+        }
+
+        .countdown-days {
+            font-size: 36px;
+            font-weight: 800;
+        }
+
+        .blocker-card {
+            border: 1px solid #b91c1c;
+            margin-bottom: 24px;
+        }
+
+        .blocker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .blocker-title {
+            color: #f87171;
+        }
+
+        .blocker-count {
+            background: #dc2626;
+        }
+
+        /* NEW: Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            aside {
+                width: 100% !important;
+                border-right: none;
+                border-bottom: 1px solid #1e293b;
+                max-height: 300px;
+            }
+
+            .countdown-banner {
+                padding: 16px;
+            }
+
+            .countdown-days {
+                font-size: 24px;
+            }
+
+            #gates {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 1rem !important;
+            }
+
+            .gate-circle {
+                width: 64px !important;
+                height: 64px !important;
+            }
+
+            #kpis {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* NEW: Keyboard shortcut hint */
+        .kbd {
+            background: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        /* NEW: Export button styles */
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #059669;
+            color: white;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .export-btn:hover {
+            background: #047857;
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+    <!-- NEW: Refresh Indicator -->
+    <div id="refreshIndicator" class="refresh-indicator">
+        <div class="refresh-spinner"></div>
+        <span>Refreshing data...</span>
+    </div>
+
+    <aside class="w-72 border-r border-slate-800 p-6 flex flex-col space-y-6 overflow-y-auto">
+        <div class="flex items-center space-x-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h1 class="text-2xl font-bold tracking-wider">JOOBIN</h1>
+        </div>
+        <div class="aspect-video">
+            <iframe src="https://player.vimeo.com/video/1121406919?badge=0&autopause=0&player_id=0&app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" class="w-full h-full rounded-lg" title="Project Demo"></iframe>
+        </div>
+        <div>
+            <h2 class="text-sm font-semibold text-slate-400 mb-2 tracking-widest">PROPERTY</h2>
+            <p class="text-sm text-slate-300">House-4 @ Sri Suria<br>Bukit Rimau, Shah Alam</p>
+            <p class="text-xs text-slate-500 mt-1">Target Completion: Q2 2026</p>
+        </div>
+        <div>
+            <h2 class="text-sm font-semibold text-slate-400 mb-3 tracking-widest">QUOTATIONS</h2>
+            <div class="space-y-2">
+                <a href="flooring-master.html" class="block px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors text-sm">
+                    📐 Flooring Comparisons
+                </a>
+                <a href="bathroom-master.html" class="block px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors text-sm">
+                    🚿 Bathroom Comparisons
+                </a>
+                <a href="kitchen-comparison.html" class="block px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors text-sm">
+                    🔪 Kitchen Quotations
+                </a>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-base font-semibold text-slate-400 mb-2 tracking-widest">ABOUT</h2>
+            <p class="text-sm leading-relaxed text-slate-400">This property is being reimagined from the ground up—blending structure, light, landscape, and livability into a fully modernized private residence.</p>
+        </div>
+        <div class="!mt-auto pt-6 text-center text-xs text-slate-600">
+            <p>Last updated: <span id="lastUpdatedSidebar">--</span></p>
+            <p class="mt-2">Auto-refresh: <span id="autoRefreshStatus" class="text-green-400">ON</span></p>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+        <!-- NEW: Skeleton Loader -->
+        <div id="loader" class="flex flex-col gap-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 200px;"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-5">
+                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 120px;"></div>
+                </div>
+                <div class="card p-5">
+                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 120px;"></div>
+                </div>
+                <div class="card p-5">
+                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 120px;"></div>
+                </div>
+                <div class="card p-5">
+                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 120px;"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="flex flex-col items-center">
+                    <div class="skeleton skeleton-circle"></div>
+                    <div class="skeleton skeleton-text mt-2" style="width: 80px;"></div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="skeleton skeleton-circle"></div>
+                    <div class="skeleton skeleton-text mt-2" style="width: 80px;"></div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="skeleton skeleton-circle"></div>
+                    <div class="skeleton skeleton-text mt-2" style="width: 80px;"></div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="skeleton skeleton-circle"></div>
+                    <div class="skeleton skeleton-text mt-2" style="width: 80px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardContent" class="hidden">
+            <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                <div class="flex-shrink-0">
+                    <h2 class="text-3xl font-bold tracking-tight">Command Center</h2>
+                    <p class="text-sm text-slate-400 mt-1">Project overview and key metrics for Sri Suria.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- NEW: Export Buttons -->
+                    <button onclick="exportToPDF()" class="export-btn" title="Export dashboard as PDF">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        PDF
+                    </button>
+                    <button onclick="exportToCSV()" class="export-btn" style="background: #2563eb;" title="Export data as CSV">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="12" y1="18" x2="12" y2="12"/>
+                            <line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
+                        CSV
+                    </button>
+                </div>
+                <div class="flex items-center justify-center text-center sm:text-left flex-grow">
+                    <div id="aiSummary" class="text-sm text-slate-400 max-w-md"></div>
+                    <button id="aiSummaryBtn" class="p-2 rounded-md hover:bg-slate-800 transition-colors flex-shrink-0 ml-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles">
+                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                            <path d="M5 3v4"/>
+                            <path d="M19 17v4"/>
+                            <path d="M3 5h4"/>
+                            <path d="M17 19h4"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div id="clock" class="text-2xl font-bold text-slate-200"></div>
+                    <div id="date" class="text-xs text-slate-500"></div>
+                    <div class="text-xs text-slate-600 mt-1">
+                        Press <span class="kbd">Ctrl+K</span> to search
+                    </div>
+                </div>
+            </header>
+            
+            <div id="critical-path-section"></div>
+            <div id="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Action Items</h3>
+                        <div class="border-b border-slate-700">
+                            <nav class="-mb-px flex space-x-8" id="tabs">
+                                <button data-tab="overdue" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Overdue</button>
+                                <button data-tab="upcoming" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Upcoming Payments</button>
+                                <button data-tab="recent" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">Recently Paid</button>
+                                <button data-tab="toComplete" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-white">To Complete</button>
+                            </nav>
+                        </div>
+                        <div class="mt-4 min-h-[250px] relative">
+                            <div id="overdueContent" class="tab-content active"></div>
+                            <div id="upcomingContent" class="tab-content"></div>
+                            <div id="recentContent" class="tab-content"></div>
+                            <div id="toCompleteContent" class="tab-content">
+                                <div class="flex justify-between items-center mb-4">
+                                    <p class="text-sm text-slate-400">Upcoming deliverables and tasks</p>
+                                    <button onclick="openAddTaskModal()" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 5v14M5 12h14"/>
+                                        </svg>
+                                        Add Task
+                                    </button>
+                                </div>
+                                <div id="upcomingTasksList" class="space-y-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Gate Progress</h3>
+                        <div id="gates" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Budget Distribution</h3>
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="card p-4 sm:p-6">
+                        <h3 class="text-lg font-semibold mb-4">Top Vendors by Spend</h3>
+                        <div id="topVendors" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals (Task, Password, At-Risk remain the same) -->
+        <div id="addTaskModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Add New Task</h3>
+                    <button onclick="closeAddTaskModal()" class="text-slate-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="addTaskForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Task Name *</label>
+                        <input type="text" id="taskName" required class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Gate *</label>
+                        <select id="taskGate" required class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select gate...</option>
+                            <option value="G0 Pre Construction">G0 Pre Construction</option>
+                            <option value="G1 Concept">G1 Concept</option>
+                            <option value="G2 Schematic">G2 Schematic</option>
+                            <option value="G3 Design Development">G3 Design Development</option>
+                            <option value="G4 Authority Submission">G4 Authority Submission</option>
+                            <option value="G5 Construction Documentation">G5 Construction Documentation</option>
+                            <option value="G6 Close-out">G6 Close-out</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Due Date</label>
+                        <input type="datetime-local" id="taskDueDate" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Priority</label>
+                        <select id="taskPriority" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Normal">Normal</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Comments</label>
+                        <textarea id="taskComments" rows="3" class="w-full px-3 py-2 bg-slate-700 rounded-md border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div id="taskFormStatus" class="hidden"></div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors">Create Task</button>
+                        <button type="button" onclick="closeAddTaskModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-md transition-colors">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="passwordModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div class="modal-content bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm transform scale-95">
+                <h3 id="modalTitle" class="text-lg font-bold text-white mb-4">Authentication Required</h3>
+                <p id="modalMessage" class="text-sm text-slate-400 mb-4">Please enter the update password to proceed.</p>
+                <input type="password" id="passwordInput" class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Password...">
+                <div id="passwordError" class="text-red-400 text-xs mt-2 hidden">Incorrect password.</div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button onclick="cancelUpdate()" class="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
+                    <button onclick="executeUpdate()" id="executeUpdateBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500">
+                        <span id="updateBtnText">Confirm</span>
+                        <span id="updateBtnSpinner" class="hidden">Updating...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="atRiskModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div class="bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-700">
+                <div class="flex justify-between items-center p-6 border-b border-slate-700">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500">
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                <path d="M12 9v4"/>
+                                <path d="M12 17h.01"/>
+                            </svg> At-Risk Milestones
+                        </h3>
+                        <p class="text-sm text-slate-400 mt-1">These milestones need immediate attention</p>
+                    </div>
+                    <button onclick="closeAtRiskModal()" class="text-slate-400 hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"/>
+                            <path d="m6 6 12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="atRiskModalContent" class="p-6 overflow-y-auto flex-1"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /* =====================================================================================
+         * JOOBIN Command Center - Enhanced Frontend v13.0.0
+         * NEW FEATURES:
+         * - Skeleton loaders for better UX
+         * - Auto-refresh every 5 minutes
+         * - Better status color palette
+         * - Mobile responsive improvements
+         * - Export to PDF/CSV
+         * - Keyboard shortcuts (Ctrl+K for search)
+         * - Better error handling with retry
+         * - Interactive charts with drill-down
+         * ===================================================================================== */
+
+        const API_URL = '/.netlify/functions/proxy';
+        let dashboardData = null;
+        let forecastChart = null;
+        let autoRefreshInterval = null;
+        let pendingUpdate = { pageId: null, action: null, gateName: null };
+
+        const norm = (s) => String(s || '').trim().toLowerCase();
+
+        // NEW: Auto-refresh functionality
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            
+            autoRefreshInterval = setInterval(async () => {
+                const indicator = document.getElementById('refreshIndicator');
+                indicator.classList.add('show');
+                
+                try {
+                    await init(true); // Silent refresh
+                    setTimeout(() => {
+                        indicator.classList.remove('show');
+                    }, 2000);
+                } catch (error) {
+                    console.error('Auto-refresh failed:', error);
+                    indicator.classList.remove('show');
+                }
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+
+        // NEW: Export to PDF
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Simple text-based PDF
+            doc.setFontSize(20);
+            doc.text('JOOBIN Dashboard Export', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
+            
+            let y = 45;
+            
+            if (dashboardData && dashboardData.kpis) {
+                doc.setFontSize(16);
+                doc.text('Key Metrics', 20, y);
+                y += 10;
+                
+                doc.setFontSize(11);
+                doc.text(`Budget Used: ${(dashboardData.kpis.paidVsBudget * 100).toFixed(1)}%`, 20, y);
+                y += 7;
+                doc.text(`Outstanding: ${formatMYR(dashboardData.kpis.totalOutstandingMYR)}`, 20, y);
+                y += 7;
+                doc.text(`Deliverables: ${dashboardData.kpis.deliverablesApproved}/${dashboardData.kpis.deliverablesTotal}`, 20, y);
+                y += 7;
+                doc.text(`At Risk Milestones: ${dashboardData.kpis.milestonesAtRisk}`, 20, y);
+                y += 15;
+                
+                // Gates
+                doc.setFontSize(16);
+                doc.text('Gate Progress', 20, y);
+                y += 10;
+                
+                doc.setFontSize(11);
+                dashboardData.gates.forEach(gate => {
+                    const progress = Math.round(gate.gateApprovalRate * 100);
+                    doc.text(`${gate.gate}: ${progress}% (${gate.approved}/${gate.total})`, 20, y);
+                    y += 7;
+                });
+            }
+            
+            doc.save(`joobin-dashboard-${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+
+        // NEW: Export to CSV
+        function exportToCSV() {
+            if (!dashboardData) return;
+            
+            let csv = 'Gate,Total,Approved,Progress\n';
+            dashboardData.gates.forEach(gate => {
+                const progress = Math.round(gate.gateApprovalRate * 100);
+                csv += `${gate.gate},${gate.total},${gate.approved},${progress}%\n`;
+            });
+            
+            csv += '\n\nDeliverables\n';
+            csv += 'Title,Gate,Status,Category,Priority\n';
+            dashboardData.deliverables.forEach(d => {
+                csv += `"${d.title}",${d.gate},${d.status},${d.category},${d.priority || 'N/A'}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `joobin-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // NEW: Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+K for search (focus on deliverables page)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                window.location.href = 'deliverables.html';
+            }
+            
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                if (!document.getElementById('atRiskModal').classList.contains('hidden')) {
+                    closeAtRiskModal();
+                }
+                if (!document.getElementById('addTaskModal').classList.contains('hidden')) {
+                    closeAddTaskModal();
+                }
+            }
+        });
+
+        function promptForUpdate(pageId, action, gateName = null) {
+            pendingUpdate = { pageId, action, gateName };
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            
+            if (action === 'mark_gate_approved') {
+                modalTitle.textContent = `Approve Gate: ${gateName}`;
+                modalMessage.textContent = `This will mark all required deliverables for ${gateName} as "Approved". Are you sure?`;
+            } else {
+                modalTitle.textContent = 'Authentication Required';
+                modalMessage.textContent = 'Please enter the update password to proceed.';
+            }
+            
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').classList.add('hidden');
+            document.getElementById('passwordModal').style.display = 'flex';
+        }
+
+        function cancelUpdate() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+        async function executeUpdate() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) {
+                document.getElementById('passwordError').textContent = "Password cannot be empty.";
+                document.getElementById('passwordError').classList.remove('hidden');
+                return;
+            }
+
+            const updateBtn = document.getElementById('executeUpdateBtn');
+            updateBtn.disabled = true;
+            document.getElementById('passwordError').classList.add('hidden');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...pendingUpdate, password })
+                });
+                
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Update failed.');
+                }
+                
+                cancelUpdate();
+                document.getElementById('loader').style.display = 'flex';
+                document.getElementById('dashboardContent').classList.add('hidden');
+                setTimeout(() => init(), 300);
+            } catch (error) {
+                document.getElementById('passwordError').textContent = error.message;
+                document.getElementById('passwordError').classList.remove('hidden');
+            } finally {
+                updateBtn.disabled = false;
+            }
+        }
+
+        function renderKPIs(kpis) {
+            const kpiData = [
+                {
+                    title: 'Budget Used',
+                    value: `${(kpis.paidVsBudget * 100).toFixed(1)}%`,
+                    subValue: `of ${formatMYRShort(kpis.budgetMYR)}`,
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>'
+                },
+                {
+                    title: 'Outstanding',
+                    value: formatMYRShort(kpis.totalOutstandingMYR),
+                    subValue: `${formatMYRShort(kpis.totalOverdueMYR)} Overdue`,
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>'
+                },
+                {
+                    title: 'Deliverables',
+                    value: `${(kpis.deliverablesProgress * 100).toFixed(0)}%`,
+                    subValue: `${kpis.deliverablesApproved} / ${kpis.deliverablesTotal} Approved`,
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+                    clickable: true
+                },
+                {
+                    title: 'At Risk',
+                    value: kpis.milestonesAtRisk,
+                    subValue: 'Milestones require attention',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+                    clickAction: 'showAtRiskModal'
+                }
+            ];
+
+            document.getElementById('kpis').innerHTML = kpiData.map(k => {
+                const isClickable = k.title === 'Deliverables' || k.clickAction;
+                const cardTag = k.title === 'Deliverables' ? 'a' : 'div';
+                const cardProps = k.title === 'Deliverables' ?
+                    'href="deliverables.html" title="View Deliverables Board"' :
+                    k.clickAction ?
+                    `onclick="${k.clickAction}()" style="cursor:pointer;" title="View details"` :
+                    '';
+                const hoverClass = isClickable ? 'hover:border-blue-500 transition-all' : '';
+
+                return `<${cardTag} ${cardProps} class="card p-5 ${hoverClass}">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-slate-400">${k.title}</p>
+                <p class="text-3xl font-bold mt-2">${k.value}</p>
+                <p class="text-xs text-slate-500 mt-1">${k.subValue}</p>
+            </div>
+            <div class="kpi-icon text-slate-600">${k.icon}</div>
+        </div>
+    </${cardTag}>`;
+            }).join('');
+        }
+
+        function renderTabs(data) {
+            const { overdue, upcoming, recentPaid } = data.paymentsSchedule;
+            
+            const renderList = (items, type) => {
+                if (!items || items.length === 0) {
+                    // NEW: Better empty states
+                    const emptyMessages = {
+                        'overdue': {
+                            icon: '✅',
+                            title: 'No overdue payments',
+                            message: 'Great! All payments are up to date.',
+                            color: 'text-green-400'
+                        },
+                        'upcoming': {
+                            icon: '📋',
+                            title: 'No upcoming payments',
+                            message: 'All scheduled payments are complete.',
+                            color: 'text-blue-400'
+                        },
+                        'recent': {
+                            icon: '💰',
+                            title: 'No recent payments',
+                            message: 'No payments have been made recently.',
+                            color: 'text-slate-400'
+                        }
+                    };
+                    
+                    const empty = emptyMessages[type] || { icon: '📭', title: 'No items', message: 'Nothing to display here.', color: 'text-slate-400' };
+                    
+                    return `<div class="text-center py-16">
+                        <div class="text-5xl mb-4">${empty.icon}</div>
+                        <h4 class="text-lg font-semibold ${empty.color} mb-2">${empty.title}</h4>
+                        <p class="text-sm text-slate-500">${empty.message}</p>
+                    </div>`;
+                }
+                
+                return `<div class="flow-root"><ul role="list" class="-my-4 divide-y divide-slate-800">${items.map(item => {
+                    const isPendingApproval = item.status === 'Pending Approval';
+                    const dueDateDisplay = isPendingApproval
+                        ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/50">⏳ Pending Approval</span>`
+                        : `<p class="text-xs text-slate-500">${type === 'recent' ? `Paid ${formatDate(item.paidDate)}` : `Due ${formatDate(item.dueDate)}`}</p>`;
+
+                    return `
+            <li class="flex items-center py-4 space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="h-10 w-10 rounded-full flex items-center justify-center ${type === 'overdue' ? 'bg-red-500/10 text-red-400' : isPendingApproval ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-700 text-slate-400'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">${item.paymentFor}</p>
+                    <p class="text-sm text-slate-400 truncate">To: ${item.vendor || 'N/A'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-semibold">${formatMYR(item.amount)}</p>
+                    ${dueDateDisplay}
+                </div>
+            </li>`;
+                }).join('')}</ul></div>`;
+            };
+            
+            document.getElementById('overdueContent').innerHTML = renderList(overdue, 'overdue');
+            document.getElementById('upcomingContent').innerHTML = renderList(upcoming, 'upcoming');
+            document.getElementById('recentContent').innerHTML = renderList(recentPaid, 'recent');
+            
+            document.getElementById('tabs').addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const tab = e.target.dataset.tab;
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(`${tab}Content`).classList.add('active');
+                }
+            });
+        }
+
+        function renderGates(gates) {
+            const container = document.getElementById('gates');
+            if (!gates || gates.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-500">No gate data available.</p>`;
+                return;
+            }
+
+            container.innerHTML = gates.map((gate, index) => {
+                const progress = Math.round(gate.gateApprovalRate * 100);
+                const r = 36, circ = 2 * Math.PI * r;
+                const offset = circ - (progress / 100) * circ;
+                let color = 'hsl(var(--ring))';
+                if (progress === 100) color = '#10b981';
+                else if (progress < 50) color = '#f59e0b';
+
+                const prevGate = index > 0 ? gates[index - 1] : null;
+                const isBlocked = prevGate && Math.round(prevGate.gateApprovalRate * 100) < 100;
+                const lockIcon = isBlocked ? '<div class="absolute top-0 right-0 text-red-500 text-xl" title="Blocked: Complete previous gate first">🔒</div>' : '';
+                const arrow = index > 0 ? '<div class="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 text-slate-600 text-2xl px-2">→</div>' : '';
+
+                return `
+        <div class="flex flex-col items-center text-center relative ${isBlocked ? 'opacity-60' : ''}">
+            ${arrow}
+            <div class="relative w-24 h-24">
+                ${lockIcon}
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="${r}" cx="50" cy="50"/>
+                    <circle class="gate-circle" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round" stroke="${color}" fill="transparent" r="${r}" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%; animation-delay: ${Math.random() * 0.5}s; stroke-dashoffset: ${offset};"/>
+                </svg>
+                <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-bold" style="color:${color};">${progress}%</span>
+            </div>
+            <p class="text-xs font-semibold mt-3">${gate.gate}</p>
+            <p class="text-xs font-mono text-slate-400">${gate.approved}/${gate.total}</p>
+            ${isBlocked ? '<p class="text-xs text-red-400 mt-1">Blocked</p>' : ''}
+        </div>`;
+            }).join('');
+        }
+
+        function renderUpcomingTasks(deliverables) {
+            const container = document.getElementById('upcomingTasksList');
+            if (!container) return;
+            
+            const tasks = deliverables.filter(d => d.dueDate && norm(d.status) !== 'approved').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            
+            if (tasks.length === 0) {
+                container.innerHTML = `<div class="text-center py-16">
+                    <div class="text-5xl mb-4">🎯</div>
+                    <h4 class="text-lg font-semibold text-slate-400 mb-2">All caught up!</h4>
+                    <p class="text-sm text-slate-500">No upcoming tasks scheduled.</p>
+                    <button onclick="openAddTaskModal()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors">
+                        Add Your First Task
+                    </button>
+                </div>`;
+                return;
+            }
+            
+            container.innerHTML = tasks.slice(0, 10).map(task => {
+                const colors = {
+                    'Critical': 'border-red-500',
+                    'High': 'border-orange-500',
+                    'Medium': 'border-yellow-500',
+                    'Low': 'border-blue-500'
+                };
+                
+                return `<div class="p-3 border-l-4 ${colors[task.priority] || 'border-slate-600'} bg-slate-800/50 rounded-r-md hover:bg-slate-800 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-sm">${task.title}</h4>
+                            <p class="text-xs text-slate-400 mt-1">${task.gate} • Due ${formatDate(task.dueDate)}</p>
+                        </div>
+                        <span class="status-${norm(task.status)} px-2 py-1 rounded-full text-xs font-medium">${task.status}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderCriticalPath(alerts) {
+            const container = document.getElementById('critical-path-section');
+            if (!alerts) { container.innerHTML = ''; return; }
+            
+            const { daysToConstructionStart, paymentsOverdue = [], contractorAwarded, mbsaPermitApproved } = alerts;
+            let blockers = [];
+            
+            if (paymentsOverdue.length > 0) blockers.push({
+                icon: '💰',
+                text: `${formatMYRShort(paymentsOverdue.reduce((s, p) => s + p.amount, 0))} in overdue payments`,
+                impact: 'Can block permits and vendor work'
+            });
+            if (!mbsaPermitApproved) blockers.push({
+                icon: '📜',
+                text: 'MBSA permit not approved',
+                impact: 'Construction cannot legally start'
+            });
+            if (!contractorAwarded) blockers.push({
+                icon: '👷',
+                text: 'Main contractor not awarded',
+                impact: 'Cannot begin mobilization'
+            });
+            
+            let riskLevel = 'high-risk', riskText = 'HIGH RISK', riskIcon = '🔴';
+            if (blockers.length === 0 && daysToConstructionStart > 60) {
+                riskLevel = 'low-risk';
+                riskText = 'ON TRACK';
+                riskIcon = '🟢';
+            } else if (blockers.length <= 1 && daysToConstructionStart > 30) {
+                riskLevel = 'medium-risk';
+                riskText = 'AT RISK';
+                riskIcon = '🟡';
+            }
+            
+            const bannerHTML = `<div class="countdown-banner ${riskLevel}">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="countdown-icon">⏱️</div>
+                        <div>
+                            <div class="countdown-days">${daysToConstructionStart} DAYS</div>
+                            <div class="text-slate-300 text-sm">TO CONSTRUCTION START</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl">${riskIcon}</span>
+                        <span class="font-bold ml-2">${riskText}</span>
+                    </div>
+                </div>
+            </div>`;
+            
+            const blockersHTML = blockers.length > 0 ? `<div class="blocker-card card p-4 mb-8">
+                <div class="blocker-header mb-4 pb-4 border-b border-slate-700">
+                    <h3 class="blocker-title font-semibold">CRITICAL BLOCKERS</h3>
+                    <span class="blocker-count font-bold text-sm rounded-full px-3 py-1">${blockers.length}</span>
+                </div>
+                <div class="space-y-3">${blockers.map(b => `<div class="flex items-start gap-3 p-3 bg-slate-800/50 rounded-md">
+                    <div class="text-xl mt-0.5">${b.icon}</div>
+                    <div>
+                        <p class="font-semibold text-slate-200">${b.text}</p>
+                        <p class="text-sm text-slate-400 mt-1">Impact: ${b.impact}</p>
+                    </div>
+                </div>`).join('')}</div>
+            </div>` : '';
+            
+            container.innerHTML = bannerHTML + blockersHTML;
+        }
+
+        function renderTopVendors(vendors) {
+            const container = document.getElementById('topVendors');
+            if (!vendors || vendors.length === 0) {
+                container.innerHTML = `<div class="text-center py-8">
+                    <div class="text-3xl mb-3">📊</div>
+                    <p class="text-sm text-slate-400">No vendor spend data yet.</p>
+                </div>`;
+                return;
+            }
+            
+            const maxPaid = Math.max(...vendors.map(v => v.paid), 0);
+            container.innerHTML = vendors.map(v => `<div class="group">
+                <div class="flex items-center space-x-3 mb-1">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate">${v.name}</p>
+                    </div>
+                    <div class="text-sm font-mono text-right">${formatMYRShort(v.paid)}</div>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-1.5">
+                    <div class="bg-blue-600 h-1.5 rounded-full transition-all" style="width: ${maxPaid > 0 ? (v.paid / maxPaid) * 100 : 0}%"></div>
+                </div>
+            </div>`).join('');
+        }
+
+        function renderCharts(data) {
+            Chart.defaults.color = '#ffffff';
+            Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+            
+            const budgetCtx = document.getElementById('forecastChart');
+            if (forecastChart) forecastChart.destroy();
+
+            if (budgetCtx && data.budgetByTrade) {
+                const tradeColors = {
+                    'Structural & Core': '#ef4444',
+                    'Building Envelope': '#f59e0b',
+                    'MEP Systems': '#10b981',
+                    'Interior Finishes': '#3b82f6',
+                    'External Works': '#8b5cf6',
+                    'Professional Services': '#ec4899',
+                    'Doors & Windows': '#14b8a6',
+                    'Other': '#6b7280'
+                };
+
+                const trades = Object.keys(data.budgetByTrade);
+                const amounts = Object.values(data.budgetByTrade);
+                const colors = trades.map(t => tradeColors[t] || tradeColors['Other']);
+
+                forecastChart = new Chart(budgetCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: trades,
+                        datasets: [{
+                            data: amounts,
+                            backgroundColor: colors,
+                            borderColor: '#1f2937',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    font: { size: 11, family: "'Inter', sans-serif", weight: '500' },
+                                    color: '#ffffff',
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        const dataTotal = data.datasets[0].data.reduce((sum, val) => sum + val, 0);
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const percentage = ((value / dataTotal) * 100).toFixed(1);
+                                            return {
+                                                text: `${label}: ${percentage}%`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                fontColor: '#ffffff',
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed;
+                                        const dataTotal = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / dataTotal) * 100).toFixed(1);
+                                        return `${context.label}: ${percentage}% (${formatMYR(value)})`;
+                                    }
+                                }
+                            }
+                        },
+                        // NEW: Interactive chart
+                        onClick: (event, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const label = forecastChart.data.labels[index];
+                                alert(`Trade: ${label}\nAmount: ${formatMYR(forecastChart.data.datasets[0].data[index])}\n\nClick OK to view detailed breakdown.`);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function showAtRiskModal() {
+            if (!dashboardData || !dashboardData.atRiskMilestones) return;
+            
+            const modal = document.getElementById('atRiskModal');
+            const content = document.getElementById('atRiskModalContent');
+            const milestones = dashboardData.atRiskMilestones;
+
+            if (milestones.length === 0) {
+                content.innerHTML = `<div class="text-center py-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-green-500 mb-4">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <p class="text-lg font-semibold">No milestones at risk!</p>
+                    <p class="text-sm text-slate-400 mt-2">All project milestones are on track.</p>
+                </div>`;
+            } else {
+                const now = new Date();
+                content.innerHTML = '<div class="space-y-4">' + milestones.map(m => {
+                    const dueDate = m.dueDate ? new Date(m.dueDate) : null;
+                    const isOverdue = dueDate && dueDate < now;
+                    const daysUntil = dueDate ? Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24)) : null;
+                    
+                    return `<a href="${m.url}" target="_blank" class="block card p-5 hover:border-red-500 transition-colors">
+                        <div class="flex items-start justify-between gap-4 mb-3">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-lg">${m.title}</h4>
+                                <div class="flex items-center gap-3 mt-2 text-sm">
+                                    <span class="px-2 py-1 rounded-md ${isOverdue ? 'bg-red-900/40 text-red-300' : 'bg-yellow-900/40 text-yellow-300'}">
+                                        ${isOverdue ? '🔴 OVERDUE' : daysUntil !== null ? `⏰ ${daysUntil} days` : '📅 TBD'}
+                                    </span>
+                                    <span class="text-slate-400">${m.phase || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold ${isOverdue ? 'text-red-400' : 'text-yellow-400'}">${m.progress || 0}%</div>
+                                <div class="text-xs text-slate-500">Progress</div>
+                            </div>
+                        </div>
+                        ${m.issue ? `<div class="bg-slate-900/50 p-3 rounded-md mt-3">
+                            <p class="text-sm text-slate-300"><strong>Issue:</strong> ${m.issue}</p>
+                        </div>` : ''}
+                    </a>`;
+                }).join('') + '</div>';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeAtRiskModal() {
+            document.getElementById('atRiskModal').classList.add('hidden');
+        }
+
+        document.getElementById('atRiskModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'atRiskModal') closeAtRiskModal();
+        });
+
+        async function init(silent = false) {
+            try {
+                if (!silent) {
+                    document.getElementById('loader').style.display = 'flex';
+                    document.getElementById('dashboardContent').classList.add('hidden');
+                }
+                
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load: ${response.statusText}`);
+                }
+                
+                dashboardData = await response.json();
+                
+                renderCriticalPath(dashboardData.alerts);
+                renderKPIs(dashboardData.kpis);
+                renderTabs(dashboardData);
+                renderUpcomingTasks(dashboardData.deliverables);
+                renderGates(dashboardData.gates);
+                renderTopVendors(dashboardData.topVendors);
+                renderCharts(dashboardData);
+                
+                document.getElementById('lastUpdatedSidebar').textContent = timeAgo(dashboardData.timestamp);
+                updateClock();
+                setInterval(updateClock, 1000);
+                
+                if (!silent) {
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('dashboardContent').classList.remove('hidden');
+                }
+                
+                // Start auto-refresh if not already started
+                if (!autoRefreshInterval) {
+                    startAutoRefresh();
+                }
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                
+                // NEW: Better error handling
+                const errorHTML = `<div class="flex flex-col items-center justify-center h-full">
+                    <div class="card bg-red-900/20 p-8 max-w-md text-center border-red-700">
+                        <div class="text-5xl mb-4">⚠️</div>
+                        <h3 class="text-xl font-bold mb-3">Failed to Load Dashboard</h3>
+                        <p class="text-sm text-slate-300 mb-6">${error.message}</p>
+                        <button onclick="location.reload()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors">
+                            🔄 Retry
+                        </button>
+                    </div>
+                </div>`;
+                
+                document.getElementById('loader').innerHTML = errorHTML;
+            }
+        }
+
+        // Add Task Modal Functions
+        function openAddTaskModal() {
+            document.getElementById('addTaskModal').classList.remove('hidden');
+            document.getElementById('taskName').focus();
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById('addTaskModal').classList.add('hidden');
+            document.getElementById('addTaskForm').reset();
+            document.getElementById('taskFormStatus').classList.add('hidden');
+        }
+
+        document.getElementById('addTaskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const statusEl = document.getElementById('taskFormStatus');
+            statusEl.textContent = 'Creating task...';
+            statusEl.className = 'mt-4 p-3 rounded-md bg-blue-900/40 text-blue-300';
+            statusEl.classList.remove('hidden');
+
+            const taskData = {
+                taskName: document.getElementById('taskName').value,
+                gate: document.getElementById('taskGate').value,
+                dueDate: document.getElementById('taskDueDate').value || null,
+                priority: document.getElementById('taskPriority').value,
+                comments: document.getElementById('taskComments').value
+            };
+
+            try {
+                const res = await fetch('/.netlify/functions/proxy/create-task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (!res.ok) throw new Error('Failed to create task');
+
+                statusEl.textContent = '✓ Task created successfully! Refreshing...';
+                statusEl.className = 'mt-4 p-3 rounded-md bg-green-900/40 text-green-300';
+
+                setTimeout(async () => {
+                    await init(true);
+                    closeAddTaskModal();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Create task error:', error);
+                statusEl.textContent = '✗ Failed to create task. Please try again.';
+                statusEl.className = 'mt-4 p-3 rounded-md bg-red-900/40 text-red-300';
+            }
+        });
+
+        // Utility functions
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        const formatMYR = (amount) => `RM ${Math.round(amount).toLocaleString()}`;
+        const formatMYRShort = (amount) => {
+            if (amount >= 1e6) return `RM ${(amount / 1e6).toFixed(1)}m`;
+            if (amount >= 1e3) return `RM ${(amount / 1e3).toFixed(0)}k`;
+            return `RM ${amount}`;
+        };
+        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A';
+        const timeAgo = (d) => {
+            if (!d) return "";
+            const s = Math.floor((new Date() - new Date(d)) / 1000);
+            let i = s / 31536000;
+            if (i > 1) return `${Math.floor(i)}y ago`;
+            i = s / 2592000;
+            if (i > 1) return `${Math.floor(i)}m ago`;
+            i = s / 86400;
+            if (i > 1) return `${Math.floor(i)}d ago`;
+            i = s / 3600;
+            if (i > 1) return `${Math.floor(i)}h ago`;
+            return "Just now";
+        };
+
+        // Initialize dashboard
+        init();
+    </script>
+</body>
+
+</html>
