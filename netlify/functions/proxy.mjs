@@ -282,12 +282,13 @@ function deriveFlooringSection(itemType, notes) {
  * @returns {Object} - Normalized line item
  */
 function normalizeQuotationLine(page, scopeType) {
-    const vendor = extractText(getProp(page, 'Vendor')) || '';
-    const itemType = extractText(getProp(page, 'Item Type')) || extractText(getProp(page, 'Item')) || '';
-    const currency = extractText(getProp(page, 'Currency')) || 'USD';
-    const qty = extractText(getProp(page, 'Qty')) || 0;
-    const unit = extractText(getProp(page, 'Unit')) || 'pcs';
-    const unitPrice = extractText(getProp(page, 'Unit Price')) || 0;
+    // Map to actual Notion column names from Master_Quotations_Database schema
+    const vendor = extractText(getProp(page, 'Company_Name')) || extractText(getProp(page, 'Vendor')) || '';
+    const itemType = extractText(getProp(page, 'Item_Description')) || extractText(getProp(page, 'Item Type')) || extractText(getProp(page, 'Item')) || '';
+    const currency = extractText(getProp(page, 'Currency_Selection')) || extractText(getProp(page, 'Currency')) || 'MYR';
+    const qty = extractText(getProp(page, 'Quantity')) || extractText(getProp(page, 'Qty')) || 0;
+    const unit = extractText(getProp(page, 'Quoted_Unit_Original')) || extractText(getProp(page, 'Unit')) || 'pcs';
+    const unitPrice = extractText(getProp(page, 'Rate_Per_Unit_Original')) || extractText(getProp(page, 'Unit Price')) || 0;
     const lineTotal = extractText(getProp(page, 'Line Total')) || (qty * unitPrice);
     
     // Context fields
@@ -298,12 +299,12 @@ function normalizeQuotationLine(page, scopeType) {
         (extractText(getProp(page, 'Bathroom Code')) || extractText(getProp(page, 'Bath Code')) || '') : 
         null;
     
-    const quoteDate = extractText(getProp(page, 'Quote Date')) || null;
+    const quoteDate = extractText(getProp(page, 'PDF_Processing_Date')) || extractText(getProp(page, 'Quote Date')) || null;
     const validUntil = extractText(getProp(page, 'Valid Until')) || null;
-    const terms = extractText(getProp(page, 'Terms')) || '';
+    const terms = extractText(getProp(page, 'Payment_Terms')) || extractText(getProp(page, 'Terms')) || '';
     const exclusions = extractText(getProp(page, 'Exclusions')) || '';
-    const notes = extractText(getProp(page, 'Notes')) || '';
-    const leadTimeDays = extractText(getProp(page, 'Lead Time (Days)')) || 
+    const notes = extractText(getProp(page, 'Conversion_Notes')) || extractText(getProp(page, 'Validation_Notes')) || extractText(getProp(page, 'Notes')) || '';
+    const leadTimeDays = extractText(getProp(page, 'Duration_Days')) || extractText(getProp(page, 'Lead Time (Days)')) || 
                          extractText(getProp(page, 'Lead Time')) || null;
     
     // Check if lumpsum
