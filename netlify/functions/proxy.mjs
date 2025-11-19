@@ -282,14 +282,24 @@ function deriveFlooringSection(itemType, notes) {
  * @returns {Object} - Normalized line item
  */
 function normalizeQuotationLine(page, scopeType) {
-    // Map to actual Notion column names from Master_Quotations_Database schema
-    const vendor = extractText(getProp(page, 'Company_Name')) || extractText(getProp(page, 'Vendor')) || '';
-    const itemType = extractText(getProp(page, 'Item_Description')) || extractText(getProp(page, 'Item Type')) || extractText(getProp(page, 'Item')) || '';
-    const currency = extractText(getProp(page, 'Currency_Selection')) || extractText(getProp(page, 'Currency')) || 'MYR';
-    const qty = extractText(getProp(page, 'Quantity')) || extractText(getProp(page, 'Qty')) || 0;
-    const unit = extractText(getProp(page, 'Quoted_Unit_Original')) || extractText(getProp(page, 'Unit')) || 'pcs';
-    const unitPrice = extractText(getProp(page, 'Rate_Per_Unit_Original')) || extractText(getProp(page, 'Unit Price')) || 0;
-    const lineTotal = extractText(getProp(page, 'Line Total')) || (qty * unitPrice);
+    // Map to EXACT column names from flooring intake databases
+    const vendor = extractText(getProp(page, 'Vendor')) || 
+                   extractText(getProp(page, 'Supplier Brand')) || 
+                   extractText(getProp(page, 'Company_Name')) || '';
+    
+    const itemType = extractText(getProp(page, 'Material Type')) || 
+                     extractText(getProp(page, 'Item_Description')) || 
+                     extractText(getProp(page, 'Item Type')) || '';
+    
+    const currency = 'MYR'; // Always MYR for these databases
+    
+    const area = extractText(getProp(page, 'Area (m²)')) || 0;
+    const unitPrice = extractText(getProp(page, 'Unit Price (MYR)')) || 
+                      extractText(getProp(page, 'Rate_Per_Unit_Original')) || 0;
+    
+    const lineTotal = extractText(getProp(page, 'Line Total (MYR)')) || 
+                      extractText(getProp(page, 'Line Total')) || 
+                      (area * unitPrice);
     
     // Context fields
     const section = scopeType === 'Flooring' ? 
@@ -307,29 +317,44 @@ function normalizeQuotationLine(page, scopeType) {
     const leadTimeDays = extractText(getProp(page, 'Duration_Days')) || extractText(getProp(page, 'Lead Time (Days)')) || 
                          extractText(getProp(page, 'Lead Time')) || null;
     
+    // Additional flooring-specific fields
+    const roomZone = extractText(getProp(page, 'Room / Zone')) || '';
+    const roomCode = extractText(getProp(page, 'Room Code')) || '';
+    const finishGrade = extractText(getProp(page, 'Finish / Grade')) || '';
+    const sizeThickness = extractText(getProp(page, 'Size / Thickness')) || '';
+    const supplierBrand = extractText(getProp(page, 'Supplier Brand')) || '';
+    const supplierModel = extractText(getProp(page, 'Supplier Model')) || '';
+    const installationRate = extractText(getProp(page, 'Installation Rate (MYR/m²)')) || 0;
+    
     // Check if lumpsum
-    const isLumpsum = norm(unit) === 'lot' || norm(itemType).includes('lump sum');
+    const isLumpsum = norm(itemType).includes('lump sum') || norm(itemType).includes('lot');
     
     // Rate-only detection
-    const isRateOnly = lineTotal === null || lineTotal === 0 && unitPrice > 0;
+    const isRateOnly = (lineTotal === null || lineTotal === 0) && unitPrice > 0;
     
     return {
         id: page.id,
         vendor,
         scopeType,
         currency,
-        qty,
-        unit,
+        area,
         unitPrice,
         lineTotal: isRateOnly ? null : lineTotal,
         section,
         bathroomCode,
         itemType,
+        roomZone,
+        roomCode,
+        finishGrade,
+        sizeThickness,
+        supplierBrand,
+        supplierModel,
+        installationRate,
         quoteDate,
         validUntil,
         terms,
         exclusions,
-        notes: notes + (isRateOnly ? ' [Rate only]' : '') + (isLumpsum ? ' [Lump sum per section]' : ''),
+        notes: notes + (isRateOnly ? ' [Rate only]' : '') + (isLumpsum ? ' [Lump sum]' : ''),
         leadTimeDays,
         isRateOnly,
         isLumpsum
