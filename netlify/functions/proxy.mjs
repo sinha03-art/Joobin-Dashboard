@@ -22,6 +22,8 @@ const {
     BATHROOM_TILES_DB_ID,
     MATERIAL_IMAGES_DB_ID,
     QUOTATIONS_HUB_ID,
+    // Sourcing master list for trade-room bid comparison
+    SOURCING_MASTER_LIST_DB_ID,
 } = process.env;
 
 // --- Constants ---
@@ -891,6 +893,29 @@ export const handler = async(event) => {
             }
         }
 
+        // GET /bids - Trade-room bid comparison from Sourcing Master List
+        if (httpMethod === 'GET' && path.endsWith('/bids')) {
+            try {
+                const bidsData = await fetchTradeRoomBids();
+                return { 
+                    statusCode: 200, 
+                    headers: { ...headers, 'Cache-Control': 'no-store' },
+                    body: JSON.stringify({
+                        success: true,
+                        data: bidsData,
+                        timestamp: new Date().toISOString()
+                    }) 
+                };
+            } catch (error) {
+                console.error('Bids data error:', error);
+                return { 
+                    statusCode: 500, 
+                    headers, 
+                    body: JSON.stringify({ error: error.message }) 
+                };
+            }
+        }
+
         // 404 - Route not found
         return { 
             statusCode: 404, 
@@ -901,7 +926,8 @@ export const handler = async(event) => {
                 availableRoutes: [
                     'GET /proxy',
                     'POST /create-task',
-                    'GET /quotations'
+                    'GET /quotations',
+                    'GET /bids'
                 ]
             }) 
         };
@@ -918,3 +944,137 @@ export const handler = async(event) => {
         };
     }
 }; // v10.0.8 - Nov 18 2025
+
+/**
+ * Fetch and process trade-room bid comparison from Sourcing Master List
+ * @returns {Promise<Object>} - Processed bid comparison data
+ */
+async function fetchTradeRoomBids() {
+    const sourcingData = await queryNotionDB(SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID || 'b84fa0c4cc8d4144afc43aa8dd894931');
+    
+    const allBids = [];
+    
+    // Normalize each row
+    for (const page of sourcingData.results || []) {
+        const itemName = extractText(getProp(page, 'Item Name')) || extractText(getProp(page, 'Name')) || '';
+        const category = extractText(getProp(page, 'Category')) || '';
+        const room = extractText(getProp(page, 'Room')) || '';
+        const vendor = extractText(getProp(page, 'Vendor')) || '';
+        const quantity = extractText(getProp(page, 'Quantity')) || 0;
+        const unitPrice = extractText(getProp(page, 'Unit Price (MYR)')) || 0;
+        
+        // Try to get Total Price from formula, or compute it
+        const totalPriceProp = getProp(page, 'Total Price (MYR)');
+        let totalPrice = null;
+        if (totalPriceProp && totalPriceProp.formula) {
+            totalPrice = totalPriceProp.formula.number;
+        }
+        if (!totalPrice && quantity && unitPrice) {
+            totalPrice = quantity * unitPrice;
+        }
+        
+        const coverage = extractText(getProp(page, 'Coverage')) || '';
+        const notes = extractText(getProp(page, 'Notes')) || '';
+        
+        // Skip if no price data
+        if (!unitPrice && !totalPrice) continue;
+        
+        // Effective total for sorting (use total if available, else unit price for ordering)
+        const effectiveTotal = totalPrice !== null ? totalPrice : unitPrice;
+        
+        allBids.push({
+            id: page.id,
+            trade: category,
+            room: room,
+            vendor: vendor,
+            item_name: itemName,
+            quantity: quantity,
+            unit_price_myr: unitPrice,
+            total_price_myr: totalPrice,
+            effective_total: effectiveTotal,
+            coverage: coverage,
+            notes: notes,
+            url: page.url
+        });
+    }
+    
+    // Group by (trade, room)
+    const grouped = {};
+    
+    for (const bid of allBids) {
+        const key = `${bid.trade}|||${bid.room}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                trade: bid.trade,
+                room: bid.room,
+                bids: []
+            };
+        }
+        grouped[key].bids.push(bid);
+    }
+    
+    // For each group, compute lowest, highest, and sort all_bids
+    const results = [];
+    
+    for (const key in grouped) {
+        const group = grouped[key];
+        const bids = group.bids;
+        
+        // Sort by effective_total ascending
+        bids.sort((a, b) => (a.effective_total || 0) - (b.effective_total || 0));
+        
+        const lowest = bids[0];
+        const highest = bids[bids.length - 1];
+        
+        const result = {
+            trade: group.trade,
+            room: group.room,
+            vendor_count: new Set(bids.map(b => b.vendor)).size,
+            price_range: highest && lowest ? (highest.effective_total || 0) - (lowest.effective_total || 0) : 0,
+            lowest_bid: lowest ? {
+                vendor: lowest.vendor,
+                total_price_myr: lowest.total_price_myr,
+                unit_price_myr: lowest.unit_price_myr,
+                quantity: lowest.quantity,
+                item_name: lowest.item_name,
+                coverage: lowest.coverage,
+                notes: lowest.notes,
+                url: lowest.url
+            } : null,
+            highest_bid: highest ? {
+                vendor: highest.vendor,
+                total_price_myr: highest.total_price_myr,
+                unit_price_myr: highest.unit_price_myr,
+                quantity: highest.quantity,
+                item_name: highest.item_name,
+                coverage: highest.coverage,
+                notes: highest.notes,
+                url: highest.url
+            } : null,
+            all_bids: bids.map(b => ({
+                vendor: b.vendor,
+                total_price_myr: b.total_price_myr,
+                unit_price_myr: b.unit_price_myr,
+                quantity: b.quantity,
+                item_name: b.item_name,
+                coverage: b.coverage,
+                notes: b.notes,
+                url: b.url
+            }))
+        };
+        
+        results.push(result);
+    }
+    
+    // Sort results by trade, then room
+    results.sort((a, b) => {
+        if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
+        return a.room.localeCompare(b.room);
+    });
+    
+    return {
+        trade_room_comparisons: results,
+        total_groups: results.length,
+        total_bids: allBids.length
+    };
+}
