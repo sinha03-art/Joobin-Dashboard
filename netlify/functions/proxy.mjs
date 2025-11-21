@@ -1,5 +1,5 @@
 /**
- * JOOBIN Renovation Hub Proxy v11.0.1 - Syntax Fix
+ * JOOBIN Renovation Hub Proxy v11.0.2 - Syntax Safety Fix
  * SOURCE OF TRUTH: Sourcing Master List
  */
 
@@ -9,7 +9,7 @@ const { Client } = require('@notionhq/client');
 const {
     NOTION_API_KEY,
     SOURCING_MASTER_LIST_DB_ID, // The Source of Truth
-    // Keep these for the main dashboard widgets if needed in future
+    // Keep these for the main dashboard widgets
     NOTION_BUDGET_DB_ID,
     NOTION_ACTUALS_DB_ID,
     MILESTONES_DB_ID,
@@ -34,17 +34,42 @@ function getProp(page, name) {
     return page.properties && page.properties[name];
 }
 
-// FIXED: Valid Optional Chaining Syntax
+/**
+ * SAFE TEXT EXTRACTION
+ * Uses standard && checks to prevent build parser errors with optional chaining
+ */
 function extractText(prop) {
     if (!prop) return '';
-    if (prop.type === 'title') return prop.title ? .[0] ? .plain_text || '';
-    if (prop.type === 'rich_text') return prop.rich_text ? .[0] ? .plain_text || '';
-    if (prop.type === 'select') return prop.select ? .name || '';
-    if (prop.type === 'status') return prop.status ? .name || '';
-    if (prop.type === 'number') return prop.number ? ? 0; // Use ?? to allow 0
-    if (prop.type === 'date') return prop.date ? .start || null;
-    if (prop.type === 'formula') return prop.formula ? .number ? ? prop.formula ? .string ? ? 0;
-    if (prop.type === 'url') return prop.url || '';
+
+    if (prop.type === 'title') {
+        return (prop.title && prop.title[0] && prop.title[0].plain_text) || '';
+    }
+    if (prop.type === 'rich_text') {
+        return (prop.rich_text && prop.rich_text[0] && prop.rich_text[0].plain_text) || '';
+    }
+    if (prop.type === 'select') {
+        return (prop.select && prop.select.name) || '';
+    }
+    if (prop.type === 'status') {
+        return (prop.status && prop.status.name) || '';
+    }
+    if (prop.type === 'number') {
+        return prop.number !== null ? prop.number : 0;
+    }
+    if (prop.type === 'date') {
+        return (prop.date && prop.date.start) || null;
+    }
+    if (prop.type === 'formula') {
+        // Handle both number and string formulas
+        if (!prop.formula) return 0;
+        if (prop.formula.type === 'number') return prop.formula.number || 0;
+        if (prop.formula.type === 'string') return prop.formula.string || '';
+        return 0;
+    }
+    if (prop.type === 'url') {
+        return prop.url || '';
+    }
+
     return '';
 }
 
@@ -94,8 +119,12 @@ async function fetchAndProcessMasterList() {
         const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown';
         const unitPrice = extractText(getProp(page, 'Unit Price (MYR)'));
         const quantity = extractText(getProp(page, 'Quantity'));
-        // Brief says Total is a formula
-        const total = extractText(getProp(page, 'Total Price (MYR)')) || (Number(unitPrice) * Number(quantity));
+        // Brief says Total is a formula, but fallback to calculation if missing
+        let total = extractText(getProp(page, 'Total Price (MYR)'));
+        if (!total && total !== 0) {
+            total = Number(unitPrice) * Number(quantity);
+        }
+
         const notes = extractText(getProp(page, 'Notes'));
 
         return {
@@ -106,7 +135,7 @@ async function fetchAndProcessMasterList() {
             room, // Critical for grouping
             unitPrice,
             quantity,
-            total,
+            total: Number(total) || 0,
             currency: 'MYR', // Master list is normalized to MYR
             notes
         };
@@ -140,7 +169,7 @@ async function fetchAndProcessMasterList() {
                 };
             }
             roomGroups[line.room][line.vendor].items.push(line);
-            roomGroups[line.room][line.vendor].total += Number(line.total);
+            roomGroups[line.room][line.vendor].total += line.total;
         });
 
         // 2. Flatten and Rank
@@ -156,7 +185,6 @@ async function fetchAndProcessMasterList() {
                 v.rank = index + 1;
                 v.isCheapest = (index === 0);
                 v.isHighest = (index === vendors.length - 1 && vendors.length > 1);
-                // Simple completeness: For now, just count items. 
                 v.completenessScore = 1;
             });
 
@@ -190,9 +218,8 @@ exports.handler = async(event) => {
             return { statusCode: 200, headers, body: JSON.stringify({ data }) };
         }
 
-        // Route: Main Dashboard Data (Keep existing logic simplified)
+        // Route: Main Dashboard Data (Keep existing logic structure but empty to prevent crashes)
         if (path.endsWith('/proxy')) {
-            // Returning basic structure to prevent frontend crash if called
             return { statusCode: 200, headers, body: JSON.stringify({ kpis: {}, gates: [], deliverables: [] }) };
         }
 
