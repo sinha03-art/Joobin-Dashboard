@@ -447,132 +447,121 @@ function calculateVendorRankings(normalizedLines, groupBy = 'section') {
 
     return rankings;
 }
+// Query the database
+const sourcingData = await queryNotionDB(dbId);
+const allProcessedBids = [];
 
+// 2. Normalize Rows
+for (const page of sourcingData.results || []) {
+    // Extraction logic
+    const item_name = extractText(getProp(page, 'Item Name')) ||
+        extractText(getProp(page, 'Name')) || 'Untitled Item';
 
-async function fetchTradeRoomBids() {
-    // 1. Source of Truth
-    const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
+    const trade = extractText(getProp(page, 'Category')) ||
+        extractText(getProp(page, 'Trade')) || 'Uncategorized';
 
-    if (!dbId) {
-        console.error("Error: SOURCING_MASTER_LIST_DB_ID is missing.");
-        return { error: "Database ID not configured" };
+    const room = extractText(getProp(page, 'Room')) || 'General';
+    const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
+    const notes = extractText(getProp(page, 'Notes')) || '';
+    const coverage = extractText(getProp(page, 'Coverage')) || '';
+
+    // Numbers
+    const quantity = extractText(getProp(page, 'Quantity')) || 0;
+    const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) ||
+        extractText(getProp(page, 'Unit Price')) || 0;
+
+    // Formula Handling
+    const totalProp = getProp(page, 'Total Price (MYR)');
+    let formula_total = null;
+    if (totalProp) {
+        if (totalProp.type === 'formula') formula_total = totalProp.formula.number;
+        else if (totalProp.type === 'number') formula_total = totalProp.number;
     }
 
-    // Query the database
-    const sourcingData = await queryNotionDB(dbId);
-    const allProcessedBids = [];
+    // Filter out empty rows
+    if (!unit_price_myr && formula_total === null) continue;
 
-    // 2. Normalize Rows
-    for (const page of sourcingData.results || []) {
-        // Extraction logic
-        const item_name = extractText(getProp(page, 'Item Name')) ||
-            extractText(getProp(page, 'Name')) || 'Untitled Item';
+    // Calculate Effective Total
+    let effective_total;
+    if (formula_total !== null) {
+        effective_total = formula_total;
+    } else if (quantity > 0) {
+        effective_total = unit_price_myr * quantity;
+    } else {
+        effective_total = unit_price_myr;
+    }
 
-        const trade = extractText(getProp(page, 'Category')) ||
-            extractText(getProp(page, 'Trade')) || 'Uncategorized';
+    // Trip/Source (Metadata)
+    const trip = extractText(getProp(page, 'Trip')) || extractText(getProp(page, 'Source')) || null;
 
-        const room = extractText(getProp(page, 'Room')) || 'General';
-        const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
-        const notes = extractText(getProp(page, 'Notes')) || '';
-        const coverage = extractText(getProp(page, 'Coverage')) || '';
-
-        // Numbers
-        const quantity = extractText(getProp(page, 'Quantity')) || 0;
-        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) ||
-            extractText(getProp(page, 'Unit Price')) || 0;
-
-        // Formula Handling
-        const totalProp = getProp(page, 'Total Price (MYR)');
-        let formula_total = null;
-        if (totalProp) {
-            if (totalProp.type === 'formula') formula_total = totalProp.formula.number;
-            else if (totalProp.type === 'number') formula_total = totalProp.number;
+    allProcessedBids.push({
+        trade,
+        room,
+        data: {
+            vendor,
+            total_price_myr: formula_total !== null ? formula_total : (quantity > 0 ? unit_price_myr * quantity : null),
+            unit_price_myr,
+            quantity,
+            item_name,
+            notes,
+            coverage,
+            trip,
+            _sort_val: effective_total // Internal use only
         }
+    });
+}
 
-        // Filter out empty rows
-        if (!unit_price_myr && formula_total === null) continue;
-
-        // Calculate Effective Total
-        let effective_total;
-        if (formula_total !== null) {
-            effective_total = formula_total;
-        } else if (quantity > 0) {
-            effective_total = unit_price_myr * quantity;
-        } else {
-            effective_total = unit_price_myr;
-        }
-
-        // Trip/Source (Metadata)
-        const trip = extractText(getProp(page, 'Trip')) || extractText(getProp(page, 'Source')) || null;
-
-        allProcessedBids.push({
-            trade,
-            room,
-            data: {
-                vendor,
-                total_price_myr: formula_total !== null ? formula_total : (quantity > 0 ? unit_price_myr * quantity : null),
-                unit_price_myr,
-                quantity,
-                item_name,
-                notes,
-                coverage,
-                trip,
-                _sort_val: effective_total // Internal use only
-            }
-        });
+// 3. Group by Trade + Room
+const grouped = {};
+for (const row of allProcessedBids) {
+    const key = `${row.trade}|||${row.room}`;
+    if (!grouped[key]) {
+        grouped[key] = { trade: row.trade, room: row.room, bids: [] };
     }
+    grouped[key].bids.push(row.data);
+}
 
-    // 3. Group by Trade + Room
-    const grouped = {};
-    for (const row of allProcessedBids) {
-        const key = `${row.trade}|||${row.room}`;
-        if (!grouped[key]) {
-            grouped[key] = { trade: row.trade, room: row.room, bids: [] };
-        }
-        grouped[key].bids.push(row.data);
-    }
+// 4. Aggregate High/Low
+const results = [];
+for (const key in grouped) {
+    const group = grouped[key];
+    const bids = group.bids;
 
-    // 4. Aggregate High/Low
-    const results = [];
-    for (const key in grouped) {
-        const group = grouped[key];
-        const bids = group.bids;
+    // Sort Ascending (Lowest First)
+    bids.sort((a, b) => a._sort_val - b._sort_val);
 
-        // Sort Ascending (Lowest First)
-        bids.sort((a, b) => a._sort_val - b._sort_val);
-
-        // Clean up internal sort key
-        const cleanBids = bids.map(b => {
-            const { _sort_val, ...rest } = b;
-            return rest;
-        });
-
-        const lowest = cleanBids[0];
-        const highest = cleanBids[cleanBids.length - 1];
-
-        results.push({
-            trade: group.trade,
-            room: group.room,
-            lowest_bid: lowest,
-            highest_bid: highest,
-            all_bids: cleanBids,
-            vendor_count: new Set(cleanBids.map(b => b.vendor)).size
-        });
-    }
-
-    // 5. Final Sort (Trade A-Z, then Room A-Z)
-    results.sort((a, b) => {
-        if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
-        return a.room.localeCompare(b.room);
+    // Clean up internal sort key
+    const cleanBids = bids.map(b => {
+        const { _sort_val, ...rest } = b;
+        return rest;
     });
 
-    return {
-        trade_room_comparisons: results,
-        meta: {
-            total_groups: results.length,
-            timestamp: new Date().toISOString()
-        }
-    };
+    const lowest = cleanBids[0];
+    const highest = cleanBids[cleanBids.length - 1];
+
+    results.push({
+        trade: group.trade,
+        room: group.room,
+        lowest_bid: lowest,
+        highest_bid: highest,
+        all_bids: cleanBids,
+        vendor_count: new Set(cleanBids.map(b => b.vendor)).size
+    });
+}
+
+// 5. Final Sort (Trade A-Z, then Room A-Z)
+results.sort((a, b) => {
+    if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
+    return a.room.localeCompare(b.room);
+});
+
+return {
+    trade_room_comparisons: results,
+    meta: {
+        total_groups: results.length,
+        timestamp: new Date().toISOString()
+    }
+};
 }
 
 // --- Main Handler ---
@@ -1038,24 +1027,149 @@ export const handler = async(event) => {
  * STRICT IMPLEMENTATION: Trade & Room Bid Comparison
  * Based on Engineering Brief: Pulls bids, computes totals, finds High/Low per (Trade, Room).
  */
+// 2. Normalize Rows
+for (const page of sourcingData.results || []) {
+    // Extraction based on Brief
+    const item_name = extractText(getProp(page, 'Item Name')) ||
+        extractText(getProp(page, 'Name')) || 'Untitled Item';
+
+    const trade = extractText(getProp(page, 'Category')) || 'Uncategorized'; // Mapped Category -> Trade
+    const room = extractText(getProp(page, 'Room')) || 'General';
+    const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
+    const notes = extractText(getProp(page, 'Notes')) || '';
+    const coverage = extractText(getProp(page, 'Coverage')) || '';
+
+    // Numbers
+    const quantity = extractText(getProp(page, 'Quantity')) || 0;
+    const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) || 0;
+
+    // Formula Handling: 'Total Price (MYR)' is usually a formula
+    const totalProp = getProp(page, 'Total Price (MYR)');
+    let formula_total = null;
+    if (totalProp) {
+        if (totalProp.type === 'formula') {
+            formula_total = totalProp.formula.number;
+        } else if (totalProp.type === 'number') {
+            formula_total = totalProp.number;
+        }
+    }
+
+    // Logic: Filter out rows where both Unit and Total are missing
+    if (!unit_price_myr && formula_total === null) continue;
+
+    // Logic: Compute Effective Total
+    // If Formula exists, use it. 
+    // Else, if Qty exists, Calc it. 
+    // Else (Qty is 0/null), fallback to Unit Price for ordering purposes.
+    let effective_total;
+    if (formula_total !== null) {
+        effective_total = formula_total;
+    } else if (quantity > 0) {
+        effective_total = unit_price_myr * quantity;
+    } else {
+        effective_total = unit_price_myr;
+    }
+
+    // Rounding (Integers only per brief)
+    effective_total = Math.round(effective_total);
+    const display_unit = Math.round(unit_price_myr);
+    const display_total = formula_total !== null ? Math.round(formula_total) :
+        (quantity > 0 ? Math.round(unit_price_myr * quantity) : null);
+
+    // Capture Trip/Source if available (Nice-to-have from previous context)
+    const trip = extractText(getProp(page, 'Trip')) || extractText(getProp(page, 'Source')) || null;
+
+    allProcessedBids.push({
+        trade,
+        room,
+        // Bid Object Shape
+        data: {
+            vendor,
+            total_price_myr: display_total !== null ? display_total : effective_total, // Prefer explicit total
+            unit_price_myr: display_unit,
+            quantity,
+            item_name,
+            notes,
+            coverage,
+            trip, // Added as nice-to-have metadata
+            // Hidden field for sorting
+            _sort_val: effective_total
+        }
+    });
+}
+
+// 3. Grouping
+const grouped = {};
+for (const row of allProcessedBids) {
+    const key = `${row.trade}|||${row.room}`;
+    if (!grouped[key]) {
+        grouped[key] = {
+            trade: row.trade,
+            room: row.room,
+            bids: []
+        };
+    }
+    grouped[key].bids.push(row.data);
+}
+
+// 4. Aggregation (High/Low)
+const results = [];
+for (const key in grouped) {
+    const group = grouped[key];
+    const bids = group.bids;
+
+    // Sort by effective total ascending
+    bids.sort((a, b) => a._sort_val - b._sort_val);
+
+    // Clean up the _sort_val from final output to keep JSON clean
+    const cleanBids = bids.map(b => {
+        const { _sort_val, ...rest } = b;
+        return rest;
+    });
+
+    const lowest = cleanBids[0];
+    const highest = cleanBids[cleanBids.length - 1];
+
+    // Optional: Price Range
+    const range = (highest.total_price_myr || highest.unit_price_myr) - (lowest.total_price_myr || lowest.unit_price_myr);
+
+    results.push({
+        trade: group.trade,
+        room: group.room,
+        lowest_bid: lowest,
+        highest_bid: highest,
+        all_bids: cleanBids,
+        // Optional Aggregates
+        vendor_count: new Set(cleanBids.map(b => b.vendor)).size,
+        price_range_myr: range
+    });
+}
+/**
+ * STRICT IMPLEMENTATION: Trade & Room Bid Comparison
+ * Endpoint: GET /bids
+ */
 async function fetchTradeRoomBids() {
     // 1. Source of Truth
     const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
+
     if (!dbId) {
         console.error("Error: SOURCING_MASTER_LIST_DB_ID is missing.");
         return { error: "Database ID not configured" };
     }
 
+    // Query the database
     const sourcingData = await queryNotionDB(dbId);
     const allProcessedBids = [];
 
     // 2. Normalize Rows
     for (const page of sourcingData.results || []) {
-        // Extraction based on Brief
+        // Extraction logic
         const item_name = extractText(getProp(page, 'Item Name')) ||
             extractText(getProp(page, 'Name')) || 'Untitled Item';
 
-        const trade = extractText(getProp(page, 'Category')) || 'Uncategorized'; // Mapped Category -> Trade
+        const trade = extractText(getProp(page, 'Category')) ||
+            extractText(getProp(page, 'Trade')) || 'Uncategorized';
+
         const room = extractText(getProp(page, 'Room')) || 'General';
         const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
         const notes = extractText(getProp(page, 'Notes')) || '';
@@ -1063,26 +1177,21 @@ async function fetchTradeRoomBids() {
 
         // Numbers
         const quantity = extractText(getProp(page, 'Quantity')) || 0;
-        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) || 0;
+        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) ||
+            extractText(getProp(page, 'Unit Price')) || 0;
 
-        // Formula Handling: 'Total Price (MYR)' is usually a formula
+        // Formula Handling
         const totalProp = getProp(page, 'Total Price (MYR)');
         let formula_total = null;
         if (totalProp) {
-            if (totalProp.type === 'formula') {
-                formula_total = totalProp.formula.number;
-            } else if (totalProp.type === 'number') {
-                formula_total = totalProp.number;
-            }
+            if (totalProp.type === 'formula') formula_total = totalProp.formula.number;
+            else if (totalProp.type === 'number') formula_total = totalProp.number;
         }
 
-        // Logic: Filter out rows where both Unit and Total are missing
+        // Filter out empty rows
         if (!unit_price_myr && formula_total === null) continue;
 
-        // Logic: Compute Effective Total
-        // If Formula exists, use it. 
-        // Else, if Qty exists, Calc it. 
-        // Else (Qty is 0/null), fallback to Unit Price for ordering purposes.
+        // Calculate Effective Total
         let effective_total;
         if (formula_total !== null) {
             effective_total = formula_total;
@@ -1092,58 +1201,46 @@ async function fetchTradeRoomBids() {
             effective_total = unit_price_myr;
         }
 
-        // Rounding (Integers only per brief)
-        effective_total = Math.round(effective_total);
-        const display_unit = Math.round(unit_price_myr);
-        const display_total = formula_total !== null ? Math.round(formula_total) :
-            (quantity > 0 ? Math.round(unit_price_myr * quantity) : null);
-
-        // Capture Trip/Source if available (Nice-to-have from previous context)
+        // Trip/Source (Metadata)
         const trip = extractText(getProp(page, 'Trip')) || extractText(getProp(page, 'Source')) || null;
 
         allProcessedBids.push({
             trade,
             room,
-            // Bid Object Shape
             data: {
                 vendor,
-                total_price_myr: display_total !== null ? display_total : effective_total, // Prefer explicit total
-                unit_price_myr: display_unit,
+                total_price_myr: formula_total !== null ? formula_total : (quantity > 0 ? unit_price_myr * quantity : null),
+                unit_price_myr,
                 quantity,
                 item_name,
                 notes,
                 coverage,
-                trip, // Added as nice-to-have metadata
-                // Hidden field for sorting
-                _sort_val: effective_total
+                trip,
+                _sort_val: effective_total // Internal use only
             }
         });
     }
 
-    // 3. Grouping
+    // 3. Group by Trade + Room
     const grouped = {};
     for (const row of allProcessedBids) {
         const key = `${row.trade}|||${row.room}`;
         if (!grouped[key]) {
-            grouped[key] = {
-                trade: row.trade,
-                room: row.room,
-                bids: []
-            };
+            grouped[key] = { trade: row.trade, room: row.room, bids: [] };
         }
         grouped[key].bids.push(row.data);
     }
 
-    // 4. Aggregation (High/Low)
+    // 4. Aggregate High/Low
     const results = [];
     for (const key in grouped) {
         const group = grouped[key];
         const bids = group.bids;
 
-        // Sort by effective total ascending
+        // Sort Ascending (Lowest First)
         bids.sort((a, b) => a._sort_val - b._sort_val);
 
-        // Clean up the _sort_val from final output to keep JSON clean
+        // Clean up internal sort key
         const cleanBids = bids.map(b => {
             const { _sort_val, ...rest } = b;
             return rest;
@@ -1152,160 +1249,27 @@ async function fetchTradeRoomBids() {
         const lowest = cleanBids[0];
         const highest = cleanBids[cleanBids.length - 1];
 
-        // Optional: Price Range
-        const range = (highest.total_price_myr || highest.unit_price_myr) - (lowest.total_price_myr || lowest.unit_price_myr);
-
         results.push({
             trade: group.trade,
             room: group.room,
             lowest_bid: lowest,
             highest_bid: highest,
             all_bids: cleanBids,
-            // Optional Aggregates
-            vendor_count: new Set(cleanBids.map(b => b.vendor)).size,
-            price_range_myr: range
+            vendor_count: new Set(cleanBids.map(b => b.vendor)).size
         });
     }
 
     // 5. Final Sort (Trade A-Z, then Room A-Z)
+    results.sort((a, b) => {
+        if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
+        return a.room.localeCompare(b.room);
+    });
 
-    async function fetchTradeRoomBids() {
-        const sourcingData = await queryNotionDB(SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID || 'b84fa0c4cc8d4144afc43aa8dd894931');
-
-        const allBids = [];
-
-        // Normalize each row
-        for (const page of sourcingData.results || []) {
-            const itemName = extractText(getProp(page, 'Item Name')) || extractText(getProp(page, 'Name')) || '';
-            const category = extractText(getProp(page, 'Category')) || '';
-            const room = extractText(getProp(page, 'Room')) || '';
-            const vendor = extractText(getProp(page, 'Vendor')) || '';
-            const quantity = extractText(getProp(page, 'Quantity')) || 0;
-            const unitPrice = extractText(getProp(page, 'Unit Price (MYR)')) || 0;
-
-            // Try to get Total Price from formula, or compute it
-            const totalPriceProp = getProp(page, 'Total Price (MYR)');
-            let totalPrice = null;
-            if (totalPriceProp && totalPriceProp.formula) {
-                totalPrice = totalPriceProp.formula.number;
-            }
-            if (!totalPrice && quantity && unitPrice) {
-                totalPrice = quantity * unitPrice;
-            }
-
-            const coverage = extractText(getProp(page, 'Coverage')) || '';
-            const notes = extractText(getProp(page, 'Notes')) || '';
-
-            // Skip if no price data
-            if (!unitPrice && !totalPrice) continue;
-
-            // Effective total for sorting (use total if available, else unit price for ordering)
-            const effectiveTotal = totalPrice !== null ? totalPrice : unitPrice;
-
-            allBids.push({
-                id: page.id,
-                trade: category,
-                room: room,
-                vendor: vendor,
-                item_name: itemName,
-                quantity: quantity,
-                unit_price_myr: unitPrice,
-                total_price_myr: totalPrice,
-                effective_total: effectiveTotal,
-                coverage: coverage,
-                notes: notes,
-                url: page.url
-            });
-        }
-
-        // Group by (trade, room)
-        const grouped = {};
-
-        for (const bid of allBids) {
-            const key = `${bid.trade}|||${bid.room}`;
-            if (!grouped[key]) {
-                grouped[key] = {
-                    trade: bid.trade,
-                    room: bid.room,
-                    bids: []
-                };
-            }
-            grouped[key].bids.push(bid);
-        }
-
-        // For each group, compute lowest, highest, and sort all_bids
-        const results = [];
-
-        for (const key in grouped) {
-            const group = grouped[key];
-            const bids = group.bids;
-
-            // Sort by effective_total ascending
-            bids.sort((a, b) => (a.effective_total || 0) - (b.effective_total || 0));
-
-            const lowest = bids[0];
-            const highest = bids[bids.length - 1];
-
-            const result = {
-                trade: group.trade,
-                room: group.room,
-                vendor_count: new Set(bids.map(b => b.vendor)).size,
-                price_range: highest && lowest ? (highest.effective_total || 0) - (lowest.effective_total || 0) : 0,
-                lowest_bid: lowest ? {
-                    vendor: lowest.vendor,
-                    total_price_myr: lowest.total_price_myr,
-                    unit_price_myr: lowest.unit_price_myr,
-                    quantity: lowest.quantity,
-                    item_name: lowest.item_name,
-                    coverage: lowest.coverage,
-                    notes: lowest.notes,
-                    url: lowest.url
-                } : null,
-                highest_bid: highest ? {
-                    vendor: highest.vendor,
-                    total_price_myr: highest.total_price_myr,
-                    unit_price_myr: highest.unit_price_myr,
-                    quantity: highest.quantity,
-                    item_name: highest.item_name,
-                    coverage: highest.coverage,
-                    notes: highest.notes,
-                    url: highest.url
-                } : null,
-                all_bids: bids.map(b => ({
-                    vendor: b.vendor,
-                    total_price_myr: b.total_price_myr,
-                    unit_price_myr: b.unit_price_myr,
-                    quantity: b.quantity,
-                    item_name: b.item_name,
-                    coverage: b.coverage,
-                    notes: b.notes,
-                    url: b.url
-                }))
-            };
-
-            results.push(result);
-        }
-
-        // Sort results by trade, then room
-        dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
-        results.sort((a, b) => {
-            if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
-            return a.room.localeCompare(b.room);
-        });
-
-        HEAD
-
-        return {
-            trade_room_comparisons: results, // The array expected by the frontend
-            meta: {
-                total_groups: results.length,
-                timestamp: new Date().toISOString()
-            }
-        };
-    }
     return {
         trade_room_comparisons: results,
-        total_groups: results.length,
-        total_bids: allBids.length
+        meta: {
+            total_groups: results.length,
+            timestamp: new Date().toISOString()
+        }
     };
 }
