@@ -1,6 +1,6 @@
 /**
- * JOOBIN Renovation Hub Proxy v10.0.7 - Netlify Compatible
- * FIXED: Removed optional chaining, PRESERVED em-dashes
+ * JOOBIN Renovation Hub Proxy v10.0.8 - Netlify Compatible
+ * IMPROVEMENTS: Added validation, 404 handling, extracted constants, security hardening
  */
 
 // --- Environment Variables ---
@@ -15,12 +15,29 @@ const {
     NOTION_WORK_PACKAGES_DB_ID,
     PAYMENTS_DB_ID,
     UPDATE_PASSWORD,
+    // Quotation intake sources
+    FLOORING_GEORGE_A_DB_ID,
+    FLOORING_GEORGE_B_DB_ID,
+    BATHROOM_SANITARY_DB_ID,
+    BATHROOM_TILES_DB_ID,
+    MATERIAL_IMAGES_DB_ID,
+    QUOTATIONS_HUB_ID,
+    // Sourcing master list for trade-room bid comparison
+    SOURCING_MASTER_LIST_DB_ID,
 } = process.env;
 
 // --- Constants ---
 const NOTION_VERSION = '2022-06-28';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const CONSTRUCTION_START_DATE = '2025-11-22';
+
+// Budget calculation constants
+const BUDGET_CONSTANTS = {
+    BASE_FEE: 27900,
+    DISCOUNT_RATE: 0.05,
+    TAX_RATE: 0.10,
+};
+
 const { Client } = require('@notionhq/client');
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
@@ -74,6 +91,28 @@ const REQUIRED_BY_GATE = {
     ]
 };
 
+// --- Validation Helper ---
+/**
+ * Validates required environment variables
+ * @throws {Error} If any required variable is missing
+ */
+function validateEnvironment() {
+    const required = [
+        'NOTION_API_KEY',
+        'NOTION_BUDGET_DB_ID',
+        'NOTION_ACTUALS_DB_ID',
+        'MILESTONES_DB_ID',
+        'DELIVERABLES_DB_ID',
+        'VENDOR_REGISTRY_DB_ID',
+        'PAYMENTS_DB_ID'
+    ];
+
+    const missing = required.filter(key => !process.env[key]);
+    if (missing.length > 0) {
+        throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    }
+}
+
 // --- API & Utility Helpers ---
 const notionHeaders = () => ({
     'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -84,7 +123,13 @@ const notionHeaders = () => ({
 const norm = (s) => String(s || '').trim().toLowerCase();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-
+/**
+ * Call Gemini AI API with retry logic
+ * @param {string} prompt - The prompt to send to Gemini
+ * @returns {Promise<string>} - The AI response text
+ * NOTE: Currently unused but kept for future AI features
+ */
+/*
 async function callGemini(prompt) {
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -114,12 +159,25 @@ async function callGemini(prompt) {
     }
     throw new Error('Gemini API is unavailable after multiple retries.');
 }
+*/
 
+/**
+ * Get property from Notion page with fallback
+ * @param {Object} page - Notion page object
+ * @param {string} name - Primary property name
+ * @param {string} fallback - Fallback property name
+ * @returns {Object|undefined} - Property object or undefined
+ */
 function getProp(page, name, fallback) {
     if (!page.properties) return undefined;
     return page.properties[name] || page.properties[fallback];
 }
 
+/**
+ * Extract text/value from Notion property based on type
+ * @param {Object} prop - Notion property object
+ * @returns {string|number|boolean|null} - Extracted value
+ */
 function extractText(prop) {
     if (!prop) return '';
     const propType = prop.type;
@@ -137,6 +195,13 @@ function extractText(prop) {
     if (propType === 'checkbox') return prop.checkbox;
     return '';
 }
+
+/**
+ * Query Notion database with pagination support
+ * @param {string} dbId - Database ID
+ * @param {Object} filter - Query filter object
+ * @returns {Promise<Object>} - Results object with all pages
+ */
 async function queryNotionDB(dbId, filter = {}) {
     if (!dbId) {
         console.warn(`queryNotionDB called with no dbId. Skipping.`);
@@ -178,6 +243,11 @@ async function queryNotionDB(dbId, filter = {}) {
     return { results: allResults };
 }
 
+/**
+ * Map review status to construction status
+ * @param {string} reviewStatus - Review status from Notion
+ * @returns {string} - Mapped construction status
+ */
 function mapConstructionStatus(reviewStatus) {
     const normalized = norm(reviewStatus);
     if (normalized === 'approved') return 'Approved';
@@ -187,13 +257,276 @@ function mapConstructionStatus(reviewStatus) {
     return 'Missing';
 }
 
+// --- QUOTATION PROCESSING FUNCTIONS ---
+
+/**
+ * Derive flooring section from item description/keywords
+ * @param {string} itemType - Item type or description
+ * @param {string} notes - Additional notes
+ * @returns {string} - Derived section
+ */
+function deriveFlooringSection(itemType, notes) {
+    const text = norm(itemType + ' ' + notes);
+    if (text.includes('deck') || text.includes('balcony') || text.includes('porch') ||
+        text.includes('outdoor') || text.includes('garden path')) {
+        return 'Outdoor & Balconies';
+    }
+    if (text.includes('stair')) return 'Staircase';
+    if (text.includes('first floor') || text.includes('1f')) return '1F Interior';
+    if (text.includes('ground floor') || text.includes('gf')) return 'GF Interior';
+    return 'GF Interior'; // default
+}
+
+/**
+ * Normalize a quotation line item to canonical schema
+ * @param {Object} page - Notion page object
+ * @param {string} scopeType - The scope type (Flooring, Bathroom-Sanitary, etc.)
+ * @returns {Object} - Normalized line item
+ */
+function normalizeQuotationLine(page, scopeType) {
+    // Map to EXACT column names from flooring intake databases
+    const vendor = extractText(getProp(page, 'Vendor')) ||
+        extractText(getProp(page, 'Supplier Brand')) ||
+        extractText(getProp(page, 'Company_Name')) || '';
+
+    const itemType = extractText(getProp(page, 'Material Type')) ||
+        extractText(getProp(page, 'Item_Description')) ||
+        extractText(getProp(page, 'Item Type')) || '';
+
+    const currency = 'MYR'; // Always MYR for these databases
+
+    const area = extractText(getProp(page, 'Area (m²)')) || 0;
+    const unitPrice = extractText(getProp(page, 'Unit Price (MYR)')) ||
+        extractText(getProp(page, 'Rate_Per_Unit_Original')) || 0;
+
+    const lineTotal = extractText(getProp(page, 'Line Total (MYR)')) ||
+        extractText(getProp(page, 'Line Total')) ||
+        (area * unitPrice);
+
+    // Context fields
+    const section = scopeType === 'Flooring' ?
+        (extractText(getProp(page, 'Section')) || deriveFlooringSection(itemType, extractText(getProp(page, 'Notes')) || '')) :
+        null;
+    const bathroomCode = scopeType.includes('Bathroom') ?
+        (extractText(getProp(page, 'Bathroom Code')) || extractText(getProp(page, 'Bath Code')) || '') :
+        null;
+
+    const quoteDate = extractText(getProp(page, 'PDF_Processing_Date')) || extractText(getProp(page, 'Quote Date')) || null;
+    const validUntil = extractText(getProp(page, 'Valid Until')) || null;
+    const terms = extractText(getProp(page, 'Payment_Terms')) || extractText(getProp(page, 'Terms')) || '';
+    const exclusions = extractText(getProp(page, 'Exclusions')) || '';
+    const notes = extractText(getProp(page, 'Conversion_Notes')) || extractText(getProp(page, 'Validation_Notes')) || extractText(getProp(page, 'Notes')) || '';
+    const leadTimeDays = extractText(getProp(page, 'Duration_Days')) || extractText(getProp(page, 'Lead Time (Days)')) ||
+        extractText(getProp(page, 'Lead Time')) || null;
+
+    // Additional flooring-specific fields
+    const roomZone = extractText(getProp(page, 'Room / Zone')) || '';
+    const roomCode = extractText(getProp(page, 'Room Code')) || '';
+    const finishGrade = extractText(getProp(page, 'Finish / Grade')) || '';
+    const sizeThickness = extractText(getProp(page, 'Size / Thickness')) || '';
+    const supplierBrand = extractText(getProp(page, 'Supplier Brand')) || '';
+    const supplierModel = extractText(getProp(page, 'Supplier Model')) || '';
+    const installationRate = extractText(getProp(page, 'Installation Rate (MYR/m²)')) || 0;
+
+    // Check if lumpsum
+    const isLumpsum = norm(itemType).includes('lump sum') || norm(itemType).includes('lot');
+
+    // Rate-only detection
+    const isRateOnly = (lineTotal === null || lineTotal === 0) && unitPrice > 0;
+
+    return {
+        id: page.id,
+        vendor,
+        scopeType,
+        currency,
+        area,
+        unitPrice,
+        lineTotal: isRateOnly ? null : lineTotal,
+        section,
+        bathroomCode,
+        itemType,
+        roomZone,
+        roomCode,
+        finishGrade,
+        sizeThickness,
+        supplierBrand,
+        supplierModel,
+        installationRate,
+        quoteDate,
+        validUntil,
+        terms,
+        exclusions,
+        notes: notes + (isRateOnly ? ' [Rate only]' : '') + (isLumpsum ? ' [Lump sum]' : ''),
+        leadTimeDays,
+        isRateOnly,
+        isLumpsum
+    };
+}
+
+/**
+ * Calculate vendor rankings by section/bathroom code
+ * @param {Array} normalizedLines - Normalized quotation lines
+ * @param {string} groupBy - 'section' or 'bathroomCode'
+ * @returns {Object} - Rankings by group
+ */
+function calculateVendorRankings(normalizedLines, groupBy = 'section') {
+    const groups = {};
+
+    // Group lines
+    normalizedLines.forEach(line => {
+        const groupKey = line[groupBy] || 'Uncategorized';
+        if (!groups[groupKey]) {
+            groups[groupKey] = {};
+        }
+
+        const vendor = line.vendor || 'Unknown';
+        if (!groups[groupKey][vendor]) {
+            groups[groupKey][vendor] = {
+                vendor,
+                lines: [],
+                total: 0,
+                filledLines: 0,
+                totalLines: 0,
+                leadTimeDays: line.leadTimeDays,
+                terms: line.terms,
+                exclusions: line.exclusions,
+                currency: line.currency
+            };
+        }
+
+        groups[groupKey][vendor].lines.push(line);
+        groups[groupKey][vendor].totalLines++;
+
+        if (line.lineTotal !== null && line.lineTotal > 0) {
+            groups[groupKey][vendor].total += line.lineTotal;
+            groups[groupKey][vendor].filledLines++;
+        }
+    });
+
+    // Calculate rankings for each group
+    const rankings = {};
+    Object.keys(groups).forEach(groupKey => {
+        const vendors = Object.values(groups[groupKey]);
+
+        // Calculate completeness scores
+        vendors.forEach(v => {
+            v.completenessScore = v.totalLines > 0 ? v.filledLines / v.totalLines : 0;
+            v.missingPrices = v.filledLines < v.totalLines;
+
+            // Gap flags
+            if (v.exclusions) v.exclusionsPresent = true;
+            if (v.terms && norm(v.terms).includes('exw')) v.termsRisk = true;
+
+            // Validity check
+            const validLine = v.lines.find(l => l.validUntil);
+            if (validLine && validLine.validUntil) {
+                const daysToExpiry = Math.floor((new Date(validLine.validUntil) - new Date()) / (1000 * 60 * 60 * 24));
+                v.shortValidity = daysToExpiry <= 3;
+                v.daysToExpiry = daysToExpiry;
+            }
+        });
+
+        // Filter vendors with sufficient completeness (≥ 70%)
+        const eligibleVendors = vendors.filter(v => v.completenessScore >= 0.7);
+
+        // Sort: ascending by total, then desc by completeness, then asc by lead time
+        const sortedVendors = [...vendors].sort((a, b) => {
+            if (a.total !== b.total) return a.total - b.total;
+            if (a.completenessScore !== b.completenessScore) return b.completenessScore - a.completenessScore;
+            return (a.leadTimeDays || 999) - (b.leadTimeDays || 999);
+        });
+
+        // Assign ranks
+        sortedVendors.forEach((v, idx) => {
+            v.rank = idx + 1;
+        });
+
+        // Find cheapest and highest among eligible vendors
+        if (eligibleVendors.length > 0) {
+            const cheapest = eligibleVendors.reduce((min, v) => v.total < min.total ? v : min);
+            const highest = eligibleVendors.reduce((max, v) => v.total > max.total ? v : max);
+            cheapest.isCheapest = true;
+            highest.isHighest = true;
+        }
+
+        rankings[groupKey] = sortedVendors;
+    });
+
+    return rankings;
+}
+
+/**
+ * Fetch and process all quotation data
+ * @returns {Promise<Object>} - Processed quotation data
+ */
+async function fetchQuotationData() {
+    const [flooringA, flooringB, bathroomSanitary, bathroomTiles, materialImages] = await Promise.all([
+        queryNotionDB(FLOORING_GEORGE_A_DB_ID || ''),
+        queryNotionDB(FLOORING_GEORGE_B_DB_ID || ''),
+        queryNotionDB(BATHROOM_SANITARY_DB_ID || ''),
+        queryNotionDB(BATHROOM_TILES_DB_ID || ''),
+        queryNotionDB(MATERIAL_IMAGES_DB_ID || ''),
+    ]);
+
+    // Normalize all lines
+    const flooringLines = [
+        ...(flooringA.results || []).map(p => normalizeQuotationLine(p, 'Flooring')),
+        ...(flooringB.results || []).map(p => normalizeQuotationLine(p, 'Flooring'))
+    ];
+
+    const bathroomSanitaryLines = (bathroomSanitary.results || [])
+        .map(p => normalizeQuotationLine(p, 'Bathroom-Sanitary'));
+
+    const bathroomTilesLines = (bathroomTiles.results || [])
+        .map(p => normalizeQuotationLine(p, 'Bathroom-Tiles'));
+
+    const allBathroomLines = [...bathroomSanitaryLines, ...bathroomTilesLines];
+
+    // Calculate rankings
+    const flooringRankings = calculateVendorRankings(flooringLines, 'section');
+    const bathroomRankings = calculateVendorRankings(allBathroomLines, 'bathroomCode');
+
+    // Process material images
+    const images = (materialImages.results || []).map(p => ({
+        item: extractText(getProp(p, 'Item')) || '',
+        category: extractText(getProp(p, 'Category')) || '',
+        zone: extractText(getProp(p, 'Zone/Bath Code')) || extractText(getProp(p, 'Zone')) || '',
+        imageUrl: extractText(getProp(p, 'Image URL')) || '',
+        notes: extractText(getProp(p, 'Notes')) || ''
+    }));
+
+    return {
+        flooring: {
+            lines: flooringLines,
+            rankings: flooringRankings
+        },
+        bathroom: {
+            lines: allBathroomLines,
+            sanitaryLines: bathroomSanitaryLines,
+            tilesLines: bathroomTilesLines,
+            rankings: bathroomRankings
+        },
+        images
+    };
+}
+
 // --- Main Handler ---
 export const handler = async(event) => {
     const { httpMethod, path } = event;
-    const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Content-Type': 'application/json' };
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Content-Type': 'application/json'
+    };
+
     if (httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
 
     try {
+        // Validate environment on first request
+        validateEnvironment();
+
+        // GET /proxy - Main data endpoint
         if (httpMethod === 'GET' && path.endsWith('/proxy')) {
             const [budgetData, actualsData, milestonesData, deliverablesData, vendorData, paymentsData] = await Promise.all([
                 queryNotionDB(NOTION_BUDGET_DB_ID),
@@ -206,11 +539,18 @@ export const handler = async(event) => {
 
             const now = new Date();
 
+            // Calculate budget with named constants
             const budgetSubtotal = (budgetData.results || [])
                 .filter(p => extractText(getProp(p, 'In Scope')))
                 .reduce((sum, p) => (sum + (extractText(getProp(p, 'Supply (MYR)')) || 0) + (extractText(getProp(p, 'Install (MYR)')) || 0)), 0);
-            const budgetMYR = (budgetSubtotal + 27900) * (1 - 0.05) * (1 + 0.10);
-            const paidMYR = (actualsData.results || []).filter(p => extractText(getProp(p, 'Status')) === 'Paid').reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
+
+            const budgetMYR = (budgetSubtotal + BUDGET_CONSTANTS.BASE_FEE) *
+                (1 - BUDGET_CONSTANTS.DISCOUNT_RATE) *
+                (1 + BUDGET_CONSTANTS.TAX_RATE);
+
+            const paidMYR = (actualsData.results || [])
+                .filter(p => extractText(getProp(p, 'Status')) === 'Paid')
+                .reduce((sum, p) => sum + (extractText(getProp(p, 'Paid (MYR)')) || 0), 0);
 
             // Unified Deliverables Processing
             const processedDeliverables = (deliverablesData.results || []).map(p => {
@@ -405,7 +745,7 @@ export const handler = async(event) => {
                 contractorAwarded: contractorAwarded && norm(contractorAwarded.status) === 'approved',
             };
 
-            // NEW v10.0.7: Get detailed at-risk milestone information
+            // Get detailed at-risk milestone information
             const atRiskMilestones = (milestonesData.results || [])
                 .filter(m => extractText(getProp(m, 'Risk')) === 'At Risk')
                 .map(m => ({
@@ -418,6 +758,7 @@ export const handler = async(event) => {
                     url: m.url
                 }))
                 .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
+
             const responseData = {
                 kpis: {
                     budgetMYR,
@@ -442,14 +783,14 @@ export const handler = async(event) => {
                     forecast: []
                 },
                 alerts,
-                atRiskMilestones, // ← ONLY LINE ADDED
+                atRiskMilestones,
                 timestamp: new Date().toISOString()
             };
 
             return { statusCode: 200, headers, body: JSON.stringify(responseData) };
         }
 
-        // Create task endpoint
+        // POST /create-task - Create new task endpoint
         if (httpMethod === 'POST' && path.endsWith('/create-task')) {
             const body = JSON.parse(event.body || '{}');
             const { taskName, gate, dueDate, comments } = body;
@@ -486,7 +827,7 @@ export const handler = async(event) => {
                     'Submitted By': {
                         multi_select: [{ name: 'Designer' }]
                     }
-                }
+                };
 
                 if (dueDate) {
                     // Check if dueDate includes time (datetime-local format: "2025-10-19T14:30")
@@ -497,7 +838,7 @@ export const handler = async(event) => {
                             time_zone: hasTime ? 'Asia/Kuala_Lumpur' : null
                         }
                     };
-                };
+                }
 
                 if (comments) {
                     properties['Comments'] = {
@@ -529,9 +870,225 @@ export const handler = async(event) => {
             }
         }
 
+        // GET /quotations - Quotation comparison data endpoint
+        if (httpMethod === 'GET' && path.endsWith('/quotations')) {
+            try {
+                const quotationData = await fetchQuotationData();
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify({
+                        success: true,
+                        data: quotationData,
+                        timestamp: new Date().toISOString()
+                    })
+                };
+            } catch (error) {
+                console.error('Quotation data error:', error);
+                return {
+                    statusCode: 500,
+                    headers,
+                    body: JSON.stringify({ error: error.message })
+                };
+            }
+        }
+
+        // GET /bids - Trade-room bid comparison from Sourcing Master List
+        if (httpMethod === 'GET' && path.endsWith('/bids')) {
+            try {
+                const bidsData = await fetchTradeRoomBids();
+                return {
+                    statusCode: 200,
+                    headers: {...headers, 'Cache-Control': 'no-store' },
+                    body: JSON.stringify({
+                        success: true,
+                        data: bidsData,
+                        timestamp: new Date().toISOString()
+                    })
+                };
+            } catch (error) {
+                console.error('Bids data error:', error);
+                return {
+                    statusCode: 500,
+                    headers,
+                    body: JSON.stringify({ error: error.message })
+                };
+            }
+        }
+
+        // 404 - Route not found
+        return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({
+                error: 'Not Found',
+                message: `Route ${httpMethod} ${path} not found`,
+                availableRoutes: [
+                    'GET /proxy',
+                    'POST /create-task',
+                    'GET /quotations',
+                    'GET /bids'
+                ]
+            })
+        };
 
     } catch (error) {
         console.error('Handler error:', error);
-        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, timestamp: new Date().toISOString() }) };
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                error: error.message,
+                timestamp: new Date().toISOString()
+            })
+        };
     }
-}; // Cache bust Sat Oct 25 09:43:32 +08 2025
+}; // v10.0.8 - Nov 18 2025
+
+/**
+ * STRICT IMPLEMENTATION: Trade & Room Bid Comparison
+ * Based on Engineering Brief: Pulls bids, computes totals, finds High/Low per (Trade, Room).
+ */
+async function fetchTradeRoomBids() {
+    // 1. Source of Truth
+    const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
+    if (!dbId) {
+        console.error("Error: SOURCING_MASTER_LIST_DB_ID is missing.");
+        return { error: "Database ID not configured" };
+    }
+
+    const sourcingData = await queryNotionDB(dbId);
+    const allProcessedBids = [];
+
+    // 2. Normalize Rows
+    for (const page of sourcingData.results || []) {
+        // Extraction based on Brief
+        const item_name = extractText(getProp(page, 'Item Name')) ||
+            extractText(getProp(page, 'Name')) || 'Untitled Item';
+
+        const trade = extractText(getProp(page, 'Category')) || 'Uncategorized'; // Mapped Category -> Trade
+        const room = extractText(getProp(page, 'Room')) || 'General';
+        const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
+        const notes = extractText(getProp(page, 'Notes')) || '';
+        const coverage = extractText(getProp(page, 'Coverage')) || '';
+
+        // Numbers
+        const quantity = extractText(getProp(page, 'Quantity')) || 0;
+        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) || 0;
+
+        // Formula Handling: 'Total Price (MYR)' is usually a formula
+        const totalProp = getProp(page, 'Total Price (MYR)');
+        let formula_total = null;
+        if (totalProp) {
+            if (totalProp.type === 'formula') {
+                formula_total = totalProp.formula.number;
+            } else if (totalProp.type === 'number') {
+                formula_total = totalProp.number;
+            }
+        }
+
+        // Logic: Filter out rows where both Unit and Total are missing
+        if (!unit_price_myr && formula_total === null) continue;
+
+        // Logic: Compute Effective Total
+        // If Formula exists, use it. 
+        // Else, if Qty exists, Calc it. 
+        // Else (Qty is 0/null), fallback to Unit Price for ordering purposes.
+        let effective_total;
+        if (formula_total !== null) {
+            effective_total = formula_total;
+        } else if (quantity > 0) {
+            effective_total = unit_price_myr * quantity;
+        } else {
+            effective_total = unit_price_myr;
+        }
+
+        // Rounding (Integers only per brief)
+        effective_total = Math.round(effective_total);
+        const display_unit = Math.round(unit_price_myr);
+        const display_total = formula_total !== null ? Math.round(formula_total) :
+            (quantity > 0 ? Math.round(unit_price_myr * quantity) : null);
+
+        // Capture Trip/Source if available (Nice-to-have from previous context)
+        const trip = extractText(getProp(page, 'Trip')) || extractText(getProp(page, 'Source')) || null;
+
+        allProcessedBids.push({
+            trade,
+            room,
+            // Bid Object Shape
+            data: {
+                vendor,
+                total_price_myr: display_total !== null ? display_total : effective_total, // Prefer explicit total
+                unit_price_myr: display_unit,
+                quantity,
+                item_name,
+                notes,
+                coverage,
+                trip, // Added as nice-to-have metadata
+                // Hidden field for sorting
+                _sort_val: effective_total
+            }
+        });
+    }
+
+    // 3. Grouping
+    const grouped = {};
+    for (const row of allProcessedBids) {
+        const key = `${row.trade}|||${row.room}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                trade: row.trade,
+                room: row.room,
+                bids: []
+            };
+        }
+        grouped[key].bids.push(row.data);
+    }
+
+    // 4. Aggregation (High/Low)
+    const results = [];
+    for (const key in grouped) {
+        const group = grouped[key];
+        const bids = group.bids;
+
+        // Sort by effective total ascending
+        bids.sort((a, b) => a._sort_val - b._sort_val);
+
+        // Clean up the _sort_val from final output to keep JSON clean
+        const cleanBids = bids.map(b => {
+            const { _sort_val, ...rest } = b;
+            return rest;
+        });
+
+        const lowest = cleanBids[0];
+        const highest = cleanBids[cleanBids.length - 1];
+
+        // Optional: Price Range
+        const range = (highest.total_price_myr || highest.unit_price_myr) - (lowest.total_price_myr || lowest.unit_price_myr);
+
+        results.push({
+            trade: group.trade,
+            room: group.room,
+            lowest_bid: lowest,
+            highest_bid: highest,
+            all_bids: cleanBids,
+            // Optional Aggregates
+            vendor_count: new Set(cleanBids.map(b => b.vendor)).size,
+            price_range_myr: range
+        });
+    }
+
+    // 5. Final Sort (Trade A-Z, then Room A-Z)
+    results.sort((a, b) => {
+        if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
+        return a.room.localeCompare(b.room);
+    });
+
+    return {
+        trade_room_comparisons: results, // The array expected by the frontend
+        meta: {
+            total_groups: results.length,
+            timestamp: new Date().toISOString()
+        }
+    };
+}
