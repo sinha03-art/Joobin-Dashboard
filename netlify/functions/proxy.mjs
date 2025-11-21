@@ -283,25 +283,29 @@ function deriveFlooringSection(itemType, notes) {
  * @param {string} scopeType - The scope type (Flooring, Bathroom-Sanitary, etc.)
  * @returns {Object} - Normalized line item
  */
+/**
+ * UPDATED: Normalize a quotation line item (Supports Old DBs + New Master List)
+ */
 function normalizeQuotationLine(page, scopeType) {
-    // 1. Vendor Name (Check all possible column names)
+    // 1. Vendor Name
     const vendor = extractText(getProp(page, 'Vendor')) ||
         extractText(getProp(page, 'Supplier Brand')) ||
         extractText(getProp(page, 'Company_Name')) ||
         'Unknown Vendor';
 
-    // 2. Item Name (Check Old 'Material Type' and New 'Item Name')
+    // 2. Item Name (Maps new 'Item Name' to old 'Item Type')
     const itemType = extractText(getProp(page, 'Item Name')) ||
         extractText(getProp(page, 'Material Type')) ||
         extractText(getProp(page, 'Item_Description')) ||
-        extractText(getProp(page, 'Item Type')) ||
+        extractText(getProp(page, 'Name')) ||
         'Untitled Item';
 
     const currency = 'MYR';
 
     // 3. Pricing Logic
     const quantity = extractText(getProp(page, 'Quantity')) || 0;
-    const area = extractText(getProp(page, 'Area (m²)')) || quantity; // Fallback to qty if area missing
+    // Fallback: Use Quantity as Area if Area is missing
+    const area = extractText(getProp(page, 'Area (m²)')) || quantity;
 
     const unitPrice = extractText(getProp(page, 'Unit Price (MYR)')) ||
         extractText(getProp(page, 'Unit Price')) ||
@@ -320,6 +324,7 @@ function normalizeQuotationLine(page, scopeType) {
 
     // 4. Context Fields
     const notes = extractText(getProp(page, 'Notes')) || extractText(getProp(page, 'Conversion_Notes')) || '';
+    // Important: Map 'Room' to 'Section' so sorting works
     const section = extractText(getProp(page, 'Room')) || extractText(getProp(page, 'Zone')) || extractText(getProp(page, 'Section')) || 'General';
     const bathroomCode = scopeType.includes('Bathroom') ? (extractText(getProp(page, 'Room')) || '') : null;
 
@@ -329,9 +334,10 @@ function normalizeQuotationLine(page, scopeType) {
     const terms = extractText(getProp(page, 'Terms')) || '';
     const exclusions = extractText(getProp(page, 'Exclusions')) || '';
 
-    // Flooring specific (if available)
+    // Flooring specific fields (keep explicitly to prevent UI errors)
     const finishGrade = extractText(getProp(page, 'Finish / Grade')) || '';
     const sizeThickness = extractText(getProp(page, 'Size / Thickness')) || '';
+    const isLumpsum = norm(itemType).includes('lump sum');
 
     return {
         id: page.id,
@@ -343,7 +349,7 @@ function normalizeQuotationLine(page, scopeType) {
         lineTotal: lineTotal || 0,
         section,
         bathroomCode,
-        itemType, // This is the Name
+        itemType,
         roomZone: section,
         finishGrade,
         sizeThickness,
@@ -352,7 +358,8 @@ function normalizeQuotationLine(page, scopeType) {
         terms,
         exclusions,
         notes,
-        leadTimeDays
+        leadTimeDays,
+        isLumpsum
     };
 }
 
@@ -924,50 +931,84 @@ export const handler = async(event) => {
             }
         }
 
-        // GET /quotations - Quotation comparison data endpoint
-        if (httpMethod === 'GET' && path.endsWith('/quotations')) {
-            try {
-                const quotationData = await fetchQuotationData();
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({
-                        success: true,
-                        data: quotationData,
-                        timestamp: new Date().toISOString()
-                    })
-                };
-            } catch (error) {
-                console.error('Quotation data error:', error);
-                return {
-                    statusCode: 500,
-                    headers,
-                    body: JSON.stringify({ error: error.message })
-                };
-            }
-        }
+        /**
+         * UPDATED: Fetch all data from Single Master List and categorize for Dashboard
+         */
+        async function fetchQuotationData() {
+            // 1. Query the NEW Master List
+            const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
 
-        // GET /bids - Trade-room bid comparison from Sourcing Master List
-        if (httpMethod === 'GET' && path.endsWith('/bids')) {
-            try {
-                const bidsData = await fetchTradeRoomBids();
-                return {
-                    statusCode: 200,
-                    headers: {...headers, 'Cache-Control': 'no-store' },
-                    body: JSON.stringify({
-                        success: true,
-                        data: bidsData,
-                        timestamp: new Date().toISOString()
-                    })
-                };
-            } catch (error) {
-                console.error('Bids data error:', error);
-                return {
-                    statusCode: 500,
-                    headers,
-                    body: JSON.stringify({ error: error.message })
-                };
-            }
+            // Fail gracefully if ID is missing
+            if (!dbId) return { error: "Master DB ID missing" };
+
+            const masterData = await queryNotionDB(dbId);
+            const allRows = masterData.results || [];
+
+            // 2. Buckets for the Dashboard
+            const flooringRaw = [];
+            const bathroomRaw = [];
+            const kitchenRaw = [];
+            const imagesRaw = [];
+
+            // 3. Sort Rows into Buckets based on Category/Trade
+            allRows.forEach(page => {
+                const category = (extractText(getProp(page, 'Category')) || '').toLowerCase();
+                const trade = (extractText(getProp(page, 'Trade')) || '').toLowerCase();
+                // Combine them to catch keywords in either column
+                const fullText = category + " " + trade;
+
+                if (fullText.includes('flooring') || fullText.includes('tile') || fullText.includes('stone')) {
+                    flooringRaw.push(page);
+                } else if (fullText.includes('bathroom') || fullText.includes('sanitary') || fullText.includes('plumbing') || fullText.includes('wc') || fullText.includes('basin')) {
+                    bathroomRaw.push(page);
+                } else if (fullText.includes('kitchen') || fullText.includes('cabinetry') || fullText.includes('appliance') || fullText.includes('backsplash')) {
+                    kitchenRaw.push(page);
+                }
+
+                // Capture images if they exist
+                const photo = extractText(getProp(page, 'Photo')) || extractText(getProp(page, 'Image URL'));
+                if (photo) imagesRaw.push(page);
+            });
+
+            // 4. Normalize Data (Map to standard format the UI expects)
+            const flooringLines = flooringRaw.map(p => normalizeQuotationLine(p, 'Flooring'));
+            const bathroomLines = bathroomRaw.map(p => normalizeQuotationLine(p, 'Bathroom-Sanitary'));
+            // We treat Kitchen as 'Flooring' type structurally so the ranking logic works
+            const kitchenLines = kitchenRaw.map(p => normalizeQuotationLine(p, 'Flooring'));
+
+            // 5. Calculate Rankings (Re-using your existing logic)
+            const flooringRankings = calculateVendorRankings(flooringLines, 'section');
+            const bathroomRankings = calculateVendorRankings(bathroomLines, 'bathroomCode');
+            const kitchenRankings = calculateVendorRankings(kitchenLines, 'section');
+
+            // 6. Process Images
+            const images = imagesRaw.map(p => ({
+                item: extractText(getProp(p, 'Item Name')) || 'Untitled',
+                category: extractText(getProp(p, 'Category')),
+                zone: extractText(getProp(p, 'Room')),
+                imageUrl: extractText(getProp(p, 'Photo')) || extractText(getProp(p, 'Image URL')),
+                notes: extractText(getProp(p, 'Notes'))
+            }));
+
+            // 7. Return Combined Object
+            return {
+                flooring: {
+                    lines: flooringLines,
+                    rankings: flooringRankings
+                },
+                bathroom: {
+                    lines: bathroomLines,
+                    sanitaryLines: bathroomLines,
+                    tilesLines: [], // Deprecated specific list
+                    rankings: bathroomRankings
+                },
+                // This enables the Kitchen view
+                kitchen: {
+                    lines: kitchenLines,
+                    rankings: kitchenRankings
+                },
+                images
+            };
         }
 
         // GET /bids - Trade-room bid comparison from Sourcing Master List
