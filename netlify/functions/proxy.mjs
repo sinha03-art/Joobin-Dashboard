@@ -1287,17 +1287,12 @@ async function fetchTradeRoomBids() {
         }
 
         // Sort results by trade, then room
-        >>>
-        >>>
-        >
         dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
         results.sort((a, b) => {
             if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
             return a.room.localeCompare(b.room);
-        }); <<
-        <<
-        <<
-        <
+        });
+
         HEAD
 
         return {
