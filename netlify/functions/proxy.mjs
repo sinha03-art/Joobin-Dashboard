@@ -449,13 +449,13 @@ function calculateVendorRankings(normalizedLines, groupBy = 'section') {
 }
 
 /**
- * Fetch and process all quotation data
- * @returns {Promise<Object>} - Processed quotation data
+ * Fetch and process trade-room bid comparison from Sourcing Master List
+ * @returns {Promise<Object>} - Processed bid comparison data
  */
 async function fetchTradeRoomBids() {
     // 1. Source of Truth
     const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
-    
+
     if (!dbId) {
         console.error("Error: SOURCING_MASTER_LIST_DB_ID is missing.");
         return { error: "Database ID not configured" };
@@ -468,22 +468,22 @@ async function fetchTradeRoomBids() {
     // 2. Normalize Rows
     for (const page of sourcingData.results || []) {
         // Extraction logic
-        const item_name = extractText(getProp(page, 'Item Name')) || 
-                          extractText(getProp(page, 'Name')) || 'Untitled Item';
-        
-        const trade = extractText(getProp(page, 'Category')) || 
-                      extractText(getProp(page, 'Trade')) || 'Uncategorized';
-        
+        const item_name = extractText(getProp(page, 'Item Name')) ||
+            extractText(getProp(page, 'Name')) || 'Untitled Item';
+
+        const trade = extractText(getProp(page, 'Category')) ||
+            extractText(getProp(page, 'Trade')) || 'Uncategorized';
+
         const room = extractText(getProp(page, 'Room')) || 'General';
         const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
         const notes = extractText(getProp(page, 'Notes')) || '';
         const coverage = extractText(getProp(page, 'Coverage')) || '';
-        
+
         // Numbers
         const quantity = extractText(getProp(page, 'Quantity')) || 0;
-        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) || 
-                               extractText(getProp(page, 'Unit Price')) || 0;
-        
+        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) ||
+            extractText(getProp(page, 'Unit Price')) || 0;
+
         // Formula Handling
         const totalProp = getProp(page, 'Total Price (MYR)');
         let formula_total = null;
@@ -1172,7 +1172,8 @@ async function fetchTradeRoomBids() {
 
     // 5. Final Sort (Trade A-Z, then Room A-Z)
     ===
-    === = *
+    ===
+    = *
     Fetch and process trade - room bid comparison from Sourcing Master List *
         @returns { Promise < Object > } - Processed bid comparison data *
         /
@@ -1295,12 +1296,14 @@ async function fetchTradeRoomBids() {
 
         // Sort results by trade, then room
         >>>
-        >>> > dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
+        >>>
+        > dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
         results.sort((a, b) => {
             if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
             return a.room.localeCompare(b.room);
         }); <<
-        << << < HEAD
+        <<
+        << < HEAD
 
         return {
             trade_room_comparisons: results, // The array expected by the frontend
@@ -1310,7 +1313,8 @@ async function fetchTradeRoomBids() {
             }
         };
     } ===
-    === =
+    ===
+    =
 
     return {
         trade_room_comparisons: results,
@@ -1318,4 +1322,5 @@ async function fetchTradeRoomBids() {
         total_bids: allBids.length
     };
 } >>>
->>> > dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
+>>>
+> dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
