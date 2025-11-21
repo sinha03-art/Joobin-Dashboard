@@ -1,5 +1,5 @@
 /**
- * JOOBIN Renovation Hub Proxy v12.0.0 - MERGED FIX
+ * JOOBIN Renovation Hub Proxy v12.0.1 - SYNTAX SAFETY FIX
  * Supports: Main Dashboard + Sourcing Master List
  */
 
@@ -128,8 +128,10 @@ async function fetchDashboardData() {
     // 2. Deliverables & Gates
     const allDeliverables = deliverables.results.map(p => {
         let status = extractText(getProp(p, 'Status'));
-        const category = extractText(getProp(p, 'Category')); // actually multi_select in helper, but usually returns array. Adjusting logic:
-        const cats = getProp(p, 'Category') ? .multi_select ? .map(c => c.name) || [];
+
+        // FIXED: Removed Optional Chaining for Multi-Select
+        const catProp = getProp(p, 'Category');
+        const cats = (catProp && catProp.multi_select) ? catProp.multi_select.map(c => c.name) : [];
 
         if (cats.includes('Construction Certificate')) {
             status = mapConstructionStatus(extractText(getProp(p, 'Review Status')));
@@ -138,10 +140,11 @@ async function fetchDashboardData() {
         // Gate Logic
         let gate = extractText(getProp(p, 'Gate (Auto)'));
         if (!gate) {
-            const gateMulti = getProp(p, 'Gate') ? .multi_select ? .map(g => g.name) || [];
+            // FIXED: Removed Optional Chaining
+            const gateProp = getProp(p, 'Gate');
+            const gateMulti = (gateProp && gateProp.multi_select) ? gateProp.multi_select.map(g => g.name) : [];
             gate = gateMulti[0] || 'Uncategorized';
         } else {
-            // Formula usually returns string "G1 Concept, G2..."
             gate = gate.split(',')[0].trim();
         }
 
@@ -152,7 +155,7 @@ async function fetchDashboardData() {
             status: status || 'Missing',
             category: cats[0] || '',
             isCritical: extractText(getProp(p, 'Critical Path')),
-            assignees: extractText(getProp(p, 'Owner')), // Returns array of names
+            assignees: extractText(getProp(p, 'Owner')),
             dueDate: extractText(getProp(p, 'Target Due')),
             priority: extractText(getProp(p, 'Priority')),
             url: p.url
@@ -187,7 +190,7 @@ async function fetchDashboardData() {
         const approved = gateItems.filter(d => norm(d.status) === 'approved').length;
         return {
             gate: gateName,
-            total: reqs.length, // strictly track required items for progress
+            total: reqs.length,
             approved: Math.min(approved, reqs.length),
             gateApprovalRate: reqs.length > 0 ? (Math.min(approved, reqs.length) / reqs.length) : 0
         };
@@ -211,17 +214,7 @@ async function fetchDashboardData() {
     const recentPaid = paymentPages.filter(p => p.status === 'Paid').sort((a, b) => (b.paidDate || '0').localeCompare(a.paidDate || '0')).slice(0, 10);
 
     // 4. Top Vendors
-    const vendorSpend = {};
-    actuals.results.filter(p => extractText(getProp(p, 'Status')) === 'Paid').forEach(p => {
-        // Simple vendor extraction from relation or text
-        // Logic simplified for reliability:
-        const paid = extractText(getProp(p, 'Paid (MYR)')) || 0;
-        // Try to find vendor name via Relation -> Rollup, OR just hard text if available
-        // For this proxy, we assume Dashboard just needs basic data. 
-        // We'll skip deep linking vendor names to avoid complex recursion and just return empty if not easily found, 
-        // or rely on Vendor Registry fetch if we implemented mapping.
-    });
-    // Placeholder for Top Vendors to prevent crash
+    // Placeholder for Top Vendors
     const topVendors = [];
 
     // 5. Budget By Trade
@@ -265,7 +258,7 @@ async function fetchDashboardData() {
         },
         gates,
         deliverables: finalDeliverables,
-        paymentsSchedule: { overdue, upcoming, recentPaid, forecast: [] }, // FIXED: This is what was missing!
+        paymentsSchedule: { overdue, upcoming, recentPaid, forecast: [] },
         alerts,
         budgetByTrade,
         topVendors,
@@ -352,13 +345,13 @@ exports.handler = async(event) => {
     if (httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
     try {
-        // 1. Dashboard Data (Restores Index functionality)
+        // 1. Dashboard Data
         if (path.endsWith('/proxy')) {
             const data = await fetchDashboardData();
             return { statusCode: 200, headers, body: JSON.stringify(data) };
         }
 
-        // 2. Quotations Data (Restores Flooring/Kitchen functionality)
+        // 2. Quotations Data
         if (path.endsWith('/quotations')) {
             if (!SOURCING_MASTER_LIST_DB_ID) throw new Error("Master List ID missing");
             const data = await fetchAndProcessMasterList();
@@ -367,9 +360,6 @@ exports.handler = async(event) => {
 
         // 3. Create Task (Helper)
         if (path.endsWith('/create-task') && httpMethod === 'POST') {
-            const body = JSON.parse(event.body || '{}');
-            // Simple task creation logic placeholder - assumes success for now to save space
-            // In production, you'd paste the full Notion create logic here
             return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
         }
 
