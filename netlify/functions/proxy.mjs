@@ -448,10 +448,7 @@ function calculateVendorRankings(normalizedLines, groupBy = 'section') {
     return rankings;
 }
 
-/**
- * Fetch and process trade-room bid comparison from Sourcing Master List
- * @returns {Promise<Object>} - Processed bid comparison data
- */
+
 async function fetchTradeRoomBids() {
     // 1. Source of Truth
     const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
@@ -1171,11 +1168,9 @@ async function fetchTradeRoomBids() {
     }
 
     // 5. Final Sort (Trade A-Z, then Room A-Z)
-    ===
-    ===
-    = *
-    Fetch and process trade - room bid comparison from Sourcing Master List *
-        @returns { Promise < Object > } - Processed bid comparison data *
+
+    // Fetch and process trade - room bid comparison from Sourcing Master List *
+    @returns { Promise < Object > } - Processed bid comparison data *
         /
     async function fetchTradeRoomBids() {
         const sourcingData = await queryNotionDB(SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID || 'b84fa0c4cc8d4144afc43aa8dd894931');
@@ -1297,13 +1292,15 @@ async function fetchTradeRoomBids() {
         // Sort results by trade, then room
         >>>
         >>>
-        > dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
+        >
+        dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
         results.sort((a, b) => {
             if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
             return a.room.localeCompare(b.room);
         }); <<
         <<
-        << < HEAD
+        <<
+        < HEAD
 
         return {
             trade_room_comparisons: results, // The array expected by the frontend
@@ -1312,15 +1309,10 @@ async function fetchTradeRoomBids() {
                 timestamp: new Date().toISOString()
             }
         };
-    } ===
-    ===
-    =
-
+    }
     return {
         trade_room_comparisons: results,
         total_groups: results.length,
         total_bids: allBids.length
     };
-} >>>
->>>
-> dfe94b8ed0012a0e0e1aea79c752f1c98f9b8831
+}
