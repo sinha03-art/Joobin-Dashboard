@@ -1,420 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bathroom MASTER — Vendor Comparison</title>
+    <title>Bathroom MASTER — Sourcing List</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
+         :root {
             --bg: #111827;
             --panel: #1f2937;
             --border: #374151;
-            --ink: #f9fafb;
-            --muted: #9ca3af;
+            --text: #f9fafb;
             --brand: #2563eb;
-            --success: #059669;
-            --warning: #f59e0b;
-            --danger: #dc2626;
         }
-
+        
         body {
             font-family: 'Inter', sans-serif;
             background: var(--bg);
-            color: var(--ink);
+            color: var(--text);
         }
-
+        
         .card {
             background: var(--panel);
             border: 1px solid var(--border);
             border-radius: 0.75rem;
             padding: 1.5rem;
         }
-
+        
         .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
             font-size: 0.75rem;
-            padding: 0.25rem 0.65rem;
-            border-radius: 999px;
-            font-weight: 600;
+            font-weight: 700;
         }
-
-        .badge-cheapest {
-            background: var(--success);
-            color: #d1fae5;
-        }
-
-        .badge-highest {
-            background: var(--danger);
-            color: #fee2e2;
-        }
-
-        .badge-warning {
-            background: var(--warning);
-            color: #fef3c7;
-        }
-
+        
         .badge-sanitary {
             background: #3b82f6;
             color: #dbeafe;
         }
-
+        /* Blue */
+        
         .badge-tiles {
             background: #8b5cf6;
             color: #ede9fe;
         }
-
+        /* Purple */
+        
+        .badge-cheapest {
+            background: #059669;
+            color: #d1fae5;
+        }
+        
+        .badge-highest {
+            background: #dc2626;
+            color: #fee2e2;
+        }
+        
         .skeleton {
-            background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s ease-in-out infinite;
-            border-radius: 0.5rem;
+            background: #1f2937;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-
-        @keyframes skeleton-loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        .sticky-header {
-            position: sticky;
-            top: 0;
-            background: var(--bg);
-            z-index: 10;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            text-align: left;
-            padding: 0.75rem;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border);
-            color: var(--muted);
-            font-size: 0.875rem;
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        tr:hover {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .progress-bar {
-            height: 0.5rem;
-            background: #374151;
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #2563eb);
-            transition: width 0.5s ease;
-        }
-
-        .bathroom-code-tag {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid #3b82f6;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #93bbfd;
+        
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
         }
     </style>
 </head>
-<body class="px-4 md:px-6">
-    <header class="sticky-header">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 max-w-7xl mx-auto">
-            <div class="flex items-center gap-4">
-                <a href="index.html" title="Back to Command Center" class="p-2 rounded-md hover:bg-slate-800 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="m12 19-7-7 7-7" />
-                        <path d="M19 12H5" />
-                    </svg>
-                </a>
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight">Bathroom MASTER</h1>
-                    <p class="text-sm text-slate-400">Vendor comparison by bathroom code with rankings</p>
-                </div>
+
+<body class="px-4 md:px-6 pb-12">
+    <header class="sticky top-0 z-10 bg-[#111827] py-6 border-b border-gray-800 mb-8">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold">Bathroom MASTER</h1>
+                <p class="text-gray-400 text-sm">Sourcing Master List • Live Comparison</p>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="refreshData()" class="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-                    Refresh Data
-                </button>
-                <a href="https://www.notion.so/CSV-MASTER-Complete-Bathroom-Package-Consolidated-1d2a26db279745f9b1bc6f87d3f16a1f" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-md border border-slate-700 text-sm font-semibold hover:bg-slate-800 transition-colors">
-                    View in Notion
-                </a>
+                <button onclick="loadData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition">Refresh</button>
+                <a href="index.html" class="px-4 py-2 border border-gray-700 hover:bg-gray-800 rounded text-sm font-medium transition">Back to Dashboard</a>
             </div>
         </div>
     </header>
 
-    <div id="loader" class="mt-6 space-y-8 max-w-7xl mx-auto">
-        <div class="skeleton h-64 w-full"></div>
+    <div id="loader" class="max-w-7xl mx-auto space-y-6">
+        <div class="skeleton h-48 w-full rounded-xl"></div>
+        <div class="skeleton h-48 w-full rounded-xl"></div>
     </div>
 
-    <main id="root" class="mt-6 space-y-8 max-w-7xl mx-auto pb-12 hidden"></main>
+    <main id="root" class="max-w-7xl mx-auto space-y-10 hidden"></main>
 
     <script>
         const PROXY_URL = '/.netlify/functions/proxy/quotations';
-        let dataCache = null;
 
-        function formatCurrency(amount, currency) {
-            const formatted = new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(amount || 0);
-            return `${currency === 'USD' ? '$' : 'RM'}${formatted}`;
+        const formatCurrency = (amt) =>
+            new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'MYR'
+            }).format(amt);
+
+        function isTile(category) {
+            const c = String(category || '').toLowerCase();
+            return c.includes('tile') || c.includes('stone') || c.includes('wall') || c.includes('floor');
         }
 
-        function renderVendorCard(vendor, bathroomCode) {
-            const badgeHtml = vendor.isCheapest ? '<span class="badge badge-cheapest">🏆 Cheapest</span>' :
-                              vendor.isHighest ? '<span class="badge badge-highest">💰 Highest</span>' : '';
-            
-            const completeness = Math.round(vendor.completenessScore * 100);
-            let completenessColor = '#6b7280';
-            if (completeness >= 90) completenessColor = '#059669';
-            else if (completeness >= 70) completenessColor = '#2563eb';
-            else if (completeness >= 50) completenessColor = '#f59e0b';
-            else completenessColor = '#dc2626';
-
-            const gapFlags = [];
-            if (vendor.missingPrices) gapFlags.push('<span class="badge badge-warning">⚠️ Missing prices</span>');
-            if (vendor.shortValidity) gapFlags.push(`<span class="badge badge-warning">⏰ Expires in ${vendor.daysToExpiry} days</span>`);
-            if (vendor.exclusionsPresent) gapFlags.push('<span class="badge badge-warning">📋 Has exclusions</span>');
-            
-            // Count sanitary vs tiles items
-            const sanitaryCount = vendor.lines.filter(l => l.scopeType === 'Bathroom-Sanitary').length;
-            const tilesCount = vendor.lines.filter(l => l.scopeType === 'Bathroom-Tiles').length;
+        function renderVendorCard(v) {
+            // New Logic: Calculate Sanitary vs Tiles based on Category
+            const items = v.items || [];
+            const tileCount = items.filter(i => isTile(i.category)).length;
+            const sanitaryCount = items.length - tileCount;
 
             return `
-                <div class="card hover:border-blue-500 transition-all">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="text-lg font-bold">${vendor.vendor}</h3>
-                                ${badgeHtml}
-                            </div>
-                            <p class="text-sm text-slate-400">Rank #${vendor.rank}</p>
-                            <div class="flex gap-2 mt-2">
-                                ${sanitaryCount > 0 ? `<span class="badge badge-sanitary">${sanitaryCount} Sanitary</span>` : ''}
-                                ${tilesCount > 0 ? `<span class="badge badge-tiles">${tilesCount} Tiles</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-baseline">
-                            <span class="text-sm text-slate-400">Total</span>
-                            <span class="text-2xl font-bold" style="color: ${vendor.isCheapest ? '#10b981' : vendor.isHighest ? '#ef4444' : '#f9fafb'}">
-                                ${formatCurrency(vendor.total, vendor.currency)}
-                            </span>
-                        </div>
-
+                <div class="card hover:border-blue-500 transition-colors">
+                    <div class="flex justify-between items-start mb-4">
                         <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-slate-400">Completeness</span>
-                                <span style="color: ${completenessColor}">${completeness}%</span>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-lg">${v.vendor}</h3>
+                                ${v.isCheapest ? '<span class="badge badge-cheapest">Best Price</span>' : ''}
                             </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${completeness}%; background: ${completenessColor}"></div>
-                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Rank #${v.rank}</p>
                         </div>
-
-                        ${vendor.leadTimeDays ? `
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-400">Lead Time</span>
-                            <span>${vendor.leadTimeDays} days</span>
-                        </div>` : ''}
-
-                        ${vendor.terms ? `
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-400">Terms</span>
-                            <span class="text-right text-xs">${vendor.terms}</span>
-                        </div>` : ''}
-
-                        ${vendor.exclusions ? `
-                        <div class="mt-2 p-2 bg-yellow-900/20 border border-yellow-700 rounded text-xs">
-                            <strong>Exclusions:</strong> ${vendor.exclusions}
-                        </div>` : ''}
-
-                        ${gapFlags.length > 0 ? `
-                        <div class="flex flex-wrap gap-2 mt-2">${gapFlags.join('')}</div>` : ''}
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderBathroomTable(bathroomCode, vendors) {
-            if (!vendors || vendors.length === 0) {
-                return '<p class="text-slate-400 text-sm">No vendor data available</p>';
-            }
-
-            const rows = vendors.map(v => `
-                <tr>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <span class="font-semibold">#${v.rank}</span>
-                            <span>${v.vendor}</span>
-                        </div>
-                    </td>
-                    <td class="font-bold">${formatCurrency(v.total, v.currency)}</td>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <div class="progress-bar w-20">
-                                <div class="progress-fill" style="width: ${v.completenessScore * 100}%"></div>
-                            </div>
-                            <span class="text-sm">${Math.round(v.completenessScore * 100)}%</span>
-                        </div>
-                    </td>
-                    <td class="text-sm">${v.lines.length} items</td>
-                    <td class="text-sm">${v.leadTimeDays ? v.leadTimeDays + ' days' : 'N/A'}</td>
-                    <td>
-                        ${v.isCheapest ? '<span class="badge badge-cheapest">Cheapest</span>' : ''}
-                        ${v.isHighest ? '<span class="badge badge-highest">Highest</span>' : ''}
-                        ${v.missingPrices ? '<span class="badge badge-warning">Gaps</span>' : ''}
-                    </td>
-                </tr>
-            `).join('');
-
-            return `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Vendor</th>
-                            <th>Total (${vendors[0].currency})</th>
-                            <th>Completeness</th>
-                            <th>Items</th>
-                            <th>Lead Time</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            `;
-        }
-
-        function renderOptimumChoice(vendor, bathroomCode) {
-            if (!vendor) return '';
-            
-            const reasons = [];
-            if (vendor.isCheapest) reasons.push('Lowest total cost');
-            if (vendor.completenessScore >= 0.9) reasons.push('Highly complete quotation (>90%)');
-            else if (vendor.completenessScore >= 0.7) reasons.push('Complete quotation (>70%)');
-            if (vendor.rank === 1) reasons.push('Top ranked');
-            if (vendor.leadTimeDays && vendor.leadTimeDays <= 30) reasons.push('Fast delivery');
-            if (!vendor.exclusions) reasons.push('No exclusions');
-            if (!vendor.termsRisk) reasons.push('No EXW risks');
-            
-            const sanitaryCount = vendor.lines.filter(l => l.scopeType === 'Bathroom-Sanitary').length;
-            const tilesCount = vendor.lines.filter(l => l.scopeType === 'Bathroom-Tiles').length;
-            if (sanitaryCount > 0 && tilesCount > 0) reasons.push('Covers both sanitary & tiles');
-
-            return `
-                <div class="card border-2 border-green-500 bg-gradient-to-r from-green-900/20 to-green-800/10">
-                    <div class="flex items-start gap-4">
-                        <div class="flex-shrink-0">
-                            <svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <h3 class="text-xl font-bold text-green-400">⭐ OPTIMUM CHOICE</h3>
-                                <span class="badge badge-cheapest">Rank #${vendor.rank}</span>
-                            </div>
-                            <p class="text-2xl font-bold mb-3">${vendor.vendor}</p>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                                <div>
-                                    <p class="text-sm text-slate-400">Total Cost</p>
-                                    <p class="text-xl font-bold text-green-400">${formatCurrency(vendor.total, vendor.currency)}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-slate-400">Completeness</p>
-                                    <p class="text-xl font-bold">${Math.round(vendor.completenessScore * 100)}%</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-slate-400">Lead Time</p>
-                                    <p class="text-xl font-bold">${vendor.leadTimeDays ? vendor.leadTimeDays + ' days' : 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-slate-400">Coverage</p>
-                                    <p class="text-sm font-bold">${sanitaryCount} Sanitary + ${tilesCount} Tiles</p>
-                                </div>
-                            </div>
-                            <div class="bg-slate-800/50 rounded-lg p-3">
-                                <p class="text-sm font-semibold text-slate-300 mb-2">✓ Why This is Optimal:</p>
-                                <ul class="text-sm text-slate-400 space-y-1">
-                                    ${reasons.map(r => `<li>• ${r}</li>`).join('')}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderBathroomSection(bathroomCode, vendors) {
-            if (!vendors || vendors.length === 0) {
-                return `
-                    <div class="card">
-                        <h2 class="text-xl font-bold mb-4">
-                            <span class="bathroom-code-tag">${bathroomCode}</span>
-                        </h2>
-                        <p class="text-slate-400">No vendor quotations available for this bathroom.</p>
-                    </div>
-                `;
-            }
-
-            // Find optimum choice: rank #1 with ≥70% completeness
-            const optimumVendor = vendors.find(v => v.rank === 1 && v.completenessScore >= 0.7);
-            const vendorCards = vendors.slice(0, 3).map(v => renderVendorCard(v, bathroomCode)).join('');
-            
-            const cheapest = vendors.find(v => v.isCheapest);
-            const highest = vendors.find(v => v.isHighest);
-            const savingsAmount = highest && cheapest ? highest.total - cheapest.total : 0;
-            const savingsPercent = highest && cheapest && highest.total > 0 ? 
-                ((savingsAmount / highest.total) * 100).toFixed(1) : 0;
-
-            return `
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-2xl font-bold">
-                            <span class="bathroom-code-tag">${bathroomCode}</span>
-                        </h2>
-                        ${cheapest && highest && savingsAmount > 0 ? `
                         <div class="text-right">
-                            <p class="text-sm text-slate-400">Potential Savings</p>
-                            <p class="text-xl font-bold text-green-400">${formatCurrency(savingsAmount, cheapest.currency)} (${savingsPercent}%)</p>
+                             <p class="text-2xl font-bold ${v.isCheapest ? 'text-green-400' : 'text-white'}">${formatCurrency(v.total)}</p>
+                             <p class="text-xs text-gray-500">Total Estimate</p>
                         </div>
-                        ` : ''}
                     </div>
                     
-                    <!-- Optimum Choice Recommendation -->
-                    ${optimumVendor ? renderOptimumChoice(optimumVendor, bathroomCode) : ''}
-                    
-                    <!-- Vendor Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        ${vendorCards}
+                    <div class="flex gap-2 mb-4">
+                        ${sanitaryCount > 0 ? `<span class="badge badge-sanitary">${sanitaryCount} Sanitary</span>` : ''}
+                        ${tileCount > 0 ? `<span class="badge badge-tiles">${tileCount} Tiles</span>` : ''}
                     </div>
 
-                    <!-- Detailed Table -->
-                    <div class="card">
-                        <h3 class="text-lg font-semibold mb-4">Detailed Ranking</h3>
-                        ${renderBathroomTable(bathroomCode, vendors)}
+                    <div class="space-y-2 border-t border-gray-700 pt-3">
+                        ${items.slice(0, 5).map(i => `
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-300 truncate pr-2" title="${i.itemType}">${i.itemType}</span>
+                                <span class="text-gray-500 whitespace-nowrap">${formatCurrency(i.total)}</span>
+                            </div>
+                        `).join('')}
+                        ${items.length > 5 ? `<div class="text-xs text-center text-gray-500 pt-1">+${items.length - 5} more items</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChart(roomName, vendors) {
+            const canvasId = `chart-${roomName.replace(/\s+/g, '-')}`;
+            setTimeout(() => {
+                const ctx = document.getElementById(canvasId);
+                if(!ctx) return;
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: vendors.map(v => v.vendor),
+                        datasets: [{
+                            label: 'Total Cost',
+                            data: vendors.map(v => v.total),
+                            backgroundColor: vendors.map(v => v.isCheapest ? '#059669' : '#374151'),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af' } },
+                            x: { display: false }
+                        }
+                    }
+                });
+            }, 100);
+            return `<div class="h-32 w-full mt-4"><canvas id="${canvasId}"></canvas></div>`;
+        }
+
+        function renderSection(roomName, vendors) {
+            if (!vendors || vendors.length === 0) return '';
+
+            return `
+                <div>
+                    <div class="flex items-center gap-3 mb-4 border-l-4 border-blue-600 pl-3">
+                        <h2 class="text-2xl font-bold text-white">${roomName}</h2>
+                        <span class="text-sm text-gray-500 bg-gray-800 px-2 py-1 rounded">${vendors.length} Vendors</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            ${vendors.map(renderVendorCard).join('')}
+                        </div>
+                        <div class="card flex flex-col justify-center">
+                            <h4 class="text-sm font-semibold text-gray-400 text-center">Price Comparison</h4>
+                            ${renderChart(roomName, vendors)}
+                        </div>
                     </div>
                 </div>
             `;
@@ -423,58 +210,42 @@
         async function loadData() {
             const loader = document.getElementById('loader');
             const root = document.getElementById('root');
+            
+            loader.classList.remove('hidden');
+            root.classList.add('hidden');
 
             try {
                 const res = await fetch(PROXY_URL);
-                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                if (!res.ok) throw new Error(`API Error ${res.status}`);
                 
                 const json = await res.json();
-                dataCache = json.data;
+                // Handle both { data: { ... } } and direct { flooring: ... } structures just in case
+                const data = json.data || json; 
+                const rankings = data.bathroom?.rankings || {};
+                
+                const rooms = Object.keys(rankings).sort();
 
-                const { bathroom } = dataCache;
-                const rankings = bathroom.rankings;
-
-                // Get all bathroom codes
-                const bathroomCodes = Object.keys(rankings).sort();
-
-                if (bathroomCodes.length === 0) {
-                    root.innerHTML = `
-                        <div class="card text-center">
-                            <p class="text-slate-400 text-lg">No bathroom quotation data available yet.</p>
-                        </div>
-                    `;
+                if (rooms.length === 0) {
+                    root.innerHTML = `<div class="text-center py-12 text-gray-500">No bathroom items found in Master List.</div>`;
                 } else {
-                    const html = bathroomCodes.map(code => 
-                        renderBathroomSection(code, rankings[code])
-                    ).join('');
-                    root.innerHTML = html;
+                    root.innerHTML = rooms.map(r => renderSection(r, rankings[r])).join('<hr class="border-gray-800 my-12">');
                 }
-
+                
                 loader.classList.add('hidden');
                 root.classList.remove('hidden');
 
-            } catch (error) {
-                console.error('Failed to load data:', error);
-                root.innerHTML = `
-                    <div class="card text-center">
-                        <p class="text-red-400 text-lg font-semibold">⚠️ Failed to load quotation data</p>
-                        <p class="text-slate-400 mt-2">${error.message}</p>
-                        <button onclick="loadData()" class="mt-4 px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700">Retry</button>
-                    </div>
-                `;
+            } catch (e) {
+                console.error(e);
+                root.innerHTML = `<div class="p-4 bg-red-900/20 border border-red-800 text-red-200 rounded text-center">
+                    Failed to load data: ${e.message}
+                </div>`;
                 loader.classList.add('hidden');
                 root.classList.remove('hidden');
             }
         }
 
-        function refreshData() {
-            document.getElementById('loader').classList.remove('hidden');
-            document.getElementById('root').classList.add('hidden');
-            loadData();
-        }
-
-        // Initial load
         loadData();
     </script>
 </body>
+
 </html>
