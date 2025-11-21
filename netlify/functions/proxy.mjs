@@ -1169,9 +1169,6 @@ async function fetchTradeRoomBids() {
 
     // 5. Final Sort (Trade A-Z, then Room A-Z)
 
-    // Fetch and process trade - room bid comparison from Sourcing Master List *
-    @returns { Promise < Object > } - Processed bid comparison data *
-        /
     async function fetchTradeRoomBids() {
         const sourcingData = await queryNotionDB(SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID || 'b84fa0c4cc8d4144afc43aa8dd894931');
 
@@ -1300,7 +1297,8 @@ async function fetchTradeRoomBids() {
         }); <<
         <<
         <<
-        < HEAD
+        <
+        HEAD
 
         return {
             trade_room_comparisons: results, // The array expected by the frontend
