@@ -569,7 +569,6 @@ return {
         timestamp: new Date().toISOString()
     }
 };
-}
 
 // --- Main Handler ---
 export const handler = async(event) => {
