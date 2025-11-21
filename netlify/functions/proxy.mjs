@@ -452,80 +452,129 @@ function calculateVendorRankings(normalizedLines, groupBy = 'section') {
  * Fetch and process all quotation data
  * @returns {Promise<Object>} - Processed quotation data
  */
-async function fetchQuotationData() {
-    // 1. Query the NEW Master List
+async function fetchTradeRoomBids() {
+    // 1. Source of Truth
     const dbId = SOURCING_MASTER_LIST_DB_ID || process.env.SOURCING_MASTER_LIST_DB_ID;
-    if (!dbId) return { error: "Master DB ID missing" };
+    
+    if (!dbId) {
+        console.error("Error: SOURCING_MASTER_LIST_DB_ID is missing.");
+        return { error: "Database ID not configured" };
+    }
 
-    const masterData = await queryNotionDB(dbId);
-    const allRows = masterData.results || [];
+    // Query the database
+    const sourcingData = await queryNotionDB(dbId);
+    const allProcessedBids = [];
 
-    // 2. Buckets for the Dashboard
-    const flooringRaw = [];
-    const bathroomRaw = [];
-    const kitchenRaw = []; // New bucket for Kitchen
-    const imagesRaw = [];
-
-    // 3. Sort Rows into Buckets based on Category/Trade
-    allRows.forEach(page => {
-        const category = (extractText(getProp(page, 'Category')) || '').toLowerCase();
-        const trade = (extractText(getProp(page, 'Trade')) || '').toLowerCase();
-        const fullText = category + " " + trade;
-
-        if (fullText.includes('flooring') || fullText.includes('tile') || fullText.includes('stone')) {
-            flooringRaw.push(page);
-        } else if (fullText.includes('bathroom') || fullText.includes('sanitary') || fullText.includes('plumbing')) {
-            bathroomRaw.push(page);
-        } else if (fullText.includes('kitchen') || fullText.includes('cabinetry') || fullText.includes('appliance')) {
-            kitchenRaw.push(page);
+    // 2. Normalize Rows
+    for (const page of sourcingData.results || []) {
+        // Extraction logic
+        const item_name = extractText(getProp(page, 'Item Name')) || 
+                          extractText(getProp(page, 'Name')) || 'Untitled Item';
+        
+        const trade = extractText(getProp(page, 'Category')) || 
+                      extractText(getProp(page, 'Trade')) || 'Uncategorized';
+        
+        const room = extractText(getProp(page, 'Room')) || 'General';
+        const vendor = extractText(getProp(page, 'Vendor')) || 'Unknown Vendor';
+        const notes = extractText(getProp(page, 'Notes')) || '';
+        const coverage = extractText(getProp(page, 'Coverage')) || '';
+        
+        // Numbers
+        const quantity = extractText(getProp(page, 'Quantity')) || 0;
+        const unit_price_myr = extractText(getProp(page, 'Unit Price (MYR)')) || 
+                               extractText(getProp(page, 'Unit Price')) || 0;
+        
+        // Formula Handling
+        const totalProp = getProp(page, 'Total Price (MYR)');
+        let formula_total = null;
+        if (totalProp) {
+            if (totalProp.type === 'formula') formula_total = totalProp.formula.number;
+            else if (totalProp.type === 'number') formula_total = totalProp.number;
         }
 
-        // Capture images if they exist
-        const photo = extractText(getProp(page, 'Photo')) || extractText(getProp(page, 'Image URL'));
-        if (photo) imagesRaw.push(page);
+        // Filter out empty rows
+        if (!unit_price_myr && formula_total === null) continue;
+
+        // Calculate Effective Total
+        let effective_total;
+        if (formula_total !== null) {
+            effective_total = formula_total;
+        } else if (quantity > 0) {
+            effective_total = unit_price_myr * quantity;
+        } else {
+            effective_total = unit_price_myr;
+        }
+
+        // Trip/Source (Metadata)
+        const trip = extractText(getProp(page, 'Trip')) || extractText(getProp(page, 'Source')) || null;
+
+        allProcessedBids.push({
+            trade,
+            room,
+            data: {
+                vendor,
+                total_price_myr: formula_total !== null ? formula_total : (quantity > 0 ? unit_price_myr * quantity : null),
+                unit_price_myr,
+                quantity,
+                item_name,
+                notes,
+                coverage,
+                trip,
+                _sort_val: effective_total // Internal use only
+            }
+        });
+    }
+
+    // 3. Group by Trade + Room
+    const grouped = {};
+    for (const row of allProcessedBids) {
+        const key = `${row.trade}|||${row.room}`;
+        if (!grouped[key]) {
+            grouped[key] = { trade: row.trade, room: row.room, bids: [] };
+        }
+        grouped[key].bids.push(row.data);
+    }
+
+    // 4. Aggregate High/Low
+    const results = [];
+    for (const key in grouped) {
+        const group = grouped[key];
+        const bids = group.bids;
+
+        // Sort Ascending (Lowest First)
+        bids.sort((a, b) => a._sort_val - b._sort_val);
+
+        // Clean up internal sort key
+        const cleanBids = bids.map(b => {
+            const { _sort_val, ...rest } = b;
+            return rest;
+        });
+
+        const lowest = cleanBids[0];
+        const highest = cleanBids[cleanBids.length - 1];
+
+        results.push({
+            trade: group.trade,
+            room: group.room,
+            lowest_bid: lowest,
+            highest_bid: highest,
+            all_bids: cleanBids,
+            vendor_count: new Set(cleanBids.map(b => b.vendor)).size
+        });
+    }
+
+    // 5. Final Sort (Trade A-Z, then Room A-Z)
+    results.sort((a, b) => {
+        if (a.trade !== b.trade) return a.trade.localeCompare(b.trade);
+        return a.room.localeCompare(b.room);
     });
 
-    // 4. Normalize Data (Map to standard format)
-    const flooringLines = flooringRaw.map(p => normalizeQuotationLine(p, 'Flooring'));
-    const bathroomLines = bathroomRaw.map(p => normalizeQuotationLine(p, 'Bathroom-Sanitary'));
-    // Note: treating Kitchen as 'Flooring' type for ranking structure (Group by Section/Room)
-    const kitchenLines = kitchenRaw.map(p => normalizeQuotationLine(p, 'Flooring'));
-
-    // 5. Calculate Rankings
-    const flooringRankings = calculateVendorRankings(flooringLines, 'section');
-    // For Bathroom, group by Room Code/Zone
-    const bathroomRankings = calculateVendorRankings(bathroomLines, 'bathroomCode');
-    // For Kitchen, group by Room/Section
-    const kitchenRankings = calculateVendorRankings(kitchenLines, 'section');
-
-    // 6. Process Images
-    const images = imagesRaw.map(p => ({
-        item: extractText(getProp(p, 'Item Name')) || 'Untitled',
-        category: extractText(getProp(p, 'Category')),
-        zone: extractText(getProp(p, 'Room')),
-        imageUrl: extractText(getProp(p, 'Photo')) || extractText(getProp(p, 'Image URL')),
-        notes: extractText(getProp(p, 'Notes'))
-    }));
-
-    // 7. Return Combined Object
     return {
-        flooring: {
-            lines: flooringLines,
-            rankings: flooringRankings
-        },
-        bathroom: {
-            lines: bathroomLines,
-            // We treat all bathroom items as one combined list now
-            sanitaryLines: bathroomLines,
-            tilesLines: [], // Deprecated specific list
-            rankings: bathroomRankings
-        },
-        // Adding Kitchen here will likely light up the Kitchen section if your frontend checks for it
-        kitchen: {
-            lines: kitchenLines,
-            rankings: kitchenRankings
-        },
-        images
+        trade_room_comparisons: results,
+        meta: {
+            total_groups: results.length,
+            timestamp: new Date().toISOString()
+        }
     };
 }
 
